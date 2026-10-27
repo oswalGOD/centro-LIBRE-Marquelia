@@ -1,0 +1,135 @@
+// Ajustes del dispositivo, respaldo y restauración de datos, e instalación de la app.
+
+import * as db from "../core/db.js";
+import { esCoordinadora, cambiarPin, pinValido, verificarPin } from "../core/auth.js";
+import { hoy } from "../core/catalogos.js";
+import { $, esc, aviso, errores, descargar, dobleToque, plural } from "../core/ui.js";
+
+export const VERSION_APP = "0.2.0";
+
+let eventoInstalar = null;
+addEventListener("beforeinstallprompt", e => { e.preventDefault(); eventoInstalar = e; });
+
+async function vista(ctx) {
+  const { yo, pintar } = ctx;
+  const coord = esCoordinadora(yo);
+  const prefijo = await db.leerMeta("prefijoFolio", "MAR");
+  const codigo = await db.leerMeta("codigoDispositivo", "A");
+  const ultimoRespaldo = await db.leerMeta("ultimoRespaldo");
+  const [acts, personas, asis] = await Promise.all(["actividades", "personas", "asistencias"].map(a => db.todos(a)));
+  const persistente = await navigator.storage?.persisted?.();
+  const estimado = await navigator.storage?.estimate?.();
+  const instalada = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+  const c = pintar("Ajustes", `
+    ${instalada ? "" : `<section class="panel stack">
+      <h2 class="h3">Instalar en este dispositivo</h2>
+      <p class="hint">${ios ? "En iPad o iPhone: abre esta página en Safari, toca el botón Compartir y elige “Agregar a pantalla de inicio”." : "Instálala para abrirla como cualquier app y usarla sin internet."}</p>
+      ${ios ? "" : `<div class="actions"><button class="btn primary" id="instalar">Instalar app</button></div>`}
+    </section>`}
+
+    <section class="panel stack">
+      <h2 class="h3">Datos en este dispositivo</h2>
+      <dl class="facts">
+        <div><dt>Actividades</dt><dd>${acts.length}</dd></div>
+        <div><dt>Personas en padrón</dt><dd>${personas.length}</dd></div>
+        <div><dt>Registros de asistencia</dt><dd>${asis.length}</dd></div>
+        <div><dt>Espacio usado</dt><dd>${estimado ? `${(estimado.usage / 1048576).toFixed(1)} MB` : "No disponible"}</dd></div>
+        <div><dt>Almacenamiento protegido</dt><dd>${persistente ? `<span class="chip ok">Sí</span>` : `<span class="chip warn">No</span>`}</dd></div>
+        <div><dt>Último respaldo</dt><dd>${ultimoRespaldo ? new Date(ultimoRespaldo).toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" }) : `<span class="chip warn">Nunca</span>`}</dd></div>
+      </dl>
+      <p class="hint">Mientras no esté activa la sincronización, los datos viven solo en este dispositivo.${coord ? " Descarga un respaldo al terminar cada actividad y guárdalo en otro lugar (USB, correo o nube)." : " La Coordinadora es quien descarga los respaldos, porque incluyen datos de todas las actividades."}</p>
+      ${coord ? `<div class="actions">
+        <button class="btn primary" id="respaldo">Descargar respaldo</button>
+        <label class="btn" for="restaurar">Restaurar desde respaldo</label><input type="file" id="restaurar" accept="application/json,.json" class="visually-hidden">
+      </div>` : ""}
+      <div id="restaurarConfirma"></div>
+    </section>
+
+    ${coord ? `<section class="panel stack">
+      <h2 class="h3">Folios</h2>
+      <div class="grid" id="f">
+        <div class="field"><label for="prefijo">Prefijo</label><input id="prefijo" class="upper" maxlength="5" value="${esc(prefijo)}"></div>
+        <div class="field"><label for="codigo">Letra de este dispositivo</label><input id="codigo" class="upper" maxlength="1" value="${esc(codigo)}"></div>
+      </div>
+      <p class="hint">Próximo folio: <b class="mono" id="ejemplo">${esc(prefijo)}-${hoy().slice(0, 4)}-${esc(codigo)}…</b>. Usa una letra distinta en cada tableta o computadora.</p>
+      <div id="errFolio"></div>
+      <div class="actions"><button class="btn" id="guardarFolio">Guardar</button></div>
+    </section>` : ""}
+
+    <section class="panel stack">
+      <h2 class="h3">Mi PIN</h2>
+      <div class="grid">
+        <div class="field"><label for="pinActual">PIN actual</label><input id="pinActual" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password"></div>
+        <div class="field"><label for="pinNuevo">PIN nuevo</label><input id="pinNuevo" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>
+      </div>
+      <div id="errPin"></div>
+      <div class="actions"><button class="btn" id="cambiarPin">Cambiar mi PIN</button></div>
+    </section>
+    <p class="hint">Versión ${VERSION_APP}</p>
+  `);
+
+  $("#instalar", c)?.addEventListener("click", async () => {
+    if (!eventoInstalar) return aviso("Usa el menú del navegador y elige “Instalar app” o “Agregar a pantalla de inicio”.");
+    eventoInstalar.prompt();
+    await eventoInstalar.userChoice;
+    eventoInstalar = null;
+  });
+
+  $("#respaldo", c)?.addEventListener("click", async () => {
+    const datos = await db.exportar();
+    descargar(`respaldo-centro-libre-${hoy()}.json`, JSON.stringify(datos));
+    await db.escribirMeta("ultimoRespaldo", Date.now());
+    aviso("Respaldo descargado");
+    vista(ctx);
+  });
+
+  $("#restaurar", c)?.addEventListener("change", async ev => {
+    const caja = $("#restaurarConfirma", c);
+    let respaldo;
+    try {
+      respaldo = JSON.parse(await ev.target.files[0].text());
+      if (respaldo.app !== "centro-libre-marquelia") throw new Error();
+    } catch {
+      return errores(caja, ["El archivo no es un respaldo de esta app."]);
+    }
+    const n = a => (respaldo.datos[a] || []).filter(x => !x.borrado).length;
+    caja.innerHTML = `<div class="confirm"><span>El respaldo del ${new Date(respaldo.exportado).toLocaleDateString("es-MX")} tiene ${plural(n("actividades"), "actividad", "actividades")} y ${plural(n("personas"), "persona", "personas")}. Reemplazará todo lo que hay en este dispositivo.</span><button class="btn danger" id="siRestaurar">Reemplazar datos</button></div>`;
+    dobleToque($("#siRestaurar", caja), "Toca otra vez para confirmar", async () => {
+      await db.importar(respaldo);
+      aviso("Datos restaurados");
+      ctx.recargar();
+    });
+  });
+
+  $("#guardarFolio", c)?.addEventListener("click", async () => {
+    const p = $("#prefijo", c).value.trim().toUpperCase(), l = $("#codigo", c).value.trim().toUpperCase();
+    const e = [];
+    if (!/^[A-Z]{2,5}$/.test(p)) e.push("El prefijo debe tener de 2 a 5 letras.");
+    if (!/^[A-Z]$/.test(l)) e.push("La letra del dispositivo debe ser una sola letra.");
+    errores($("#errFolio", c), e);
+    if (e.length) return;
+    await db.escribirMeta("prefijoFolio", p);
+    await db.escribirMeta("codigoDispositivo", l);
+    aviso("Folios actualizados");
+    vista(ctx);
+  });
+
+  $("#cambiarPin", c).onclick = async () => {
+    const actual = $("#pinActual", c).value, nuevo = $("#pinNuevo", c).value;
+    const e = [];
+    if (!(await verificarPin(yo, actual))) e.push("El PIN actual no es correcto.");
+    if (!pinValido(nuevo)) e.push("El PIN nuevo debe tener de 4 a 6 números.");
+    errores($("#errPin", c), e);
+    if (e.length) return;
+    await cambiarPin(yo, nuevo);
+    aviso("Tu PIN se actualizó");
+    vista(ctx);
+  };
+}
+
+export default {
+  menu: [{ href: "#/ajustes", texto: "Ajustes", activa: /^#\/ajustes/ }],
+  rutas: [[/^#\/ajustes$/, vista]],
+};
