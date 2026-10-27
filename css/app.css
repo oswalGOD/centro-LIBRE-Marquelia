@@ -302,3 +302,6 @@ table.data tbody tr:hover { background: var(--surface-2); }
 .scan-frame { position: absolute; left: 50%; top: 50%; width: min(70%, 70vh); aspect-ratio: 1; transform: translate(-50%, -50%); border: 3px solid rgba(255, 255, 255, .85); border-radius: 14px; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .35); pointer-events: none; }
 .scan-msg { position: absolute; left: 12px; right: 12px; bottom: 12px; margin: 0; color: #fff; text-align: center; text-shadow: 0 1px 2px #000; }
 .scan-msg:empty { display: none; }
+
+/* Desarrollo */
+textarea.mono { width: 100%; border: 2px solid var(--control-line); background: var(--field-bg); color: var(--ink); border-radius: 10px; padding: 10px 12px; font-size: .85rem; resize: vertical; word-break: break-all; }

@@ -65,6 +65,18 @@ export function abrir() {
   return conexion;
 }
 
+/** Borra la base de datos completa de este dispositivo (Desarrollo → Restablecer). */
+export async function eliminarTodo() {
+  if (conexion) (await conexion).close();
+  conexion = null;
+  await new Promise((ok, mal) => {
+    const r = indexedDB.deleteDatabase(NOMBRE);
+    r.onsuccess = ok;
+    r.onerror = () => mal(r.error);
+    r.onblocked = ok; // otra pestaña la tiene abierta: se borra en cuanto la cierre
+  });
+}
+
 export const ALMACENES = ["perfiles", "usuarias", "actividades", "asistencias", "meta"];
 
 const pedir = r => new Promise((resolve, reject) => { r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error); });

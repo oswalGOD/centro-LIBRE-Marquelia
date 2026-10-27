@@ -9,6 +9,7 @@
 
 import * as db from "./db.js";
 import { SUPABASE_URL, SUPABASE_ANON } from "./config.js";
+import { anotar } from "./bitacora.js";
 
 const SINCRONIZADOS = ["perfiles", "usuarias", "actividades", "asistencias"];
 const LOTE = 200;
@@ -196,6 +197,7 @@ export function sincronizar() {
       return r;
     } catch (e) {
       estado.error = e.message;
+      if (navigator.onLine) anotar(e.message, "sincronización");
       throw e;
     } finally {
       estado.enCurso = false;

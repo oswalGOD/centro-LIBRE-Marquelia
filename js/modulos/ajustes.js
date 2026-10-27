@@ -6,7 +6,7 @@ import { hoy } from "../core/catalogos.js";
 import { $, esc, aviso, errores, descargar, dobleToque, plural } from "../core/ui.js";
 import * as nube from "../core/sync.js";
 
-export const VERSION_APP = "0.5.2";
+export const VERSION_APP = "0.6.0";
 
 let eventoInstalar = null;
 addEventListener("beforeinstallprompt", e => { e.preventDefault(); eventoInstalar = e; });
@@ -96,7 +96,7 @@ async function vista(ctx) {
       <div id="errPin"></div>
       <div class="actions"><button class="btn" id="cambiarPin">Cambiar mi PIN</button></div>
     </section>
-    <p class="hint">Versión ${VERSION_APP}</p>
+    <p class="hint">Versión ${VERSION_APP} · <a href="#/desarrollo">Opciones para desarrolladores</a></p>
   `);
 
   $("#sincronizar", c)?.addEventListener("click", async ev => {
