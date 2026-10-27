@@ -27,7 +27,7 @@ function pintar(titulo, contenido, { atras, ancho } = {}) {
   raiz.innerHTML = `
     <header class="topbar">
       <div class="wrap">
-        <a class="brand" href="#/"><span class="mark" aria-hidden="true">L</span><span><b>Centro LIBRE</b><small>Marquelia</small></span></a>
+        <a class="brand" href="#/"><img class="mark" src="icons/icon-192.png" alt="" aria-hidden="true"><span><b>Centro LIBRE</b><small>Marquelia</small></span></a>
         <nav class="menu" aria-label="Secciones">
           ${menu.map(i => `<a href="${i.href}" ${i.activa.test(ruta) ? 'aria-current="page"' : ""}>${esc(i.texto)}</a>`).join("")}
         </nav>
@@ -99,7 +99,7 @@ async function primerUso() {
   raiz.innerHTML = `
   <main class="auth">
     <div class="auth-card stack">
-      <div class="auth-brand"><span class="mark" aria-hidden="true">L</span><div><h1>Centro LIBRE Marquelia</h1><p class="hint">Listas de asistencia</p></div></div>
+      <div class="auth-brand"><img class="mark" src="icons/icon-192.png" alt="" aria-hidden="true"><div><h1>Centro LIBRE Marquelia</h1><p class="hint">Listas de asistencia</p></div></div>
       <h2>Configura este dispositivo</h2>
 
       <section class="stack" data-paso="cuenta" ${conectada ? "hidden" : ""}>
@@ -107,7 +107,7 @@ async function primerUso() {
         <div class="grid">
           <div class="field span-2"><label for="n-correo">Correo de la cuenta del Centro</label><input id="n-correo" type="email" autocomplete="username"></div>
           <div class="field span-2"><label for="n-clave">Contraseña</label><input id="n-clave" type="password" autocomplete="current-password"></div>
-          <div class="field"><label for="c-codigo">Letra de este dispositivo</label><input id="c-codigo" class="upper" value="A" maxlength="1">
+          <div class="field"><label for="c-id">ID de este dispositivo</label><input id="c-id" class="upper" value="A" maxlength="1">
             <span class="note">Una letra distinta en cada tableta o computadora (A, B, C…). Va en el folio para que nunca se repita.</span></div>
         </div>
         <div class="actions"><button class="btn primary" id="unir">Entrar</button></div>
@@ -127,12 +127,12 @@ async function primerUso() {
   </main>`;
 
   $("#unir").onclick = async ev => {
-    const letra = $("#c-codigo").value.trim().toUpperCase();
-    if (!/^[A-Z]$/.test(letra)) return errores($("#err"), ["La letra del dispositivo debe ser una sola letra."]);
+    const idDisp = $("#c-id").value.trim().toUpperCase();
+    if (!/^[A-Z]$/.test(idDisp)) return errores($("#err"), ["El ID del dispositivo debe ser una sola letra (A, B, C…)."]);
     ev.target.disabled = true;
     ev.target.textContent = "Conectando…";
     try {
-      await db.escribirMeta("codigoDispositivo", letra);
+      await db.escribirMeta("idDispositivo", idDisp);
       await nube.conectar($("#n-correo").value, $("#n-clave").value);
       await nube.sincronizar();
       if ((await db.todos("perfiles")).length) {
@@ -172,7 +172,7 @@ function entrar(lista) {
   raiz.innerHTML = `
   <main class="auth">
     <div class="auth-card stack">
-      <div class="auth-brand"><span class="mark" aria-hidden="true">L</span><div><h1>Centro LIBRE Marquelia</h1><p class="hint">Listas de asistencia</p></div></div>
+      <div class="auth-brand"><img class="mark" src="icons/icon-192.png" alt="" aria-hidden="true"><div><h1>Centro LIBRE Marquelia</h1><p class="hint">Listas de asistencia</p></div></div>
       <h2>¿Quién va a capturar?</h2>
       <div class="people">${lista.map(u => `<button class="person-btn" data-id="${u.id}"><span class="avatar">${esc(u.nombre[0])}</span><span><b>${esc(u.nombre)}</b><small>${esc(u.rol)}</small></span></button>`).join("")}</div>
       <form id="pinForm" class="stack" hidden>

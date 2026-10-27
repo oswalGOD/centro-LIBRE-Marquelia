@@ -61,10 +61,26 @@ export function abrir() {
       asistencias.createIndex("usuariaId", "usuariaId");
       d.createObjectStore("meta", { keyPath: "clave" });
     };
-    r.onsuccess = () => resolve(r.result);
+    r.onsuccess = () => renombrarMeta(r.result).then(() => resolve(r.result), reject);
     r.onerror = () => reject(r.error);
   });
   return conexion;
+}
+
+// Claves de `meta` que cambiaron de nombre en la versión 0.9.1 (la «letra del dispositivo» pasó a ser el «ID de dispositivo»)
+const RENOMBRES = [["codigoDispositivo", "idDispositivo"], ["dispositivoId", "uuidDispositivo"], ["avisoLetra", "avisoIdRepetido"]];
+function renombrarMeta(d) {
+  const t = d.transaction("meta", "readwrite");
+  const s = t.objectStore("meta");
+  for (const [vieja, nueva] of RENOMBRES) {
+    const r = s.get(vieja);
+    r.onsuccess = () => {
+      if (!r.result) return;
+      s.put({ ...r.result, clave: nueva });
+      s.delete(vieja);
+    };
+  }
+  return terminar(t);
 }
 
 /** Borra la base de datos completa de este dispositivo (Desarrollo → Restablecer). */
@@ -89,7 +105,7 @@ export const cambios = new EventTarget();
 const avisarCambio = almacen => cambios.dispatchEvent(new CustomEvent("cambio", { detail: { almacen } }));
 
 /** Claves de `meta` que pertenecen a este dispositivo y no viajan en respaldos. */
-export const META_LOCAL = ["dispositivoId", "codigoDispositivo", "nube", "ultimoEnvio", "ultimaRecepcion", "ultimaSincronizacion", "avisoLetra", "ultimoRespaldo"];
+export const META_LOCAL = ["uuidDispositivo", "idDispositivo", "nube", "ultimoEnvio", "ultimaRecepcion", "ultimaSincronizacion", "avisoIdRepetido", "ultimoRespaldo"];
 
 export const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
 
@@ -151,18 +167,18 @@ export async function escribirMeta(clave, valor) {
   await terminar(t);
 }
 
-/** Folio consecutivo por mes y dispositivo, p. ej. OCT-2026-A001, según la fecha de la actividad. Se asigna dentro de una transacción. */
+/** Folio consecutivo por mes y por ID de dispositivo, p. ej. OCT-2026-A001, según la fecha de la actividad. Se asigna dentro de una transacción. */
 export async function siguienteFolio(fecha) {
   const f = fecha || new Date().toISOString().slice(0, 10);
   const prefijo = prefijoFolio(f);
-  const letra = await leerMeta("codigoDispositivo", "A");
+  const id = await leerMeta("idDispositivo", "A");
   const t = (await abrir()).transaction("meta", "readwrite");
   const s = t.objectStore("meta");
-  const clave = `folio-${f.slice(0, 7)}-${letra}`;
+  const clave = `folio-${f.slice(0, 7)}-${id}`;
   const actual = (await pedir(s.get(clave)))?.valor || 0;
   s.put({ clave, valor: actual + 1, actualizado: Date.now() });
   await terminar(t);
-  return `${prefijo}-${letra}${String(actual + 1).padStart(3, "0")}`;
+  return `${prefijo}-${id}${String(actual + 1).padStart(3, "0")}`;
 }
 
 /** Copia completa de la base de datos, incluidos los borrados, para respaldos. */
@@ -193,8 +209,9 @@ export async function importar(respaldo) {
   avisarCambio("todos");
 }
 
-export async function idDispositivo() {
-  let id = await leerMeta("dispositivoId");
-  if (!id) await escribirMeta("dispositivoId", (id = uid()));
+/** Identificador interno y único de este dispositivo (UUID); distinto del ID de dispositivo que va en los folios. */
+export async function uuidDispositivo() {
+  let id = await leerMeta("uuidDispositivo");
+  if (!id) await escribirMeta("uuidDispositivo", (id = uid()));
   return id;
 }

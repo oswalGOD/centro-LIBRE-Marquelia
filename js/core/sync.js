@@ -94,7 +94,7 @@ async function porEnviar() {
 
 async function enviar() {
   const inicio = Date.now();
-  const dispositivo = await db.idDispositivo();
+  const dispositivo = await db.uuidDispositivo();
   const lista = await porEnviar();
   for (let i = 0; i < lista.length; i += LOTE) {
     const filas = lista.slice(i, i + LOTE).map(([almacen, r]) => ({ almacen, id: r.id, datos: r, actualizado: r.actualizado, borrado: !!r.borrado, dispositivo }));
@@ -147,9 +147,9 @@ async function aplicar(almacen, remoto) {
 async function recibir() {
   const cursor = await db.leerMeta("ultimaRecepcion");
   const desde = cursor ? new Date(new Date(cursor).getTime() - MARGEN_RECEPCION).toISOString() : "1970-01-01T00:00:00Z";
-  const yo = await db.idDispositivo();
-  const letra = await db.leerMeta("codigoDispositivo", "A");
-  let maximo = cursor, recibidos = 0, fusiones = 0, letraRepetida = false;
+  const yo = await db.uuidDispositivo();
+  const idDisp = await db.leerMeta("idDispositivo", "A");
+  let maximo = cursor, recibidos = 0, fusiones = 0, idRepetido = false;
   for (let pagina = 0; ; pagina++) {
     const filas = await api(`registros?select=almacen,id,datos,dispositivo,recibido&recibido=gte.${encodeURIComponent(desde)}&order=recibido.asc,almacen.asc,id.asc&limit=${LOTE}&offset=${pagina * LOTE}`);
     for (const f of filas) {
@@ -158,14 +158,14 @@ async function recibir() {
       if (f.dispositivo !== yo) {
         if (await aplicar(f.almacen, f.datos)) fusiones++;
         recibidos++;
-        if (f.almacen === "actividades" && new RegExp(`-${letra}\\d+$`).test(f.datos.folio || "")) letraRepetida = true;
+        if (f.almacen === "actividades" && new RegExp(`-${idDisp}\\d+$`).test(f.datos.folio || "")) idRepetido = true;
       }
       if (!maximo || f.recibido > maximo) maximo = f.recibido;
     }
     if (filas.length < LOTE) break;
   }
   if (maximo) await db.escribirMeta("ultimaRecepcion", maximo);
-  if (letraRepetida) await db.escribirMeta("avisoLetra", true);
+  if (idRepetido) await db.escribirMeta("avisoIdRepetido", true);
   return { recibidos, fusiones };
 }
 

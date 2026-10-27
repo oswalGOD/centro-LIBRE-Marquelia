@@ -3,6 +3,8 @@
 // Opciones:
 //   girado(): true cuando el panel se muestra rotado 90° con CSS (celular en vertical)
 //   conservar: el trazo existente sigue siendo parte de la firma en curso (al redibujar tras girar)
+const GROSOR = 3.64; // grosor del trazo en px
+
 export function panelFirma(canvas, existente = "", { girado = () => false, conservar = false } = {}) {
   const ctx = canvas.getContext("2d");
   let dibujando = false, trazada = conservar && !!existente, ultimo = null;
@@ -13,7 +15,7 @@ export function panelFirma(canvas, existente = "", { girado = () => false, conse
     canvas.width = Math.round(r.width * dpr);
     canvas.height = Math.round(r.height * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.lineWidth = 2.6;
+    ctx.lineWidth = GROSOR;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.strokeStyle = ctx.fillStyle = "#1d2b6b";
@@ -43,7 +45,7 @@ export function panelFirma(canvas, existente = "", { girado = () => false, conse
     ultimo = punto(e);
     canvas.setPointerCapture(e.pointerId);
     ctx.beginPath();
-    ctx.arc(ultimo[0], ultimo[1], 1.3, 0, Math.PI * 2);
+    ctx.arc(ultimo[0], ultimo[1], GROSOR / 2, 0, Math.PI * 2);
     ctx.fill();
   });
   canvas.addEventListener("pointermove", e => {
