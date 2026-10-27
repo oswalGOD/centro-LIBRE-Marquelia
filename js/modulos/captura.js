@@ -4,6 +4,7 @@ import * as db from "../core/db.js";
 import { GRUPOS, SEXOS, leerCurp, limpiarCurp, edad, rangoDe, etiquetaRango, normalizar } from "../core/catalogos.js";
 import { puedeEditar } from "../core/permisos.js";
 import { pedirFirma } from "../core/firma.js";
+import { escanearCurp } from "../core/escaner.js";
 import { $, $$, esc, aviso, errores, dobleToque } from "../core/ui.js";
 
 const CAMPOS = ["curp", "nombre", "fnac", "sexo", "lugar", "grupo", "ocupacion", "telefono"];
@@ -31,7 +32,8 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
         <div class="results" id="resultados" hidden></div></div>`}
       <div class="grid">
         <div class="field span-2"><label for="curp">CURP</label>
-          <input id="curp" class="upper" maxlength="18" autocomplete="off" spellcheck="false" placeholder="18 caracteres" value="${esc(d.curp)}">
+          <div class="input-row"><input id="curp" class="upper" maxlength="18" autocomplete="off" spellcheck="false" placeholder="18 caracteres" value="${esc(d.curp)}">
+            ${existente ? "" : `<button type="button" class="btn" id="escanear">Escanear CURP</button>`}</div>
           <span class="note" id="curpNota"></span>
           <label class="check"><input type="checkbox" id="sinCurp" ${d.sinCurp ? "checked" : ""}> La persona no tiene CURP</label></div>
         <div id="reconocida" class="span-2" hidden></div>
@@ -116,6 +118,22 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
     nota.className = "note ok";
     nota.textContent = "Fecha de nacimiento, sexo y estado tomados de la CURP.";
     pintarCampos();
+  });
+
+  // El QR de la constancia trae la CURP y el nombre completo
+  $("#escanear", c)?.addEventListener("click", async () => {
+    const r = await escanearCurp();
+    if (!r) return;
+    d.sinCurp = false;
+    $("#sinCurp", c).checked = false;
+    $("#curp", c).disabled = false;
+    $("#curp", c).value = r.curp;
+    $("#curp", c).dispatchEvent(new Event("input"));
+    if (registradas.some(p => p.curp === r.curp)) return; // ya vino antes: se llenaron sus datos guardados
+    d.nombre = r.nombre;
+    if (leerCurp(r.curp)) $("#curpNota", c).textContent = "Nombre, fecha de nacimiento, sexo y estado tomados de la constancia de CURP.";
+    pintarCampos();
+    $("#ocupacion", c).focus();
   });
 
   $("#sinCurp", c).addEventListener("change", ev => {

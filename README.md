@@ -9,6 +9,7 @@ Es una app web instalable (PWA): se instala desde el navegador en Windows, Andro
 - **Perfiles y roles**: Coordinadora, Psicóloga y Abogada, cada perfil con su PIN. La Coordinadora ve todo y administra los perfiles; la Psicóloga y la Abogada ven solo las actividades que crean o facilitan.
 - **Actividades**: encabezado del formato, folio consecutivo por dispositivo (`MAR-2026-A001`), cierre de la lista.
 - **Captura**: al escribir la CURP se llenan fecha de nacimiento, sexo, estado y rango de edad. Si la usuaria ya está registrada, se llenan todos sus datos. Admite personas sin CURP. Firma con el dedo o lápiz. No deja guardar con campos vacíos.
+- **Escanear CURP**: con la cámara se lee el código QR de la constancia de CURP (impresa o en el celular) y se llenan la CURP, el nombre completo, la fecha de nacimiento, el sexo y el estado. Funciona sin internet y no envía datos a ningún lado. Si no hay cámara, se puede usar una foto. Usa la biblioteca [jsQR](https://github.com/cozmo/jsQR) (Apache-2.0), incluida en `js/vendor/`.
 - **Usuarias**: las personas que usan los servicios del Centro. Búsqueda, edición de datos e historial de asistencia de cada una.
 - **Formato**: 10 personas por hoja con el resumen por grupo, rango de edad y sexo de cada hoja. Botón para imprimir o guardar en PDF.
 - **Estadísticas**: por periodo, tipo de actividad y facilitadora; tablas por rango de edad, grupo y sexo y por actividad, contando asistencias o usuarias distintas. Descarga del resumen y de la lista detallada en CSV para Excel.
