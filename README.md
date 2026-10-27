@@ -11,9 +11,10 @@ Es una app web instalable (PWA): se instala desde el navegador en Windows, Andro
 - **Captura**: al escribir la CURP se llenan fecha de nacimiento, sexo, estado y rango de edad. Si la persona ya está en el padrón, se llenan todos sus datos. Admite personas sin CURP. Firma con el dedo o lápiz. No deja guardar con campos vacíos.
 - **Padrón**: búsqueda, edición de datos e historial de asistencia por persona.
 - **Formato**: 10 personas por hoja con el resumen por grupo, rango de edad y sexo de cada hoja. Botón para imprimir o guardar en PDF.
+- **Estadísticas**: por periodo, tipo de actividad y facilitadora; tablas por rango de edad, grupo y sexo y por actividad, contando asistencias o personas distintas. Descarga del resumen y de la lista detallada en CSV para Excel.
 - **Respaldo**: la Coordinadora descarga y restaura un archivo `.json` con todos los datos.
 
-Pendiente (siguiente etapa): sincronización entre dispositivos y estadísticas por actividad, rango de edad, grupo y sexo.
+Pendiente (siguiente etapa): sincronización entre dispositivos.
 
 ## Probar en tu computadora
 
