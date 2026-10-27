@@ -40,7 +40,7 @@ function calcular({ visibles, asis }) {
     if (!previa || previa.actividad.fecha <= r.actividad.fecha) personas.set(r.personaId, r);
   }
 
-  // Personas nuevas: su primera asistencia (de todas las que esta usuaria puede ver) cae dentro del periodo
+  // Personas nuevas: su primera asistencia (de todas las que este perfil puede ver) cae dentro del periodo
   const primera = new Map();
   const fechaDe = new Map(visibles.map(a => [a.id, a.fecha]));
   for (const x of asis) {
@@ -81,7 +81,7 @@ async function vista(ctx) {
   const { yo, pintar } = ctx;
   const datos = await cargar(yo);
   const coord = esCoordinadora(yo);
-  const usuarias = coord ? (await db.todos("usuarias")).sort((a, b) => a.nombre.localeCompare(b.nombre)) : [];
+  const perfiles = coord ? (await db.todos("usuarias")).sort((a, b) => a.nombre.localeCompare(b.nombre)) : [];
   const tipos = [...new Set(datos.visibles.map(a => a.tipo))].sort();
 
   const c = pintar("Estadísticas", `
@@ -89,7 +89,7 @@ async function vista(ctx) {
       <div class="field"><label for="e-desde">Desde</label><input id="e-desde" type="date" data-filtro="desde" value="${filtros.desde}"></div>
       <div class="field"><label for="e-hasta">Hasta</label><input id="e-hasta" type="date" data-filtro="hasta" value="${filtros.hasta}"></div>
       <div class="field"><label for="e-tipo">Tipo de actividad</label><select id="e-tipo" data-filtro="tipo"><option value="">Todos</option>${tipos.map(t => `<option ${t === filtros.tipo ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></div>
-      ${coord ? `<div class="field"><label for="e-fac">Facilitadora</label><select id="e-fac" data-filtro="facilitadoraId"><option value="">Todas</option>${usuarias.map(u => `<option value="${u.id}" ${u.id === filtros.facilitadoraId ? "selected" : ""}>${esc(u.nombre)}</option>`).join("")}</select></div>` : ""}
+      ${coord ? `<div class="field"><label for="e-fac">Facilitadora</label><select id="e-fac" data-filtro="facilitadoraId"><option value="">Todas</option>${perfiles.map(u => `<option value="${u.id}" ${u.id === filtros.facilitadoraId ? "selected" : ""}>${esc(u.nombre)}</option>`).join("")}</select></div>` : ""}
       <div class="field"><span class="legend">Contar</span><div class="segmented" role="radiogroup" aria-label="Qué contar">
         <button type="button" role="radio" data-contar="asistencias">Asistencias</button>
         <button type="button" role="radio" data-contar="personas">Personas distintas</button></div></div>

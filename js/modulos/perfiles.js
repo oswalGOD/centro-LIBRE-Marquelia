@@ -1,8 +1,8 @@
-// Usuarias de la app. Solo la Coordinadora puede dar de alta, cambiar PIN o desactivar.
+// Perfiles de las integrantes del Centro que usan la app. Solo la Coordinadora puede dar de alta, cambiar PIN o desactivar.
 
 import * as db from "../core/db.js";
 import { ROLES } from "../core/catalogos.js";
-import { crearUsuaria, cambiarPin, pinValido } from "../core/auth.js";
+import { crearPerfil, cambiarPin, pinValido } from "../core/auth.js";
 import { $, $$, esc, aviso, errores, leerCampos } from "../core/ui.js";
 
 async function vista(ctx) {
@@ -10,11 +10,11 @@ async function vista(ctx) {
   const lista = (await db.todos("usuarias")).sort((a, b) => b.activa - a.activa || ROLES.indexOf(a.rol) - ROLES.indexOf(b.rol));
   const coordinadorasActivas = lista.filter(u => u.activa && u.rol === "Coordinadora").length;
 
-  const c = pintar("Usuarias", `
+  const c = pintar("Perfiles", `
     <div class="list">${lista.map(u => `
       <div class="row user ${u.activa ? "" : "inactive"}" data-id="${u.id}">
         <span class="avatar" aria-hidden="true">${esc(u.nombre[0])}</span>
-        <span class="body"><span class="name">${esc(u.nombre)}${u.id === yo.id ? " (tú)" : ""}</span><span class="meta"><span>${esc(u.rol)}</span>${u.activa ? "" : `<span class="chip">Desactivada</span>`}</span></span>
+        <span class="body"><span class="name">${esc(u.nombre)}${u.id === yo.id ? " (tú)" : ""}</span><span class="meta"><span>${esc(u.rol)}</span>${u.activa ? "" : `<span class="chip">Desactivado</span>`}</span></span>
         <span class="end actions">
           <button class="btn small ghost" data-accion="pin">Cambiar PIN</button>
           ${u.activa && !(u.rol === "Coordinadora" && coordinadorasActivas === 1) ? `<button class="btn small ghost danger" data-accion="desactivar">Desactivar</button>` : ""}
@@ -26,15 +26,15 @@ async function vista(ctx) {
         </div>
       </div>`).join("")}</div>
     <section class="panel stack">
-      <h2 class="h3">Agregar usuaria</h2>
+      <h2 class="h3">Agregar perfil</h2>
       <div class="grid" id="f">
         <div class="field span-2"><label for="u-nombre">Nombre completo</label><input id="u-nombre" data-campo="nombre" autocomplete="off"></div>
         <div class="field"><label for="u-rol">Rol</label><select id="u-rol" data-campo="rol">${ROLES.map(r => `<option ${r === "Psicóloga" ? "selected" : ""}>${r}</option>`).join("")}</select></div>
         <div class="field"><label for="u-pin">PIN inicial de 4 a 6 números</label><input id="u-pin" data-campo="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>
       </div>
       <div id="err"></div>
-      <div class="actions"><button class="btn primary" id="agregar">Agregar usuaria</button></div>
-      <p class="hint">Cada usuaria entra con su nombre y su PIN. La Psicóloga y la Abogada solo ven las actividades que crean o facilitan; la Coordinadora ve todas.</p>
+      <div class="actions"><button class="btn primary" id="agregar">Agregar perfil</button></div>
+      <p class="hint">Cada perfil entra con su nombre y su PIN. La Psicóloga y la Abogada solo ven las actividades que crean o facilitan; la Coordinadora ve todas.</p>
     </section>
   `);
 
@@ -52,7 +52,7 @@ async function vista(ctx) {
       }
       if (accion === "desactivar" || accion === "activar") {
         await db.guardar("usuarias", { ...u, activa: accion === "activar" });
-        aviso(accion === "activar" ? "Usuaria activada" : "Usuaria desactivada. Ya no podrá entrar.");
+        aviso(accion === "activar" ? "Perfil activado" : "Perfil desactivado. Ya no podrá entrar.");
         if (u.id === yo.id) return ctx.recargar();
         vista(ctx);
       }
@@ -66,13 +66,13 @@ async function vista(ctx) {
     if (!pinValido(d.pin)) e.push("El PIN debe tener de 4 a 6 números.");
     errores($("#err", c), e);
     if (e.length) return;
-    await crearUsuaria(d);
+    await crearPerfil(d);
     aviso(`${d.nombre.split(" ")[0]} ya puede entrar con su PIN`);
     vista(ctx);
   };
 }
 
 export default {
-  menu: [{ href: "#/usuarias", texto: "Usuarias", activa: /^#\/usuarias/, soloCoordinadora: true }],
-  rutas: [[/^#\/usuarias$/, vista, { soloCoordinadora: true }]],
+  menu: [{ href: "#/perfiles", texto: "Perfiles", activa: /^#\/perfiles/, soloCoordinadora: true }],
+  rutas: [[/^#\/perfiles$/, vista, { soloCoordinadora: true }]],
 };

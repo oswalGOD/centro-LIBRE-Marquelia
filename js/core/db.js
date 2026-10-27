@@ -12,7 +12,7 @@ export function abrir() {
     const r = indexedDB.open(NOMBRE, VERSION);
     r.onupgradeneeded = () => {
       const d = r.result;
-      d.createObjectStore("usuarias", { keyPath: "id" });
+      d.createObjectStore("usuarias", { keyPath: "id" }); // perfiles; el nombre del almacén se conserva por los datos ya guardados
       const personas = d.createObjectStore("personas", { keyPath: "id" });
       personas.createIndex("curp", "curp", { unique: true });
       const actividades = d.createObjectStore("actividades", { keyPath: "id" });

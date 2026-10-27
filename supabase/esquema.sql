@@ -5,7 +5,7 @@
 -- Todos los registros de la app (usuarias, personas, actividades, asistencias)
 -- en una sola tabla. Cada fila es un registro tal como se guarda en el dispositivo.
 create table if not exists public.registros (
-  almacen      text        not null,              -- usuarias | personas | actividades | asistencias
+  almacen      text        not null,              -- usuarias (perfiles) | personas | actividades | asistencias
   id           text        not null,
   datos        jsonb       not null,              -- el registro completo
   actualizado  bigint      not null,              -- hora del cambio en el dispositivo (ms)
@@ -37,7 +37,7 @@ create trigger registros_ultimo_gana
   before insert or update on public.registros
   for each row execute function public.registros_ultimo_gana();
 
--- Solo la cuenta del Centro (usuaria autenticada) puede leer y escribir.
+-- Solo la cuenta del Centro (sesión autenticada) puede leer y escribir.
 -- La clave pública (anon) sola no da acceso a nada.
 alter table public.registros enable row level security;
 

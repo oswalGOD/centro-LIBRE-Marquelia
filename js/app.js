@@ -4,16 +4,16 @@
 
 import * as db from "./core/db.js";
 import { ROLES } from "./core/catalogos.js";
-import { crearUsuaria, iniciarSesion, cerrarSesion, sesionActual, verificarPin, pinValido, esCoordinadora } from "./core/auth.js";
+import { crearPerfil, iniciarSesion, cerrarSesion, sesionActual, verificarPin, pinValido, esCoordinadora } from "./core/auth.js";
 import { $, $$, esc, aviso, errores, leerCampos } from "./core/ui.js";
 import * as nube from "./core/sync.js";
 import actividades from "./modulos/actividades.js";
 import padron from "./modulos/padron.js";
 import estadisticas from "./modulos/estadisticas.js";
-import usuarias from "./modulos/usuarias.js";
+import perfiles from "./modulos/perfiles.js";
 import ajustes from "./modulos/ajustes.js";
 
-const MODULOS = [actividades, padron, estadisticas, usuarias, ajustes];
+const MODULOS = [actividades, padron, estadisticas, perfiles, ajustes];
 
 const raiz = document.getElementById("app");
 let yo = null;
@@ -114,7 +114,7 @@ function primerUso() {
       </section>
 
       <section class="stack" data-panel="unir" hidden>
-        <p class="hint">Entra con la cuenta del Centro para traer usuarias, padrón y actividades de los otros dispositivos. Necesitas internet solo para este paso.</p>
+        <p class="hint">Entra con la cuenta del Centro para traer perfiles, padrón y actividades de los otros dispositivos. Necesitas internet solo para este paso.</p>
         <div class="grid">
           <div class="field span-2"><label for="n-correo">Correo de la cuenta del Centro</label><input id="n-correo" type="email" autocomplete="username"></div>
           <div class="field span-2"><label for="n-clave">Contraseña</label><input id="n-clave" type="password" autocomplete="current-password"></div>
@@ -152,7 +152,7 @@ function primerUso() {
     if (e.length) return;
     await db.escribirMeta("prefijoFolio", d.prefijo.toUpperCase());
     await db.escribirMeta("codigoDispositivo", letra());
-    const u = await crearUsuaria({ nombre: d.nombre, rol: "Coordinadora", pin: d.pin });
+    const u = await crearPerfil({ nombre: d.nombre, rol: "Coordinadora", pin: d.pin });
     iniciarSesion(u);
     aviso("Cuenta creada");
     location.hash = "#/";
@@ -240,5 +240,5 @@ router();
 
 // Si llegan datos de otro dispositivo, se refresca la pantalla salvo que se esté llenando un formulario
 nube.iniciarAutomatica(() => {
-  if (!/(registrar|editar|nueva|ajustes|usuarias)/.test(location.hash) && !document.querySelector("#pinForm:not([hidden])")) router();
+  if (!/(registrar|editar|nueva|ajustes|perfiles)/.test(location.hash) && !document.querySelector("#pinForm:not([hidden])")) router();
 });

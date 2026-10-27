@@ -6,13 +6,13 @@ Es una app web instalable (PWA): se instala desde el navegador en Windows, Andro
 
 ## Qué hace hoy
 
-- **Usuarias y roles**: Coordinadora, Psicóloga y Abogada, cada una con su PIN. La Coordinadora ve todo y administra usuarias; la Psicóloga y la Abogada ven solo las actividades que crean o facilitan.
+- **Perfiles y roles**: Coordinadora, Psicóloga y Abogada, cada perfil con su PIN. La Coordinadora ve todo y administra los perfiles; la Psicóloga y la Abogada ven solo las actividades que crean o facilitan.
 - **Actividades**: encabezado del formato, folio consecutivo por dispositivo (`MAR-2026-A001`), cierre de la lista.
 - **Captura**: al escribir la CURP se llenan fecha de nacimiento, sexo, estado y rango de edad. Si la persona ya está en el padrón, se llenan todos sus datos. Admite personas sin CURP. Firma con el dedo o lápiz. No deja guardar con campos vacíos.
 - **Padrón**: búsqueda, edición de datos e historial de asistencia por persona.
 - **Formato**: 10 personas por hoja con el resumen por grupo, rango de edad y sexo de cada hoja. Botón para imprimir o guardar en PDF.
 - **Estadísticas**: por periodo, tipo de actividad y facilitadora; tablas por rango de edad, grupo y sexo y por actividad, contando asistencias o personas distintas. Descarga del resumen y de la lista detallada en CSV para Excel.
-- **Sincronización**: los dispositivos conectados a la cuenta del Centro comparten usuarias, padrón y actividades a través de Supabase. Cada uno sigue funcionando sin internet y envía sus cambios cuando vuelve la conexión.
+- **Sincronización**: los dispositivos conectados a la cuenta del Centro comparten perfiles, padrón y actividades a través de Supabase. Cada uno sigue funcionando sin internet y envía sus cambios cuando vuelve la conexión.
 - **Respaldo**: la Coordinadora descarga y restaura un archivo `.json` con todos los datos.
 
 ## Configurar la sincronización (una sola vez)
@@ -66,7 +66,7 @@ fonts/                  tipografías incluidas para funcionar sin internet
 
 ### Datos
 
-Todo se guarda en el navegador del dispositivo (IndexedDB), en los almacenes `usuarias`, `personas`, `actividades`, `asistencias` y `meta`. Cada registro guarda `creado` y `actualizado`, y los borrados se marcan con `borrado: true` en lugar de eliminarse, para que la sincronización pueda reconciliar cambios entre dispositivos.
+Todo se guarda en el navegador del dispositivo (IndexedDB), en los almacenes `usuarias` (perfiles de las integrantes del Centro), `personas`, `actividades`, `asistencias` y `meta`. Cada registro guarda `creado` y `actualizado`, y los borrados se marcan con `borrado: true` en lugar de eliminarse, para que la sincronización pueda reconciliar cambios entre dispositivos.
 
 Cada asistencia guarda una copia de los datos de la persona tal como estaban ese día, para que la lista firmada no cambie si después se corrige el padrón.
 

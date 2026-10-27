@@ -6,7 +6,7 @@ import { hoy } from "../core/catalogos.js";
 import { $, esc, aviso, errores, descargar, dobleToque, plural } from "../core/ui.js";
 import * as nube from "../core/sync.js";
 
-export const VERSION_APP = "0.4.2";
+export const VERSION_APP = "0.4.3";
 
 let eventoInstalar = null;
 addEventListener("beforeinstallprompt", e => { e.preventDefault(); eventoInstalar = e; });
@@ -48,7 +48,7 @@ async function vista(ctx) {
         <div class="actions"><button class="btn primary" id="sincronizar">Sincronizar ahora</button>
           ${coord ? `<button class="btn ghost danger" id="desconectar">Desconectar este dispositivo</button>` : ""}</div>`
       : coord ? `
-        <p class="hint">Conecta este dispositivo con la cuenta del Centro para compartir usuarias, padrón y actividades con las demás tabletas y computadoras.</p>
+        <p class="hint">Conecta este dispositivo con la cuenta del Centro para compartir perfiles, padrón y actividades con las demás tabletas y computadoras.</p>
         <div class="grid">
           <div class="field"><label for="n-correo">Correo de la cuenta del Centro</label><input id="n-correo" type="email" autocomplete="username"></div>
           <div class="field"><label for="n-clave">Contraseña</label><input id="n-clave" type="password" autocomplete="current-password"></div>
