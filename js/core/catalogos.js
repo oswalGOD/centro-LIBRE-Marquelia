@@ -24,7 +24,9 @@ export const RANGOS = [
 
 export const SEXOS = [["M", "Mujer"], ["H", "Hombre"], ["Otro", "Otro"]];
 
-export const TIPOS_ACTIVIDAD = ["Taller", "Plática", "Asesoría jurídica", "Atención psicológica", "Grupo de apoyo", "Jornada comunitaria", "Capacitación", "Reunión"];
+export const TIPOS_ACTIVIDAD = ["Taller", "Plática", "Grupo de apoyo", "Jornada comunitaria", "Capacitación", "Reunión"];
+// Atenciones individuales y confidenciales: no van en listas de asistencia grupales (tendrán su propio módulo)
+export const TIPOS_RETIRADOS = ["Asesoría jurídica", "Atención psicológica"];
 
 export const ESTADOS = {
   AS: "Aguascalientes", BC: "Baja California", BS: "Baja California Sur", CC: "Campeche", CL: "Coahuila", CM: "Colima",
