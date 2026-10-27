@@ -2,6 +2,8 @@
 // Cada registro lleva `actualizado` y los borrados son lógicos (`borrado: true`)
 // para que la sincronización entre dispositivos pueda reconciliar cambios.
 
+import { prefijoFolio } from "./catalogos.js";
+
 const NOMBRE = "centro-libre-marquelia";
 const VERSION = 2;
 
@@ -149,18 +151,18 @@ export async function escribirMeta(clave, valor) {
   await terminar(t);
 }
 
-/** Folio consecutivo por año y dispositivo, p. ej. MAR-2026-A001. Se asigna dentro de una transacción. */
+/** Folio consecutivo por mes y dispositivo, p. ej. OCT-2026-A001, según la fecha de la actividad. Se asigna dentro de una transacción. */
 export async function siguienteFolio(fecha) {
-  const anio = (fecha || new Date().toISOString()).slice(0, 4);
-  const prefijo = await leerMeta("prefijoFolio", "MAR");
+  const f = fecha || new Date().toISOString().slice(0, 10);
+  const prefijo = prefijoFolio(f);
   const letra = await leerMeta("codigoDispositivo", "A");
   const t = (await abrir()).transaction("meta", "readwrite");
   const s = t.objectStore("meta");
-  const clave = `folio-${anio}-${letra}`;
+  const clave = `folio-${f.slice(0, 7)}-${letra}`;
   const actual = (await pedir(s.get(clave)))?.valor || 0;
   s.put({ clave, valor: actual + 1, actualizado: Date.now() });
   await terminar(t);
-  return `${prefijo}-${anio}-${letra}${String(actual + 1).padStart(3, "0")}`;
+  return `${prefijo}-${letra}${String(actual + 1).padStart(3, "0")}`;
 }
 
 /** Copia completa de la base de datos, incluidos los borrados, para respaldos. */

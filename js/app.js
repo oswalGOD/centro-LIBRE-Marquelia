@@ -119,7 +119,6 @@ async function primerUso() {
           <div class="field span-2"><label for="c-nombre">Nombre completo de la Coordinadora</label><input id="c-nombre" data-campo="nombre" autocomplete="name"></div>
           <div class="field"><label for="c-pin">PIN de 4 a 6 números</label><input id="c-pin" data-campo="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>
           <div class="field"><label for="c-pin2">Repite el PIN</label><input id="c-pin2" data-campo="pin2" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>
-          <div class="field"><label for="c-prefijo">Prefijo de folio</label><input id="c-prefijo" data-campo="prefijo" class="upper" value="MAR" maxlength="5"></div>
         </div>
         <div class="actions"><button class="btn primary" id="crear">Crear perfil y empezar</button></div>
       </section>
@@ -157,10 +156,8 @@ async function primerUso() {
     if (d.nombre.split(" ").filter(Boolean).length < 2) e.push("Escribe nombre y apellido.");
     if (!pinValido(d.pin)) e.push("El PIN debe tener de 4 a 6 números.");
     else if (d.pin !== d.pin2) e.push("Los dos PIN no coinciden.");
-    if (!/^[A-Z]{2,5}$/i.test(d.prefijo)) e.push("El prefijo de folio debe tener de 2 a 5 letras.");
     errores($("#err"), e);
     if (e.length) return;
-    await db.escribirMeta("prefijoFolio", d.prefijo.toUpperCase());
     const u = await crearPerfil({ nombre: d.nombre, rol: "Coordinadora", pin: d.pin });
     iniciarSesion(u);
     aviso("Perfil creado");

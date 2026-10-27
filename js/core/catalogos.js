@@ -69,6 +69,9 @@ export const hoy = () => {
 };
 export const fechaCorta = f => (f ? f.split("-").reverse().join("/") : "");
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+
+/** Inicio del folio según el mes y año de la fecha, p. ej. "OCT-2026". */
+export const prefijoFolio = f => `${MESES[Number(f.slice(5, 7)) - 1].toUpperCase()}-${f.slice(0, 4)}`;
 export const fechaLarga = f => (f ? `${Number(f.slice(8, 10))} ${MESES[Number(f.slice(5, 7)) - 1]} ${f.slice(0, 4)}` : "");
 export const mesCorto = f => MESES[Number(f.slice(5, 7)) - 1];
 
