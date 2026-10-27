@@ -43,7 +43,7 @@ async function lista({ yo, pintar }) {
 async function formulario({ yo, pintar, ir }, id) {
   const act = id ? await db.uno("actividades", id) : null;
   if (id && (!act || !puedeEditar(yo, act))) return ir(id ? `#/actividad/${id}` : "#/");
-  const usuarias = (await db.todos("usuarias")).filter(u => u.activa);
+  const perfiles = (await db.todos("perfiles")).filter(u => u.activa);
   const ultimoLugar = await db.leerMeta("ultimoLugar", "Marquelia, Gro.");
   const a = act || { nombre: "", fecha: hoy(), lugar: ultimoLugar, facilitadoraId: yo.id, tipo: "Taller" };
 
@@ -55,7 +55,7 @@ async function formulario({ yo, pintar, ir }, id) {
         <div class="field"><label for="a-fecha">Fecha</label><input id="a-fecha" type="date" data-campo="fecha" value="${esc(a.fecha)}"></div>
         <div class="field"><label for="a-lugar">Lugar de desarrollo</label><input id="a-lugar" data-campo="lugar" value="${esc(a.lugar)}"></div>
         <div class="field"><label for="a-facilitadora">Facilitadora</label>
-          <select id="a-facilitadora" data-campo="facilitadoraId">${usuarias.map(u => `<option value="${u.id}" ${u.id === a.facilitadoraId ? "selected" : ""}>${esc(u.nombre)} · ${esc(u.rol)}</option>`).join("")}</select></div>
+          <select id="a-facilitadora" data-campo="facilitadoraId">${perfiles.map(u => `<option value="${u.id}" ${u.id === a.facilitadoraId ? "selected" : ""}>${esc(u.nombre)} · ${esc(u.rol)}</option>`).join("")}</select></div>
         <div class="field"><label for="a-tipo">Tipo de actividad</label><input id="a-tipo" data-campo="tipo" list="tipos" value="${esc(a.tipo)}">
           <datalist id="tipos">${TIPOS_ACTIVIDAD.map(t => `<option value="${t}">`).join("")}</datalist></div>
         ${act ? `<div class="field"><label>Folio</label><input value="${esc(act.folio)}" disabled></div>` : ""}
@@ -73,7 +73,7 @@ async function formulario({ yo, pintar, ir }, id) {
     if (!d.tipo) e.push("Escribe el tipo de actividad.");
     errores($("#err", c), e);
     if (e.length) return;
-    const f = usuarias.find(u => u.id === d.facilitadoraId);
+    const f = perfiles.find(u => u.id === d.facilitadoraId);
     const registro = {
       ...(act || { id: db.uid(), folio: await db.siguienteFolio(d.fecha), creadaPor: yo.id, estado: "abierta" }),
       nombre: d.nombre, fecha: d.fecha, lugar: d.lugar, tipo: d.tipo,

@@ -4,13 +4,13 @@
 //   1. Envía los registros que cambiaron desde el último envío.
 //   2. Recibe lo que otros dispositivos enviaron desde la última recepción.
 // Si dos dispositivos cambiaron el mismo registro, gana el cambio más reciente.
-// Si dos dispositivos dieron de alta a la misma persona (misma CURP), se fusionan
+// Si dos dispositivos dieron de alta a la misma usuaria (misma CURP), se fusionan
 // en una sola y sus asistencias pasan a la que queda.
 
 import * as db from "./db.js";
 import { SUPABASE_URL, SUPABASE_ANON } from "./config.js";
 
-const SINCRONIZADOS = ["usuarias", "personas", "actividades", "asistencias"];
+const SINCRONIZADOS = ["perfiles", "usuarias", "actividades", "asistencias"];
 const LOTE = 200;
 const MARGEN_RECEPCION = 2 * 60 * 1000; // se vuelve a pedir un poco de atrás por si algo llegó tarde
 const CADA = 5 * 60 * 1000;
@@ -107,17 +107,17 @@ async function enviar() {
 const pedirIdb = r => new Promise((ok, mal) => { r.onsuccess = () => ok(r.result); r.onerror = () => mal(r.error); });
 const fin = t => new Promise((ok, mal) => { t.oncomplete = ok; t.onerror = t.onabort = () => mal(t.error); });
 
-/** Guarda un registro recibido si es más nuevo que el local. Devuelve true si hubo que fusionar personas. */
+/** Guarda un registro recibido si es más nuevo que el local. Devuelve true si hubo que fusionar usuarias. */
 async function aplicar(almacen, remoto) {
   const d = await db.abrir();
-  const t = d.transaction(["personas", "asistencias"].includes(almacen) ? ["personas", "asistencias"] : [almacen], "readwrite");
+  const t = d.transaction(["usuarias", "asistencias"].includes(almacen) ? ["usuarias", "asistencias"] : [almacen], "readwrite");
   const s = t.objectStore(almacen);
   const local = await pedirIdb(s.get(remoto.id));
   if (local && local.actualizado >= remoto.actualizado) { await fin(t); return false; }
   let fusion = false;
   const ahora = Date.now();
 
-  if (almacen === "personas" && remoto.curp && !remoto.borrado) {
+  if (almacen === "usuarias" && remoto.curp && !remoto.borrado) {
     const otra = await pedirIdb(s.index("curp").get(remoto.curp));
     if (otra && otra.id !== remoto.id) {
       // Misma CURP con dos ids: se queda el id menor en todos los dispositivos
@@ -128,15 +128,15 @@ async function aplicar(almacen, remoto) {
       s.put(fusionada);
       if (queda === remoto) s.put(remoto);
       const asis = t.objectStore("asistencias");
-      for (const x of await pedirIdb(asis.index("personaId").getAll(sale.id))) asis.put({ ...x, personaId: queda.id, actualizado: ahora });
+      for (const x of await pedirIdb(asis.index("usuariaId").getAll(sale.id))) asis.put({ ...x, usuariaId: queda.id, actualizado: ahora });
       await fin(t);
       return fusion;
     }
   }
 
   if (almacen === "asistencias") {
-    const p = await pedirIdb(t.objectStore("personas").get(remoto.personaId));
-    if (p?.fusionadaEn) { remoto = { ...remoto, personaId: p.fusionadaEn, actualizado: ahora }; fusion = true; }
+    const p = await pedirIdb(t.objectStore("usuarias").get(remoto.usuariaId));
+    if (p?.fusionadaEn) { remoto = { ...remoto, usuariaId: p.fusionadaEn, actualizado: ahora }; fusion = true; }
   }
   s.put(remoto);
   await fin(t);
@@ -153,6 +153,7 @@ async function recibir() {
     const filas = await api(`registros?select=almacen,id,datos,dispositivo,recibido&recibido=gte.${encodeURIComponent(desde)}&order=recibido.asc,almacen.asc,id.asc&limit=${LOTE}&offset=${pagina * LOTE}`);
     for (const f of filas) {
       if (!SINCRONIZADOS.includes(f.almacen)) continue;
+      if ((f.almacen === "usuarias" && "pin" in f.datos) || (f.almacen === "asistencias" && !f.datos.usuariaId)) continue; // nombres anteriores a la versión 0.5
       if (f.dispositivo !== yo) {
         if (await aplicar(f.almacen, f.datos)) fusiones++;
         recibidos++;

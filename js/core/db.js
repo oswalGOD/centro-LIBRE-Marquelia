@@ -3,23 +3,60 @@
 // para que la sincronización entre dispositivos pueda reconciliar cambios.
 
 const NOMBRE = "centro-libre-marquelia";
-const VERSION = 1;
+const VERSION = 2;
 
 let conexion;
+
+function crearAlmacenUsuarias(d) {
+  d.createObjectStore("usuarias", { keyPath: "id" }).createIndex("curp", "curp", { unique: true });
+}
+
+/**
+ * Versión 1 a 2: lo que se llamaba «usuarias» (integrantes del Centro) pasa a «perfiles»,
+ * «personas» pasa a «usuarias» y en las asistencias `personaId` pasa a `usuariaId`.
+ */
+export function convertirV1(datos) {
+  const { usuarias = [], personas = [], asistencias = [], ...resto } = datos;
+  return {
+    ...resto,
+    perfiles: usuarias,
+    usuarias: personas,
+    asistencias: asistencias.map(({ personaId, ...x }) => ({ ...x, usuariaId: x.usuariaId ?? personaId })),
+  };
+}
+
+function migrarV1(d, t) {
+  const leer = nombre => new Promise(ok => { t.objectStore(nombre).getAll().onsuccess = e => ok(e.target.result); });
+  Promise.all(["usuarias", "personas", "asistencias"].map(leer)).then(([usuarias, personas, asistencias]) => {
+    const nuevo = convertirV1({ usuarias, personas, asistencias });
+    d.deleteObjectStore("usuarias");
+    d.deleteObjectStore("personas");
+    d.createObjectStore("perfiles", { keyPath: "id" });
+    crearAlmacenUsuarias(d);
+    const asis = t.objectStore("asistencias");
+    asis.deleteIndex("personaId");
+    asis.createIndex("usuariaId", "usuariaId");
+    for (const a of ["perfiles", "usuarias", "asistencias"]) for (const r of nuevo[a]) t.objectStore(a).put(r);
+    // Todo se vuelve a enviar y recibir con los nombres nuevos
+    const meta = t.objectStore("meta");
+    meta.put({ clave: "ultimoEnvio", valor: 0, actualizado: Date.now() });
+    meta.delete("ultimaRecepcion");
+  });
+}
 
 export function abrir() {
   conexion ??= new Promise((resolve, reject) => {
     const r = indexedDB.open(NOMBRE, VERSION);
-    r.onupgradeneeded = () => {
+    r.onupgradeneeded = e => {
       const d = r.result;
-      d.createObjectStore("usuarias", { keyPath: "id" });
-      const personas = d.createObjectStore("personas", { keyPath: "id" });
-      personas.createIndex("curp", "curp", { unique: true });
+      if (e.oldVersion >= 1) return migrarV1(d, r.transaction);
+      d.createObjectStore("perfiles", { keyPath: "id" });
+      crearAlmacenUsuarias(d);
       const actividades = d.createObjectStore("actividades", { keyPath: "id" });
       actividades.createIndex("fecha", "fecha");
       const asistencias = d.createObjectStore("asistencias", { keyPath: "id" });
       asistencias.createIndex("actividadId", "actividadId");
-      asistencias.createIndex("personaId", "personaId");
+      asistencias.createIndex("usuariaId", "usuariaId");
       d.createObjectStore("meta", { keyPath: "clave" });
     };
     r.onsuccess = () => resolve(r.result);
@@ -28,7 +65,7 @@ export function abrir() {
   return conexion;
 }
 
-export const ALMACENES = ["usuarias", "personas", "actividades", "asistencias", "meta"];
+export const ALMACENES = ["perfiles", "usuarias", "actividades", "asistencias", "meta"];
 
 const pedir = r => new Promise((resolve, reject) => { r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error); });
 const terminar = t => new Promise((resolve, reject) => { t.oncomplete = resolve; t.onerror = t.onabort = () => reject(t.error); });
@@ -82,7 +119,7 @@ export async function borrar(almacen, id) {
   if (x) {
     x.borrado = true;
     x.actualizado = Date.now();
-    if (almacen === "personas") delete x.curp; // libera la CURP para un registro nuevo
+    if (almacen === "usuarias") delete x.curp; // libera la CURP para un registro nuevo
     s.put(x);
   }
   await terminar(t);
@@ -126,6 +163,7 @@ export async function exportar() {
 /** Reemplaza todo el contenido con un respaldo. Conserva los ajustes propios de este dispositivo. */
 export async function importar(respaldo) {
   if (respaldo?.app !== NOMBRE || !respaldo.datos) throw new Error("El archivo no es un respaldo de esta app.");
+  if ((respaldo.version || 1) < 2) respaldo = { ...respaldo, datos: convertirV1(respaldo.datos) };
   const d = await abrir();
   const locales = (await pedir(d.transaction("meta").objectStore("meta").getAll())).filter(m => META_LOCAL.includes(m.clave));
   const t = d.transaction(ALMACENES, "readwrite");
