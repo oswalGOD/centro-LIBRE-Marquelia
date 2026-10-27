@@ -20,6 +20,12 @@ export const estado = { conectada: false, cuenta: "", enCurso: false, ultima: nu
 export const avisos = new EventTarget();
 const publicar = () => avisos.dispatchEvent(new Event("estado"));
 
+/** Lee la respuesta como JSON. Supabase contesta algunos envíos con el cuerpo vacío: eso da null. */
+async function leerJson(r) {
+  const texto = await r.text().catch(() => "");
+  try { return texto ? JSON.parse(texto) : null; } catch { return null; }
+}
+
 /* ---------- Cuenta del Centro (Supabase Auth) ---------- */
 async function pedirToken(cuerpo, tipo) {
   const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=${tipo}`, {
@@ -27,7 +33,7 @@ async function pedirToken(cuerpo, tipo) {
     headers: { apikey: SUPABASE_ANON, "Content-Type": "application/json" },
     body: JSON.stringify(cuerpo),
   });
-  const j = await r.json().catch(() => ({}));
+  const j = (await leerJson(r)) || {};
   if (!r.ok) {
     if (r.status === 400 && tipo === "password") throw new Error("Correo o contraseña incorrectos.");
     throw new Error(j.error_description || j.msg || `El servidor respondió ${r.status}.`);
@@ -69,12 +75,12 @@ async function api(ruta, opciones = {}, reintento = false) {
     headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${await token(reintento)}`, "Content-Type": "application/json", ...opciones.headers },
   });
   if (r.status === 401 && !reintento) return api(ruta, opciones, true);
+  const j = await leerJson(r);
   if (!r.ok) {
-    const j = await r.json().catch(() => ({}));
-    if (j.code === "42P01" || r.status === 404) throw new Error("Falta crear la tabla en Supabase (supabase/esquema.sql).");
-    throw new Error(j.message || `El servidor respondió ${r.status}.`);
+    if (j?.code === "42P01" || r.status === 404) throw new Error("Falta crear la tabla en Supabase (supabase/esquema.sql).");
+    throw new Error(j?.message || `El servidor respondió ${r.status}.`);
   }
-  return r.status === 204 || r.status === 201 ? null : r.json();
+  return j;
 }
 
 /* ---------- Envío ---------- */
