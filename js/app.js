@@ -6,6 +6,7 @@ import * as db from "./core/db.js";
 import { ROLES } from "./core/catalogos.js";
 import { crearUsuaria, iniciarSesion, cerrarSesion, sesionActual, verificarPin, pinValido, esCoordinadora } from "./core/auth.js";
 import { $, $$, esc, aviso, errores, leerCampos } from "./core/ui.js";
+import * as nube from "./core/sync.js";
 import actividades from "./modulos/actividades.js";
 import padron from "./modulos/padron.js";
 import estadisticas from "./modulos/estadisticas.js";
@@ -28,7 +29,7 @@ function pintar(titulo, contenido, { atras, ancho } = {}) {
         <nav class="menu" aria-label="Secciones">
           ${menu.map(i => `<a href="${i.href}" ${i.activa.test(ruta) ? 'aria-current="page"' : ""}>${esc(i.texto)}</a>`).join("")}
         </nav>
-        <div class="who"><span class="avatar" aria-hidden="true">${esc(yo.nombre[0] || "?")}</span><span><b>${esc(yo.nombre.split(" ")[0])}</b><small>${esc(yo.rol)}</small></span>
+        <div class="who"><a class="sync-pill" id="nube" href="#/ajustes" hidden></a><span class="avatar" aria-hidden="true">${esc(yo.nombre[0] || "?")}</span><span><b>${esc(yo.nombre.split(" ")[0])}</b><small>${esc(yo.rol)}</small></span>
           <button class="btn small ghost" id="salir">Salir</button></div>
       </div>
     </header>
@@ -40,9 +41,28 @@ function pintar(titulo, contenido, { atras, ancho } = {}) {
       <div id="contenido" class="stack">${contenido}</div>
     </main>`;
   $("#salir").onclick = () => { cerrarSesion(); location.hash = "#/"; router(); };
+  pintarNube();
   window.scrollTo({ top: 0 });
   return $("#contenido");
 }
+
+/** Indicador de sincronización en la barra superior. */
+function pintarNube() {
+  const el = $("#nube");
+  if (!el) return;
+  const e = nube.estado;
+  el.hidden = !e.conectada;
+  const [clase, texto] = e.enCurso ? ["busy", "Sincronizando…"]
+    : e.sinInternet ? ["off", e.pendientes ? `Sin internet · ${e.pendientes} por enviar` : "Sin internet"]
+    : e.error ? ["warn", "No se pudo sincronizar"]
+    : e.pendientes ? ["busy", `${e.pendientes} por enviar`]
+    : ["ok", "Sincronizado"];
+  el.className = `sync-pill ${clase}`;
+  el.innerHTML = `<span class="sync-text">${esc(texto)}</span>`;
+  el.setAttribute("aria-label", texto);
+  el.title = [texto, e.error || (e.ultima ? `Última sincronización: ${new Date(e.ultima).toLocaleString("es-MX")}` : "")].filter(Boolean).join(" · ");
+}
+nube.avisos.addEventListener("estado", pintarNube);
 
 const contexto = () => ({ yo, pintar, ir: h => (location.hash = h), recargar: router });
 
@@ -68,29 +88,58 @@ async function router() {
   }
 }
 
-/* ---------- Primer uso: crear a la Coordinadora ---------- */
+/* ---------- Primer uso ---------- */
 function primerUso() {
   raiz.innerHTML = `
   <main class="auth">
     <div class="auth-card stack">
       <div class="auth-brand"><span class="mark" aria-hidden="true">L</span><div><h1>Centro LIBRE Marquelia</h1><p class="hint">Listas de asistencia</p></div></div>
       <h2>Configura este dispositivo</h2>
-      <p class="hint">Crea la cuenta de la Coordinadora. Después ella podrá dar de alta a la Psicóloga y a la Abogada.</p>
-      <div class="grid" id="f">
-        <div class="field span-2"><label for="c-nombre">Nombre completo de la Coordinadora</label><input id="c-nombre" data-campo="nombre" autocomplete="name"></div>
-        <div class="field"><label for="c-pin">PIN de 4 a 6 números</label><input id="c-pin" data-campo="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>
-        <div class="field"><label for="c-pin2">Repite el PIN</label><input id="c-pin2" data-campo="pin2" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>
-        <div class="field"><label for="c-prefijo">Prefijo de folio</label><input id="c-prefijo" data-campo="prefijo" class="upper" value="MAR" maxlength="5"></div>
-        <div class="field"><label for="c-codigo">Letra de este dispositivo</label><input id="c-codigo" data-campo="codigo" class="upper" value="A" maxlength="1"><span class="note">Usa otra letra en cada tableta o computadora (A, B, C…) para que los folios nunca se repitan.</span></div>
+      <div class="field"><label for="c-codigo">Letra de este dispositivo</label><input id="c-codigo" class="upper" value="A" maxlength="1">
+        <span class="note">Usa una letra distinta en cada tableta o computadora (A, B, C…). Va en el folio para que nunca se repita.</span></div>
+      <div class="segmented wide" role="tablist">
+        <button type="button" role="tab" data-modo="nuevo" aria-selected="true">Primer dispositivo</button>
+        <button type="button" role="tab" data-modo="unir" aria-selected="false">Ya la usamos en otro</button>
       </div>
+
+      <section class="stack" data-panel="nuevo">
+        <p class="hint">Crea la cuenta de la Coordinadora. Después ella podrá dar de alta a la Psicóloga y a la Abogada.</p>
+        <div class="grid" id="f">
+          <div class="field span-2"><label for="c-nombre">Nombre completo de la Coordinadora</label><input id="c-nombre" data-campo="nombre" autocomplete="name"></div>
+          <div class="field"><label for="c-pin">PIN de 4 a 6 números</label><input id="c-pin" data-campo="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>
+          <div class="field"><label for="c-pin2">Repite el PIN</label><input id="c-pin2" data-campo="pin2" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>
+          <div class="field"><label for="c-prefijo">Prefijo de folio</label><input id="c-prefijo" data-campo="prefijo" class="upper" value="MAR" maxlength="5"></div>
+        </div>
+        <div class="actions"><button class="btn primary" id="crear">Crear cuenta y empezar</button></div>
+      </section>
+
+      <section class="stack" data-panel="unir" hidden>
+        <p class="hint">Entra con la cuenta del Centro para traer usuarias, padrón y actividades de los otros dispositivos. Necesitas internet solo para este paso.</p>
+        <div class="grid">
+          <div class="field span-2"><label for="n-correo">Correo de la cuenta del Centro</label><input id="n-correo" type="email" autocomplete="username"></div>
+          <div class="field span-2"><label for="n-clave">Contraseña</label><input id="n-clave" type="password" autocomplete="current-password"></div>
+        </div>
+        <div class="actions"><button class="btn primary" id="unir">Conectar y descargar datos</button></div>
+        <details class="restore"><summary>Sin internet: cargar un respaldo</summary>
+          <p class="hint">Elige el archivo de respaldo (.json) que descargó la Coordinadora.</p>
+          <input type="file" id="archivo" accept="application/json,.json">
+        </details>
+      </section>
       <div id="err"></div>
-      <div class="actions"><button class="btn primary" id="crear">Crear cuenta y empezar</button></div>
-      <details class="restore"><summary>¿Ya tienes un respaldo de otro dispositivo?</summary>
-        <p class="hint">Elige el archivo de respaldo (.json) para cargar usuarias, padrón y actividades.</p>
-        <input type="file" id="archivo" accept="application/json,.json">
-      </details>
     </div>
   </main>`;
+
+  $$("[data-modo]").forEach(b => (b.onclick = () => {
+    $$("[data-modo]").forEach(x => x.setAttribute("aria-selected", x === b));
+    $$("[data-panel]").forEach(p => (p.hidden = p.dataset.panel !== b.dataset.modo));
+    $("#err").innerHTML = "";
+  }));
+
+  const letra = () => {
+    const l = $("#c-codigo").value.trim().toUpperCase();
+    return /^[A-Z]$/.test(l) ? l : null;
+  };
+
   $("#crear").onclick = async () => {
     const d = leerCampos($("#f"));
     const e = [];
@@ -98,19 +147,40 @@ function primerUso() {
     if (!pinValido(d.pin)) e.push("El PIN debe tener de 4 a 6 números.");
     else if (d.pin !== d.pin2) e.push("Los dos PIN no coinciden.");
     if (!/^[A-Z]{2,5}$/i.test(d.prefijo)) e.push("El prefijo de folio debe tener de 2 a 5 letras.");
-    if (!/^[A-Z]$/i.test(d.codigo)) e.push("La letra del dispositivo debe ser una sola letra.");
+    if (!letra()) e.push("La letra del dispositivo debe ser una sola letra.");
     errores($("#err"), e);
     if (e.length) return;
     await db.escribirMeta("prefijoFolio", d.prefijo.toUpperCase());
-    await db.escribirMeta("codigoDispositivo", d.codigo.toUpperCase());
+    await db.escribirMeta("codigoDispositivo", letra());
     const u = await crearUsuaria({ nombre: d.nombre, rol: "Coordinadora", pin: d.pin });
     iniciarSesion(u);
     aviso("Cuenta creada");
     location.hash = "#/";
     router();
   };
-  $("#archivo").onchange = async ev => {
+
+  $("#unir").onclick = async ev => {
+    if (!letra()) return errores($("#err"), ["La letra del dispositivo debe ser una sola letra."]);
+    ev.target.disabled = true;
+    ev.target.textContent = "Conectando…";
     try {
+      await db.escribirMeta("codigoDispositivo", letra());
+      await nube.conectar($("#n-correo").value, $("#n-clave").value);
+      await nube.sincronizar();
+      if (!(await db.todos("usuarias")).length) throw new Error("La cuenta del Centro todavía no tiene datos. Configura primero el dispositivo principal y sincronízalo.");
+      aviso("Datos descargados. Entra con tu PIN.");
+      router();
+    } catch (e) {
+      errores($("#err"), [e.message]);
+      ev.target.disabled = false;
+      ev.target.textContent = "Conectar y descargar datos";
+    }
+  };
+
+  $("#archivo").onchange = async ev => {
+    if (!letra()) return errores($("#err"), ["La letra del dispositivo debe ser una sola letra."]);
+    try {
+      await db.escribirMeta("codigoDispositivo", letra());
       await db.importar(JSON.parse(await ev.target.files[0].text()));
       aviso("Respaldo cargado. Entra con tu PIN.");
       router();
@@ -167,3 +237,8 @@ function entrar(lista) {
 window.addEventListener("hashchange", router);
 navigator.storage?.persist?.();
 router();
+
+// Si llegan datos de otro dispositivo, se refresca la pantalla salvo que se esté llenando un formulario
+nube.iniciarAutomatica(() => {
+  if (!/(registrar|editar|nueva|ajustes|usuarias)/.test(location.hash) && !document.querySelector("#pinForm:not([hidden])")) router();
+});

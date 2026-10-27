@@ -167,6 +167,18 @@ a.row:hover { border-color: var(--accent); }
 .results button:hover, .results button:focus-visible { background: var(--accent-soft); }
 .results small { color: var(--muted); }
 
+/* ---------- Sincronización ---------- */
+.sync-pill { display: inline-flex; align-items: center; gap: 6px; font-size: .8rem; font-weight: 700; padding: 4px 10px; border-radius: 999px; text-decoration: none; white-space: nowrap; background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); }
+.sync-pill .sync-text { color: var(--ink); }
+@media (max-width: 1180px) { .sync-pill .sync-text { display: none; } .sync-pill { padding: 8px; } }
+.sync-pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.sync-pill.ok { color: var(--ok); }
+.sync-pill.busy { color: var(--gold); }
+.sync-pill.warn { color: var(--warn); }
+.segmented.wide { display: flex; }
+.segmented.wide button { flex: 1; }
+.segmented [aria-selected="true"] { background: var(--accent); color: var(--accent-ink); }
+
 /* ---------- Estadísticas ---------- */
 .filters { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: end; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
 .filters .field { flex: 1 1 160px; }
