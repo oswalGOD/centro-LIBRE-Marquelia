@@ -8,10 +8,11 @@ import { crearUsuaria, iniciarSesion, cerrarSesion, sesionActual, verificarPin, 
 import { $, $$, esc, aviso, errores, leerCampos } from "./core/ui.js";
 import actividades from "./modulos/actividades.js";
 import padron from "./modulos/padron.js";
+import estadisticas from "./modulos/estadisticas.js";
 import usuarias from "./modulos/usuarias.js";
 import ajustes from "./modulos/ajustes.js";
 
-const MODULOS = [actividades, padron, usuarias, ajustes];
+const MODULOS = [actividades, padron, estadisticas, usuarias, ajustes];
 
 const raiz = document.getElementById("app");
 let yo = null;
