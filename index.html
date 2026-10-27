@@ -32,8 +32,10 @@
       document.getElementById("recargar").onclick = () => {
         navigator.serviceWorker.getRegistration().then(r => r?.waiting?.postMessage("activar"));
       };
+      // Recarga solo al actualizar una versión ya instalada, no en la primera visita
+      const habiaVersion = !!navigator.serviceWorker.controller;
       let recargando = false;
-      navigator.serviceWorker.addEventListener("controllerchange", () => { if (!recargando) { recargando = true; location.reload(); } });
+      navigator.serviceWorker.addEventListener("controllerchange", () => { if (habiaVersion && !recargando) { recargando = true; location.reload(); } });
     }
   </script>
 </body>

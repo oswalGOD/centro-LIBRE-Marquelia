@@ -4,8 +4,9 @@ import * as db from "../core/db.js";
 import { esCoordinadora, cambiarPin, pinValido, verificarPin } from "../core/auth.js";
 import { hoy } from "../core/catalogos.js";
 import { $, esc, aviso, errores, descargar, dobleToque, plural } from "../core/ui.js";
+import * as nube from "../core/sync.js";
 
-export const VERSION_APP = "0.3.0";
+export const VERSION_APP = "0.4.0";
 
 let eventoInstalar = null;
 addEventListener("beforeinstallprompt", e => { e.preventDefault(); eventoInstalar = e; });
@@ -18,6 +19,9 @@ async function vista(ctx) {
   const ultimoRespaldo = await db.leerMeta("ultimoRespaldo");
   const [acts, personas, asis] = await Promise.all(["actividades", "personas", "asistencias"].map(a => db.todos(a)));
   const persistente = await navigator.storage?.persisted?.();
+  await nube.actualizarEstado();
+  const e = nube.estado;
+  const avisoLetra = await db.leerMeta("avisoLetra");
   const estimado = await navigator.storage?.estimate?.();
   const instalada = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
   const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -29,6 +33,31 @@ async function vista(ctx) {
       ${ios ? "" : `<div class="actions"><button class="btn primary" id="instalar">Instalar app</button></div>`}
     </section>`}
 
+    <section class="panel stack" id="sincronizacion">
+      <h2 class="h3">Sincronización entre dispositivos</h2>
+      ${e.conectada ? `
+        <dl class="facts">
+          <div><dt>Cuenta del Centro</dt><dd>${esc(e.cuenta)}</dd></div>
+          <div><dt>Estado</dt><dd>${e.sinInternet ? `<span class="chip">Sin internet</span>` : e.error ? `<span class="chip warn">Con error</span>` : `<span class="chip ok">Activa</span>`}</dd></div>
+          <div><dt>Cambios por enviar</dt><dd>${e.pendientes}</dd></div>
+          <div><dt>Última sincronización</dt><dd>${e.ultima ? new Date(e.ultima).toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" }) : "Todavía no"}</dd></div>
+        </dl>
+        ${e.error ? `<div class="issues">${esc(e.error)}</div>` : ""}
+        ${avisoLetra ? `<div class="issues"><b>Otro dispositivo también usa la letra ${esc(codigo)} en sus folios.</b> ${coord ? "Cambia la letra de este dispositivo abajo, en Folios." : "Pide a la Coordinadora que cambie la letra de este dispositivo."}</div>` : ""}
+        <p class="hint">Se sincroniza sola al abrir la app, al volver el internet, unos segundos después de cada cambio y cada 5 minutos.</p>
+        <div class="actions"><button class="btn primary" id="sincronizar">Sincronizar ahora</button>
+          ${coord ? `<button class="btn ghost danger" id="desconectar">Desconectar este dispositivo</button>` : ""}</div>`
+      : coord ? `
+        <p class="hint">Conecta este dispositivo con la cuenta del Centro para compartir usuarias, padrón y actividades con las demás tabletas y computadoras.</p>
+        <div class="grid">
+          <div class="field"><label for="n-correo">Correo de la cuenta del Centro</label><input id="n-correo" type="email" autocomplete="username"></div>
+          <div class="field"><label for="n-clave">Contraseña</label><input id="n-clave" type="password" autocomplete="current-password"></div>
+        </div>
+        <div id="errNube"></div>
+        <div class="actions"><button class="btn primary" id="conectar">Conectar y sincronizar</button></div>`
+      : `<p class="hint">Este dispositivo no está conectado. Pide a la Coordinadora que lo conecte desde Ajustes con la cuenta del Centro.</p>`}
+    </section>
+
     <section class="panel stack">
       <h2 class="h3">Datos en este dispositivo</h2>
       <dl class="facts">
@@ -39,7 +68,7 @@ async function vista(ctx) {
         <div><dt>Almacenamiento protegido</dt><dd>${persistente ? `<span class="chip ok">Sí</span>` : `<span class="chip warn">No</span>`}</dd></div>
         <div><dt>Último respaldo</dt><dd>${ultimoRespaldo ? new Date(ultimoRespaldo).toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" }) : `<span class="chip warn">Nunca</span>`}</dd></div>
       </dl>
-      <p class="hint">Mientras no esté activa la sincronización, los datos viven solo en este dispositivo.${coord ? " Descarga un respaldo al terminar cada actividad y guárdalo en otro lugar (USB, correo o nube)." : " La Coordinadora es quien descarga los respaldos, porque incluyen datos de todas las actividades."}</p>
+      <p class="hint">${e.conectada ? "Los datos también se guardan en la cuenta del Centro." : "Mientras no esté activa la sincronización, los datos viven solo en este dispositivo."}${coord ? " Descarga un respaldo al terminar cada actividad y guárdalo en otro lugar (USB, correo o nube)." : " La Coordinadora es quien descarga los respaldos, porque incluyen datos de todas las actividades."}</p>
       ${coord ? `<div class="actions">
         <button class="btn primary" id="respaldo">Descargar respaldo</button>
         <label class="btn" for="restaurar">Restaurar desde respaldo</label><input type="file" id="restaurar" accept="application/json,.json" class="visually-hidden">
@@ -69,6 +98,36 @@ async function vista(ctx) {
     </section>
     <p class="hint">Versión ${VERSION_APP}</p>
   `);
+
+  $("#sincronizar", c)?.addEventListener("click", async ev => {
+    ev.target.disabled = true;
+    ev.target.textContent = "Sincronizando…";
+    try {
+      const r = await nube.sincronizar();
+      aviso(r.recibidos ? `Sincronizado · ${plural(r.recibidos, "cambio recibido", "cambios recibidos")}` : "Todo está al día");
+    } catch {}
+    vista(ctx);
+  });
+  $("#conectar", c)?.addEventListener("click", async ev => {
+    ev.target.disabled = true;
+    ev.target.textContent = "Conectando…";
+    try {
+      await nube.conectar($("#n-correo", c).value, $("#n-clave", c).value);
+      await nube.sincronizar();
+      aviso("Dispositivo conectado y sincronizado");
+      vista(ctx);
+    } catch (err) {
+      errores($("#errNube", c), [err.message]);
+      ev.target.disabled = false;
+      ev.target.textContent = "Conectar y sincronizar";
+    }
+  });
+  const desconectar = $("#desconectar", c);
+  if (desconectar) dobleToque(desconectar, "Toca otra vez para desconectar", async () => {
+    await nube.desconectar();
+    aviso("Dispositivo desconectado. Los datos siguen guardados aquí.");
+    vista(ctx);
+  });
 
   $("#instalar", c)?.addEventListener("click", async () => {
     if (!eventoInstalar) return aviso("Usa el menú del navegador y elige “Instalar app” o “Agregar a pantalla de inicio”.");
@@ -111,6 +170,7 @@ async function vista(ctx) {
     errores($("#errFolio", c), e);
     if (e.length) return;
     await db.escribirMeta("prefijoFolio", p);
+    if (l !== codigo) await db.escribirMeta("avisoLetra", false);
     await db.escribirMeta("codigoDispositivo", l);
     aviso("Folios actualizados");
     vista(ctx);
