@@ -2,11 +2,11 @@
 
 import * as db from "../core/db.js";
 import { esCoordinadora, cambiarPin, pinValido, verificarPin } from "../core/auth.js";
-import { hoy } from "../core/catalogos.js";
+import { hoy, prefijoFolio } from "../core/catalogos.js";
 import { $, esc, aviso, errores, descargar, dobleToque, plural } from "../core/ui.js";
 import * as nube from "../core/sync.js";
 
-export const VERSION_APP = "0.8.0";
+export const VERSION_APP = "0.8.1";
 
 let eventoInstalar = null;
 addEventListener("beforeinstallprompt", e => { e.preventDefault(); eventoInstalar = e; });
@@ -14,7 +14,6 @@ addEventListener("beforeinstallprompt", e => { e.preventDefault(); eventoInstala
 async function vista(ctx) {
   const { yo, pintar } = ctx;
   const coord = esCoordinadora(yo);
-  const prefijo = await db.leerMeta("prefijoFolio", "MAR");
   const codigo = await db.leerMeta("codigoDispositivo", "A");
   const ultimoRespaldo = await db.leerMeta("ultimoRespaldo");
   const [acts, usuarias, asis] = await Promise.all(["actividades", "usuarias", "asistencias"].map(a => db.todos(a)));
@@ -79,10 +78,9 @@ async function vista(ctx) {
     ${coord ? `<section class="panel stack">
       <h2 class="h3">Folios</h2>
       <div class="grid" id="f">
-        <div class="field"><label for="prefijo">Prefijo</label><input id="prefijo" class="upper" maxlength="5" value="${esc(prefijo)}"></div>
         <div class="field"><label for="codigo">Letra de este dispositivo</label><input id="codigo" class="upper" maxlength="1" value="${esc(codigo)}"></div>
       </div>
-      <p class="hint">Próximo folio: <b class="mono" id="ejemplo">${esc(prefijo)}-${hoy().slice(0, 4)}-${esc(codigo)}…</b>. Usa una letra distinta en cada tableta o computadora.</p>
+      <p class="hint">El folio toma el mes y el año de la actividad y lleva un consecutivo por mes, p. ej. <b class="mono">${prefijoFolio(hoy())}-${esc(codigo)}001</b>. Usa una letra distinta en cada tableta o computadora.</p>
       <div id="errFolio"></div>
       <div class="actions"><button class="btn" id="guardarFolio">Guardar</button></div>
     </section>` : ""}
@@ -164,13 +162,11 @@ async function vista(ctx) {
   });
 
   $("#guardarFolio", c)?.addEventListener("click", async () => {
-    const p = $("#prefijo", c).value.trim().toUpperCase(), l = $("#codigo", c).value.trim().toUpperCase();
+    const l = $("#codigo", c).value.trim().toUpperCase();
     const e = [];
-    if (!/^[A-Z]{2,5}$/.test(p)) e.push("El prefijo debe tener de 2 a 5 letras.");
     if (!/^[A-Z]$/.test(l)) e.push("La letra del dispositivo debe ser una sola letra.");
     errores($("#errFolio", c), e);
     if (e.length) return;
-    await db.escribirMeta("prefijoFolio", p);
     if (l !== codigo) await db.escribirMeta("avisoLetra", false);
     await db.escribirMeta("codigoDispositivo", l);
     aviso("Folios actualizados");
