@@ -23,7 +23,7 @@ Es una app web instalable (PWA): se instala desde el navegador en Windows, Andro
 2. **Authentication → Users → Add user → Create new user**: crea la cuenta del Centro (un correo y una contraseña segura) y marca **Auto Confirm User**.
 3. **Authentication → Sign In / Providers**: desactiva **Allow new users to sign up**, para que nadie más pueda crear cuentas.
 4. Ejecuta [`supabase/blindaje.sql`](supabase/blindaje.sql) cambiando antes el correo de ejemplo por el de la cuenta del Centro: solo esa cuenta podrá leer o escribir datos.
-5. En cada tableta o computadora, la primera pantalla pide la cuenta del Centro y una letra distinta. Si la nube todavía no tiene perfiles, después se crea el de la Coordinadora.
+5. En cada tableta o computadora, la primera pantalla pide la cuenta del Centro y un ID de dispositivo distinto (una letra). Si la nube todavía no tiene perfiles, después se crea el de la Coordinadora.
 
 **Si la tabla ya existía antes de la versión 0.5:** actualiza la app en todos los dispositivos y luego ejecuta una vez [`supabase/migracion-0.5.sql`](supabase/migracion-0.5.sql), que cambia los nombres de los registros ya guardados.
 
@@ -42,7 +42,7 @@ La dirección del proyecto y la clave pública están en `js/core/config.js`. Es
 
 - Si dos dispositivos cambian el mismo registro, gana el cambio más reciente.
 - Si dos dispositivos dan de alta a la misma usuaria (misma CURP) sin conexión, se fusionan en una sola y sus asistencias pasan a la que queda.
-- Los folios llevan la letra del dispositivo, así que no se repiten. Si dos dispositivos usan la misma letra, Ajustes lo avisa.
+- Los folios llevan el ID del dispositivo, así que no se repiten. Si dos dispositivos usan el mismo ID, Ajustes lo avisa.
 
 ## Probar en tu computadora
 

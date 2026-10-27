@@ -66,7 +66,7 @@ main.wrap.wide { max-width: 1240px; }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); }
 .brand b { display: block; font-family: var(--f-display); color: var(--accent); line-height: 1.1; }
 .brand small { display: block; color: var(--muted); font-size: .8rem; line-height: 1.1; }
-.mark { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: var(--accent); color: var(--accent-ink); font-family: var(--f-display); font-weight: 700; font-size: 1.2rem; flex: none; }
+.mark { display: block; width: 36px; height: 36px; border-radius: 10px; object-fit: cover; flex: none; }
 .menu { display: flex; gap: 4px; overflow-x: auto; order: 3; width: 100%; }
 .menu a { padding: 8px 14px; border-radius: 10px; font-weight: 700; color: var(--muted); text-decoration: none; white-space: nowrap; }
 .menu a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
@@ -239,7 +239,7 @@ table.data tbody tr:hover { background: var(--surface-2); }
 .auth { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 24px max(16px, env(safe-area-inset-left, 0px)); }
 .auth-card { width: 100%; max-width: 560px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 28px; }
 .auth-brand { display: flex; gap: 14px; align-items: center; }
-.auth-brand .mark { width: 48px; height: 48px; font-size: 1.5rem; border-radius: 14px; }
+.auth-brand .mark { width: 48px; height: 48px; border-radius: 14px; }
 .auth-brand h1 { font-size: 1.35rem; color: var(--accent); }
 .people { display: grid; gap: 8px; }
 .person-btn { display: flex; gap: 12px; align-items: center; text-align: left; border: 1.5px solid var(--line); background: var(--surface-2); border-radius: var(--radius); padding: 12px 14px; cursor: pointer; }

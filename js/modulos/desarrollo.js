@@ -45,8 +45,8 @@ async function vista(ctx) {
     app: VERSION_APP,
     cache: cachesActivas,
     serviceWorker: sw?.active ? "activo" : "no",
-    dispositivo: await db.idDispositivo(),
-    letra: await db.leerMeta("codigoDispositivo", "A"),
+    dispositivo: await db.uuidDispositivo(),
+    idDispositivo: await db.leerMeta("idDispositivo", "A"),
     navegador: navigator.userAgent,
     pantalla: `${screen.width}×${screen.height} @${devicePixelRatio}`,
     almacenamientoMB: estimado ? +(estimado.usage / 1048576).toFixed(2) : null,
@@ -67,7 +67,7 @@ async function vista(ctx) {
       <dl class="facts">
         <div><dt>Versión</dt><dd>${esc(VERSION_APP)}</dd></div>
         <div><dt>Caché instalada</dt><dd class="mono">${esc(cachesActivas.join(", ") || "ninguna")}</dd></div>
-        <div><dt>Dispositivo</dt><dd>Letra ${esc(diagnostico.letra)} · <span class="mono">${esc(diagnostico.dispositivo.slice(0, 8))}</span></dd></div>
+        <div><dt>Dispositivo</dt><dd>ID ${esc(diagnostico.idDispositivo)} · <span class="mono">${esc(diagnostico.dispositivo.slice(0, 8))}</span></dd></div>
         <div><dt>Espacio usado</dt><dd>${diagnostico.almacenamientoMB ?? "?"} MB de ${diagnostico.cuotaMB ?? "?"} MB</dd></div>
         <div><dt>Almacenamiento protegido</dt><dd>${persistente ? `<span class="chip ok">Sí</span>` : `<span class="chip warn">No</span>`}</dd></div>
         ${ALMACENES_DATOS.map(a => `<div><dt>${a}</dt><dd>${conteos[a].vigentes}${conteos[a].borrados ? ` <small class="hint">+ ${conteos[a].borrados} borrados</small>` : ""}</dd></div>`).join("")}
@@ -116,7 +116,7 @@ async function vista(ctx) {
     <div class="actions"><button class="btn ghost" id="cerrar">Cerrar sección de desarrollo</button></div>
   `, { atras: "#/ajustes" });
 
-  $("#descargarDiag", c).onclick = () => descargar(`diagnostico-${diagnostico.letra}-${diagnostico.generado.slice(0, 10)}.json`, JSON.stringify(diagnostico, null, 2));
+  $("#descargarDiag", c).onclick = () => descargar(`diagnostico-${diagnostico.idDispositivo}-${diagnostico.generado.slice(0, 10)}.json`, JSON.stringify(diagnostico, null, 2));
   $("#proteger", c)?.addEventListener("click", async () => {
     const ok = await navigator.storage?.persist?.();
     aviso(ok ? "Almacenamiento protegido" : "El navegador no lo permitió. Instalar la app suele ayudar.");

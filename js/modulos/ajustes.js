@@ -6,7 +6,7 @@ import { hoy, prefijoFolio } from "../core/catalogos.js";
 import { $, esc, aviso, errores, descargar, dobleToque, plural } from "../core/ui.js";
 import * as nube from "../core/sync.js";
 
-export const VERSION_APP = "0.9.0";
+export const VERSION_APP = "0.9.1";
 
 let eventoInstalar = null;
 addEventListener("beforeinstallprompt", e => { e.preventDefault(); eventoInstalar = e; });
@@ -14,13 +14,13 @@ addEventListener("beforeinstallprompt", e => { e.preventDefault(); eventoInstala
 async function vista(ctx) {
   const { yo, pintar } = ctx;
   const coord = esCoordinadora(yo);
-  const codigo = await db.leerMeta("codigoDispositivo", "A");
+  const idDisp = await db.leerMeta("idDispositivo", "A");
   const ultimoRespaldo = await db.leerMeta("ultimoRespaldo");
   const [acts, usuarias, asis] = await Promise.all(["actividades", "usuarias", "asistencias"].map(a => db.todos(a)));
   const persistente = await navigator.storage?.persisted?.();
   await nube.actualizarEstado();
   const e = nube.estado;
-  const avisoLetra = await db.leerMeta("avisoLetra");
+  const avisoIdRepetido = await db.leerMeta("avisoIdRepetido");
   const estimado = await navigator.storage?.estimate?.();
   const instalada = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
   const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -42,7 +42,7 @@ async function vista(ctx) {
           <div><dt>Última sincronización</dt><dd>${e.ultima ? new Date(e.ultima).toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" }) : "Todavía no"}</dd></div>
         </dl>
         ${e.error ? `<div class="issues">${esc(e.error)}</div>` : ""}
-        ${avisoLetra ? `<div class="issues"><b>Otro dispositivo también usa la letra ${esc(codigo)} en sus folios.</b> ${coord ? "Cambia la letra de este dispositivo abajo, en Folios." : "Pide a la Coordinadora que cambie la letra de este dispositivo."}</div>` : ""}
+        ${avisoIdRepetido ? `<div class="issues"><b>Otro dispositivo también usa el ID ${esc(idDisp)} en sus folios.</b> ${coord ? "Cambia el ID de este dispositivo abajo, en Folios." : "Pide a la Coordinadora que cambie el ID de este dispositivo."}</div>` : ""}
         <p class="hint">Se sincroniza sola al abrir la app, al volver el internet, unos segundos después de cada cambio y cada 5 minutos.</p>
         <div class="actions"><button class="btn primary" id="sincronizar">Sincronizar ahora</button>
           ${coord ? `<button class="btn ghost danger" id="desconectar">Desconectar este dispositivo</button>` : ""}</div>`
@@ -78,9 +78,9 @@ async function vista(ctx) {
     ${coord ? `<section class="panel stack">
       <h2 class="h3">Folios</h2>
       <div class="grid" id="f">
-        <div class="field"><label for="codigo">Letra de este dispositivo</label><input id="codigo" class="upper" maxlength="1" value="${esc(codigo)}"></div>
+        <div class="field"><label for="idDisp">ID de este dispositivo</label><input id="idDisp" class="upper" maxlength="1" value="${esc(idDisp)}"></div>
       </div>
-      <p class="hint">El folio toma el mes y el año de la actividad y lleva un consecutivo por mes, p. ej. <b class="mono">${prefijoFolio(hoy())}-${esc(codigo)}001</b>. Usa una letra distinta en cada tableta o computadora.</p>
+      <p class="hint">El folio toma el mes y el año de la actividad y lleva un consecutivo por mes, p. ej. <b class="mono">${prefijoFolio(hoy())}-${esc(idDisp)}001</b>. Usa un ID (una letra) distinto en cada tableta o computadora.</p>
       <div id="errFolio"></div>
       <div class="actions"><button class="btn" id="guardarFolio">Guardar</button></div>
     </section>` : ""}
@@ -162,13 +162,13 @@ async function vista(ctx) {
   });
 
   $("#guardarFolio", c)?.addEventListener("click", async () => {
-    const l = $("#codigo", c).value.trim().toUpperCase();
+    const l = $("#idDisp", c).value.trim().toUpperCase();
     const e = [];
-    if (!/^[A-Z]$/.test(l)) e.push("La letra del dispositivo debe ser una sola letra.");
+    if (!/^[A-Z]$/.test(l)) e.push("El ID del dispositivo debe ser una sola letra (A, B, C…).");
     errores($("#errFolio", c), e);
     if (e.length) return;
-    if (l !== codigo) await db.escribirMeta("avisoLetra", false);
-    await db.escribirMeta("codigoDispositivo", l);
+    if (l !== idDisp) await db.escribirMeta("avisoIdRepetido", false);
+    await db.escribirMeta("idDispositivo", l);
     aviso("Folios actualizados");
     vista(ctx);
   });
