@@ -2,10 +2,10 @@
 -- Ejecútalo una sola vez en Supabase → SQL Editor → New query → Run.
 -- Es seguro volver a ejecutarlo: no borra datos.
 
--- Todos los registros de la app (usuarias, personas, actividades, asistencias)
+-- Todos los registros de la app (perfiles, usuarias, actividades, asistencias)
 -- en una sola tabla. Cada fila es un registro tal como se guarda en el dispositivo.
 create table if not exists public.registros (
-  almacen      text        not null,              -- usuarias (perfiles) | personas | actividades | asistencias
+  almacen      text        not null,              -- perfiles | usuarias | actividades | asistencias
   id           text        not null,
   datos        jsonb       not null,              -- el registro completo
   actualizado  bigint      not null,              -- hora del cambio en el dispositivo (ms)

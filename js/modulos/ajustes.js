@@ -6,7 +6,7 @@ import { hoy } from "../core/catalogos.js";
 import { $, esc, aviso, errores, descargar, dobleToque, plural } from "../core/ui.js";
 import * as nube from "../core/sync.js";
 
-export const VERSION_APP = "0.4.3";
+export const VERSION_APP = "0.5.0";
 
 let eventoInstalar = null;
 addEventListener("beforeinstallprompt", e => { e.preventDefault(); eventoInstalar = e; });
@@ -17,7 +17,7 @@ async function vista(ctx) {
   const prefijo = await db.leerMeta("prefijoFolio", "MAR");
   const codigo = await db.leerMeta("codigoDispositivo", "A");
   const ultimoRespaldo = await db.leerMeta("ultimoRespaldo");
-  const [acts, personas, asis] = await Promise.all(["actividades", "personas", "asistencias"].map(a => db.todos(a)));
+  const [acts, usuarias, asis] = await Promise.all(["actividades", "usuarias", "asistencias"].map(a => db.todos(a)));
   const persistente = await navigator.storage?.persisted?.();
   await nube.actualizarEstado();
   const e = nube.estado;
@@ -48,7 +48,7 @@ async function vista(ctx) {
         <div class="actions"><button class="btn primary" id="sincronizar">Sincronizar ahora</button>
           ${coord ? `<button class="btn ghost danger" id="desconectar">Desconectar este dispositivo</button>` : ""}</div>`
       : coord ? `
-        <p class="hint">Conecta este dispositivo con la cuenta del Centro para compartir perfiles, padrón y actividades con las demás tabletas y computadoras.</p>
+        <p class="hint">Conecta este dispositivo con la cuenta del Centro para compartir perfiles, usuarias y actividades con las demás tabletas y computadoras.</p>
         <div class="grid">
           <div class="field"><label for="n-correo">Correo de la cuenta del Centro</label><input id="n-correo" type="email" autocomplete="username"></div>
           <div class="field"><label for="n-clave">Contraseña</label><input id="n-clave" type="password" autocomplete="current-password"></div>
@@ -62,7 +62,7 @@ async function vista(ctx) {
       <h2 class="h3">Datos en este dispositivo</h2>
       <dl class="facts">
         <div><dt>Actividades</dt><dd>${acts.length}</dd></div>
-        <div><dt>Personas en padrón</dt><dd>${personas.length}</dd></div>
+        <div><dt>Usuarias</dt><dd>${usuarias.length}</dd></div>
         <div><dt>Registros de asistencia</dt><dd>${asis.length}</dd></div>
         <div><dt>Espacio usado</dt><dd>${estimado ? `${(estimado.usage / 1048576).toFixed(1)} MB` : "No disponible"}</dd></div>
         <div><dt>Almacenamiento protegido</dt><dd>${persistente ? `<span class="chip ok">Sí</span>` : `<span class="chip warn">No</span>`}</dd></div>
@@ -150,11 +150,12 @@ async function vista(ctx) {
     try {
       respaldo = JSON.parse(await ev.target.files[0].text());
       if (respaldo.app !== "centro-libre-marquelia") throw new Error();
+      if ((respaldo.version || 1) < 2) respaldo = { ...respaldo, version: 2, datos: db.convertirV1(respaldo.datos) };
     } catch {
       return errores(caja, ["El archivo no es un respaldo de esta app."]);
     }
     const n = a => (respaldo.datos[a] || []).filter(x => !x.borrado).length;
-    caja.innerHTML = `<div class="confirm"><span>El respaldo del ${new Date(respaldo.exportado).toLocaleDateString("es-MX")} tiene ${plural(n("actividades"), "actividad", "actividades")} y ${plural(n("personas"), "persona", "personas")}. Reemplazará todo lo que hay en este dispositivo.</span><button class="btn danger" id="siRestaurar">Reemplazar datos</button></div>`;
+    caja.innerHTML = `<div class="confirm"><span>El respaldo del ${new Date(respaldo.exportado).toLocaleDateString("es-MX")} tiene ${plural(n("actividades"), "actividad", "actividades")} y ${plural(n("usuarias"), "usuaria", "usuarias")}. Reemplazará todo lo que hay en este dispositivo.</span><button class="btn danger" id="siRestaurar">Reemplazar datos</button></div>`;
     dobleToque($("#siRestaurar", caja), "Toca otra vez para confirmar", async () => {
       await db.importar(respaldo);
       aviso("Datos restaurados");

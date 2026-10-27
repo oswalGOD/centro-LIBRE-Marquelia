@@ -18,13 +18,13 @@ export const pinValido = pin => /^\d{4,6}$/.test(pin);
 
 export async function crearPerfil({ nombre, rol, pin }) {
   const sal = hex(crypto.getRandomValues(new Uint8Array(16)));
-  return db.guardar("usuarias", { id: db.uid(), nombre: nombre.trim(), rol, sal, pin: await derivarPin(pin, sal), activa: true });
+  return db.guardar("perfiles", { id: db.uid(), nombre: nombre.trim(), rol, sal, pin: await derivarPin(pin, sal), activa: true });
 }
 
 export async function cambiarPin(perfil, pin) {
   perfil.sal = hex(crypto.getRandomValues(new Uint8Array(16)));
   perfil.pin = await derivarPin(pin, perfil.sal);
-  return db.guardar("usuarias", perfil);
+  return db.guardar("perfiles", perfil);
 }
 
 export async function verificarPin(perfil, pin) {
@@ -44,7 +44,7 @@ export async function sesionActual() {
   let s = null;
   try { s = JSON.parse(localStorage.getItem(CLAVE_SESION)); } catch (e) {}
   if (!s || s.expira < Date.now()) return null;
-  const u = await db.uno("usuarias", s.id);
+  const u = await db.uno("perfiles", s.id);
   return u && u.activa ? u : null;
 }
 

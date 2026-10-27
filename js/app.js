@@ -8,12 +8,12 @@ import { crearPerfil, iniciarSesion, cerrarSesion, sesionActual, verificarPin, p
 import { $, $$, esc, aviso, errores, leerCampos } from "./core/ui.js";
 import * as nube from "./core/sync.js";
 import actividades from "./modulos/actividades.js";
-import padron from "./modulos/padron.js";
+import usuarias from "./modulos/usuarias.js";
 import estadisticas from "./modulos/estadisticas.js";
 import perfiles from "./modulos/perfiles.js";
 import ajustes from "./modulos/ajustes.js";
 
-const MODULOS = [actividades, padron, estadisticas, perfiles, ajustes];
+const MODULOS = [actividades, usuarias, estadisticas, perfiles, ajustes];
 
 const raiz = document.getElementById("app");
 let yo = null;
@@ -68,7 +68,7 @@ const contexto = () => ({ yo, pintar, ir: h => (location.hash = h), recargar: ro
 
 async function router() {
   try {
-    const lista = await db.todos("usuarias");
+    const lista = await db.todos("perfiles");
     if (!lista.length) return primerUso();
     yo = await sesionActual();
     if (!yo) return entrar(lista.filter(u => u.activa));
@@ -114,7 +114,7 @@ function primerUso() {
       </section>
 
       <section class="stack" data-panel="unir" hidden>
-        <p class="hint">Entra con la cuenta del Centro para traer perfiles, padrón y actividades de los otros dispositivos. Necesitas internet solo para este paso.</p>
+        <p class="hint">Entra con la cuenta del Centro para traer perfiles, usuarias y actividades de los otros dispositivos. Necesitas internet solo para este paso.</p>
         <div class="grid">
           <div class="field span-2"><label for="n-correo">Correo de la cuenta del Centro</label><input id="n-correo" type="email" autocomplete="username"></div>
           <div class="field span-2"><label for="n-clave">Contraseña</label><input id="n-clave" type="password" autocomplete="current-password"></div>
@@ -167,7 +167,7 @@ function primerUso() {
       await db.escribirMeta("codigoDispositivo", letra());
       await nube.conectar($("#n-correo").value, $("#n-clave").value);
       await nube.sincronizar();
-      if (!(await db.todos("usuarias")).length) throw new Error("La cuenta del Centro todavía no tiene datos. Configura primero el dispositivo principal y sincronízalo.");
+      if (!(await db.todos("perfiles")).length) throw new Error("La cuenta del Centro todavía no tiene datos. Configura primero el dispositivo principal y sincronízalo.");
       aviso("Datos descargados. Entra con tu PIN.");
       router();
     } catch (e) {

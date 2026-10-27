@@ -7,7 +7,7 @@ import { $, $$, esc, aviso, errores, leerCampos } from "../core/ui.js";
 
 async function vista(ctx) {
   const { yo, pintar } = ctx;
-  const lista = (await db.todos("usuarias")).sort((a, b) => b.activa - a.activa || ROLES.indexOf(a.rol) - ROLES.indexOf(b.rol));
+  const lista = (await db.todos("perfiles")).sort((a, b) => b.activa - a.activa || ROLES.indexOf(a.rol) - ROLES.indexOf(b.rol));
   const coordinadorasActivas = lista.filter(u => u.activa && u.rol === "Coordinadora").length;
 
   const c = pintar("Perfiles", `
@@ -51,7 +51,7 @@ async function vista(ctx) {
         vista(ctx);
       }
       if (accion === "desactivar" || accion === "activar") {
-        await db.guardar("usuarias", { ...u, activa: accion === "activar" });
+        await db.guardar("perfiles", { ...u, activa: accion === "activar" });
         aviso(accion === "activar" ? "Perfil activado" : "Perfil desactivado. Ya no podrá entrar.");
         if (u.id === yo.id) return ctx.recargar();
         vista(ctx);

@@ -1,4 +1,4 @@
-// Registro de una persona en una actividad: datos, reconocimiento en el padrón y firma.
+// Registro de una persona en una actividad: datos, reconocimiento de usuarias que ya vinieron y firma.
 
 import * as db from "../core/db.js";
 import { GRUPOS, SEXOS, leerCurp, limpiarCurp, edad, rangoDe, etiquetaRango, normalizar } from "../core/catalogos.js";
@@ -13,20 +13,20 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
   if (!act || !puedeEditar(yo, act)) return ir(`#/actividad/${actividadId}`);
   const existente = asistenciaId ? await db.uno("asistencias", asistenciaId) : null;
   if (asistenciaId && !existente) return ir(`#/actividad/${actividadId}`);
-  const padron = await db.todos("personas");
-  const yaEnLista = new Set((await db.todos("asistencias", "actividadId", actividadId)).filter(x => x.id !== asistenciaId).map(x => x.personaId));
+  const registradas = await db.todos("usuarias");
+  const yaEnLista = new Set((await db.todos("asistencias", "actividadId", actividadId)).filter(x => x.id !== asistenciaId).map(x => x.usuariaId));
 
   // Borrador de la persona que se está capturando
   const d = existente
-    ? { ...existente.datos, personaId: existente.personaId, sinCurp: !existente.datos.curp }
-    : { curp: "", nombre: "", fnac: "", sexo: "", lugar: "", grupo: "", ocupacion: "", telefono: "", personaId: null, sinCurp: false };
+    ? { ...existente.datos, usuariaId: existente.usuariaId, sinCurp: !existente.datos.curp }
+    : { curp: "", nombre: "", fnac: "", sexo: "", lugar: "", grupo: "", ocupacion: "", telefono: "", usuariaId: null, sinCurp: false };
 
   const volver = `#/actividad/${actividadId}`;
   const c = pintar(existente ? "Editar asistente" : "Registrar asistente", `
     <p class="hint context">${esc(act.nombre)} · <span class="mono">${esc(act.folio)}</span></p>
     <section class="panel stack">
       ${existente ? "" : `
-      <div class="field search-field"><label for="buscar">Buscar en el padrón por nombre</label>
+      <div class="field search-field"><label for="buscar">Buscar usuaria por nombre</label>
         <input id="buscar" type="search" autocomplete="off" placeholder="Para quien ya vino antes y no trae su CURP">
         <div class="results" id="resultados" hidden></div></div>`}
       <div class="grid">
@@ -74,7 +74,7 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
 
   function reconocer(p) {
     CAMPOS.forEach(k => (d[k] = p[k] || ""));
-    d.personaId = p.id;
+    d.usuariaId = p.id;
     d.sinCurp = !p.curp;
     $("#sinCurp", c).checked = d.sinCurp;
     const visitas = p.visitas ?? 0;
@@ -82,7 +82,7 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
     r.hidden = false;
     r.innerHTML = yaEnLista.has(p.id)
       ? `<div class="issues"><b>${esc(p.nombre)} ya está registrada en esta actividad.</b></div>`
-      : `<div class="recognized">Persona ya registrada en el padrón${visitas ? ` · ${visitas} ${visitas === 1 ? "actividad anterior" : "actividades anteriores"}` : ""}. Confirma que sus datos sigan vigentes y pide su firma.</div>`;
+      : `<div class="recognized">Usuaria ya registrada${visitas ? ` · ${visitas} ${visitas === 1 ? "actividad anterior" : "actividades anteriores"}` : ""}. Confirma que sus datos sigan vigentes y pide su firma.</div>`;
     pintarCampos();
   }
 
@@ -105,7 +105,7 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
     if (d.curp.length < 18) { nota.textContent = d.curp ? `${d.curp.length} de 18 caracteres` : ""; return; }
     const info = leerCurp(d.curp);
     if (!info) { nota.className = "note warn"; nota.textContent = "La CURP no tiene un formato válido. Revisa letras y números."; return; }
-    const conocida = padron.find(p => p.curp === d.curp && p.id !== d.personaId);
+    const conocida = registradas.find(p => p.curp === d.curp && p.id !== d.usuariaId);
     if (conocida && !existente) {
       nota.textContent = "";
       return reconocer({ ...conocida, visitas: conocida.visitas });
@@ -127,7 +127,7 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
 
   // Conteo de visitas para mostrar al reconocer
   const asistencias = await db.todos("asistencias");
-  padron.forEach(p => (p.visitas = asistencias.filter(x => x.personaId === p.id).length));
+  registradas.forEach(p => (p.visitas = asistencias.filter(x => x.usuariaId === p.id).length));
 
   const buscar = $("#buscar", c);
   if (buscar) buscar.addEventListener("input", () => {
@@ -135,13 +135,13 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
     const res = $("#resultados", c);
     if (q.length < 3) { res.hidden = true; return; }
     const palabras = q.split(/\s+/);
-    const hallados = padron.filter(p => palabras.every(w => normalizar(p.nombre).includes(w))).slice(0, 6);
+    const hallados = registradas.filter(p => palabras.every(w => normalizar(p.nombre).includes(w))).slice(0, 6);
     res.hidden = false;
     res.innerHTML = hallados.length
       ? hallados.map(p => `<button type="button" data-id="${p.id}"><b>${esc(p.nombre)}</b><small>${esc(p.curp || "Sin CURP")} · ${edad(p.fnac, act.fecha) ?? "?"} años</small></button>`).join("")
-      : `<p class="hint">No hay nadie con ese nombre en el padrón. Captura sus datos abajo.</p>`;
+      : `<p class="hint">No hay ninguna usuaria con ese nombre. Captura sus datos abajo.</p>`;
     $$("button", res).forEach(b => (b.onclick = () => {
-      reconocer(padron.find(p => p.id === b.dataset.id));
+      reconocer(registradas.find(p => p.id === b.dataset.id));
       res.hidden = true;
       buscar.value = "";
     }));
@@ -168,24 +168,24 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
     const imagenFirma = firma;
     if (!imagenFirma) e.push("Firma");
 
-    // CURP repetida en el padrón con otra persona
+    // CURP repetida con otra usuaria
     const curp = d.sinCurp ? "" : d.curp;
-    const duena = curp && padron.find(p => p.curp === curp && p.id !== d.personaId);
-    if (duena && existente) e.push(`Esa CURP ya pertenece a ${duena.nombre} en el padrón`);
+    const duena = curp && registradas.find(p => p.curp === curp && p.id !== d.usuariaId);
+    if (duena && existente) e.push(`Esa CURP ya pertenece a ${duena.nombre} en Usuarias`);
     errores($("#err", c), e, "El formato no admite espacios en blanco. Falta:");
     if (e.length) return;
 
     const datos = { curp, nombre, fnac: d.fnac, sexo: d.sexo, lugar: d.lugar.trim(), grupo: d.grupo, ocupacion: d.ocupacion.trim(), telefono: tel };
-    let persona = (d.personaId && (await db.uno("personas", d.personaId))) || (duena && !existente ? duena : null);
-    if (persona && yaEnLista.has(persona.id)) return errores($("#err", c), [`${persona.nombre} ya está registrada en esta actividad.`]);
-    persona = { ...(persona || { id: db.uid(), creadaPor: yo.id }), ...datos };
-    if (!curp) delete persona.curp;
-    await db.guardar("personas", persona);
+    let usuaria = (d.usuariaId && (await db.uno("usuarias", d.usuariaId))) || (duena && !existente ? duena : null);
+    if (usuaria && yaEnLista.has(usuaria.id)) return errores($("#err", c), [`${usuaria.nombre} ya está registrada en esta actividad.`]);
+    usuaria = { ...(usuaria || { id: db.uid(), creadaPor: yo.id }), ...datos };
+    if (!curp) delete usuaria.curp;
+    await db.guardar("usuarias", usuaria);
 
     const orden = existente?.orden ?? (await db.todos("asistencias", "actividadId", actividadId)).reduce((m, x) => Math.max(m, x.orden), 0) + 1;
     await db.guardar("asistencias", {
       ...(existente || { id: db.uid(), actividadId, registradaPor: yo.id }),
-      personaId: persona.id, orden, datos, firma: imagenFirma,
+      usuariaId: usuaria.id, orden, datos, firma: imagenFirma,
     });
     aviso(existente ? "Cambios guardados" : `${nombre.split(" ")[0]} quedó registrada`);
     if (otra) captura({ yo, pintar, ir }, actividadId); // la ruta no cambia: se abre un formulario en blanco
@@ -197,7 +197,7 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
   const quitar = $("#quitar", c);
   if (quitar) dobleToque(quitar, "Toca otra vez para quitarla", async () => {
     await db.borrar("asistencias", existente.id);
-    aviso("Persona quitada de la lista");
+    aviso("Usuaria quitada de la lista");
     ir(volver);
   });
 

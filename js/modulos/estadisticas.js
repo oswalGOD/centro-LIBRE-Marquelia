@@ -17,7 +17,7 @@ async function cargar(yo) {
   return { visibles, asis };
 }
 
-/** Aplica los filtros y devuelve las filas a contar: una por asistencia o una por persona. */
+/** Aplica los filtros y devuelve las filas a contar: una por asistencia o una por usuaria. */
 function calcular({ visibles, asis }) {
   const acts = visibles
     .filter(a => a.fecha >= filtros.desde && a.fecha <= filtros.hasta)
@@ -29,27 +29,27 @@ function calcular({ visibles, asis }) {
     .filter(x => porId.has(x.actividadId))
     .map(x => {
       const a = porId.get(x.actividadId);
-      return { ...x.datos, personaId: x.personaId, orden: x.orden, actividad: a, rango: rangoDe(edad(x.datos.fnac, a.fecha)) };
+      return { ...x.datos, usuariaId: x.usuariaId, orden: x.orden, actividad: a, rango: rangoDe(edad(x.datos.fnac, a.fecha)) };
     })
     .sort((x, y) => x.actividad.fecha.localeCompare(y.actividad.fecha) || x.actividad.folio.localeCompare(y.actividad.folio) || x.orden - y.orden);
 
-  // Personas distintas: se cuenta cada persona una vez, con sus datos de la última actividad del periodo
-  const personas = new Map();
+  // Usuarias distintas: se cuenta cada usuaria una vez, con sus datos de la última actividad del periodo
+  const usuarias = new Map();
   for (const r of registros) {
-    const previa = personas.get(r.personaId);
-    if (!previa || previa.actividad.fecha <= r.actividad.fecha) personas.set(r.personaId, r);
+    const previa = usuarias.get(r.usuariaId);
+    if (!previa || previa.actividad.fecha <= r.actividad.fecha) usuarias.set(r.usuariaId, r);
   }
 
-  // Personas nuevas: su primera asistencia (de todas las que este perfil puede ver) cae dentro del periodo
+  // Usuarias nuevas: su primera asistencia (de todas las que este perfil puede ver) cae dentro del periodo
   const primera = new Map();
   const fechaDe = new Map(visibles.map(a => [a.id, a.fecha]));
   for (const x of asis) {
     const f = fechaDe.get(x.actividadId);
-    if (f && (!primera.has(x.personaId) || f < primera.get(x.personaId))) primera.set(x.personaId, f);
+    if (f && (!primera.has(x.usuariaId) || f < primera.get(x.usuariaId))) primera.set(x.usuariaId, f);
   }
-  const nuevas = [...personas.keys()].filter(id => primera.get(id) >= filtros.desde).length;
+  const nuevas = [...usuarias.keys()].filter(id => primera.get(id) >= filtros.desde).length;
 
-  return { acts, registros, personas: [...personas.values()], nuevas };
+  return { acts, registros, usuarias: [...usuarias.values()], nuevas };
 }
 
 function tablaCruzada(titulo, filas, clave, catalogo, etiqueta) {
@@ -81,7 +81,7 @@ async function vista(ctx) {
   const { yo, pintar } = ctx;
   const datos = await cargar(yo);
   const coord = esCoordinadora(yo);
-  const perfiles = coord ? (await db.todos("usuarias")).sort((a, b) => a.nombre.localeCompare(b.nombre)) : [];
+  const perfiles = coord ? (await db.todos("perfiles")).sort((a, b) => a.nombre.localeCompare(b.nombre)) : [];
   const tipos = [...new Set(datos.visibles.map(a => a.tipo))].sort();
 
   const c = pintar("Estadísticas", `
@@ -92,7 +92,7 @@ async function vista(ctx) {
       ${coord ? `<div class="field"><label for="e-fac">Facilitadora</label><select id="e-fac" data-filtro="facilitadoraId"><option value="">Todas</option>${perfiles.map(u => `<option value="${u.id}" ${u.id === filtros.facilitadoraId ? "selected" : ""}>${esc(u.nombre)}</option>`).join("")}</select></div>` : ""}
       <div class="field"><span class="legend">Contar</span><div class="segmented" role="radiogroup" aria-label="Qué contar">
         <button type="button" role="radio" data-contar="asistencias">Asistencias</button>
-        <button type="button" role="radio" data-contar="personas">Personas distintas</button></div></div>
+        <button type="button" role="radio" data-contar="usuarias">Usuarias distintas</button></div></div>
     </div>
     <div id="resultado" class="stack"></div>
   `, { ancho: true });
@@ -100,10 +100,10 @@ async function vista(ctx) {
   function pintarResultado() {
     $$("[data-contar]", c).forEach(b => b.setAttribute("aria-checked", b.dataset.contar === filtros.contar));
     const r = calcular(datos);
-    const filas = filtros.contar === "personas" ? r.personas : r.registros;
-    const nota = filtros.contar === "personas"
-      ? "Cada persona cuenta una vez en el periodo, con su edad y grupo de la última actividad a la que asistió."
-      : "Cada firma en una lista cuenta una vez: si una persona fue a tres actividades, cuenta tres.";
+    const filas = filtros.contar === "usuarias" ? r.usuarias : r.registros;
+    const nota = filtros.contar === "usuarias"
+      ? "Cada usuaria cuenta una vez en el periodo, con su edad y grupo de la última actividad a la que asistió."
+      : "Cada firma en una lista cuenta una vez: si una usuaria fue a tres actividades, cuenta tres.";
     const porAct = r.acts.map(a => {
       const de = r.registros.filter(x => x.actividad.id === a.id);
       return { a, n: de.length, sexo: SEXO_COLUMNAS.map(([s]) => de.filter(x => x.sexo === s).length) };
@@ -113,8 +113,8 @@ async function vista(ctx) {
       <p class="hint">Del ${fechaLarga(filtros.desde)} al ${fechaLarga(filtros.hasta)}${coord ? "" : " · solo tus actividades"}.</p>
       <div class="tiles">
         <div class="tile"><span class="label">Asistencias registradas</span><span class="value">${r.registros.length}</span></div>
-        <div class="tile"><span class="label">Personas distintas</span><span class="value">${r.personas.length}</span></div>
-        <div class="tile"><span class="label">Personas nuevas</span><span class="value">${r.nuevas}</span><span class="sub">primera vez en el periodo</span></div>
+        <div class="tile"><span class="label">Usuarias distintas</span><span class="value">${r.usuarias.length}</span></div>
+        <div class="tile"><span class="label">Usuarias nuevas</span><span class="value">${r.nuevas}</span><span class="sub">primera vez en el periodo</span></div>
         <div class="tile"><span class="label">Actividades</span><span class="value">${r.acts.length}</span></div>
       </div>
       ${r.registros.length ? `

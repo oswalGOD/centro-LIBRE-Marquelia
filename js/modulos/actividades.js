@@ -43,7 +43,7 @@ async function lista({ yo, pintar }) {
 async function formulario({ yo, pintar, ir }, id) {
   const act = id ? await db.uno("actividades", id) : null;
   if (id && (!act || !puedeEditar(yo, act))) return ir(id ? `#/actividad/${id}` : "#/");
-  const perfiles = (await db.todos("usuarias")).filter(u => u.activa);
+  const perfiles = (await db.todos("perfiles")).filter(u => u.activa);
   const ultimoLugar = await db.leerMeta("ultimoLugar", "Marquelia, Gro.");
   const a = act || { nombre: "", fecha: hoy(), lugar: ultimoLugar, facilitadoraId: yo.id, tipo: "Taller" };
 
