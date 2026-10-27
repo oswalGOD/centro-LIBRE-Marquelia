@@ -22,12 +22,21 @@ Es una app web instalable (PWA): se instala desde el navegador en Windows, Andro
 1. En [Supabase](https://supabase.com), abre el proyecto → **SQL Editor** → **New query**, pega el contenido de [`supabase/esquema.sql`](supabase/esquema.sql) y toca **Run**.
 2. **Authentication → Users → Add user → Create new user**: crea la cuenta del Centro (un correo y una contraseña segura) y marca **Auto Confirm User**.
 3. **Authentication → Sign In / Providers**: desactiva **Allow new users to sign up**, para que nadie más pueda crear cuentas.
-4. En la app, la Coordinadora entra a **Ajustes → Sincronización entre dispositivos** y conecta el dispositivo con esa cuenta.
-5. En cada tableta o computadora nueva, en la primera pantalla elige **Ya la usamos en otro**, pon una letra distinta y entra con la misma cuenta.
+4. Ejecuta [`supabase/blindaje.sql`](supabase/blindaje.sql) cambiando antes el correo de ejemplo por el de la cuenta del Centro: solo esa cuenta podrá leer o escribir datos.
+5. En cada tableta o computadora, la primera pantalla pide la cuenta del Centro y una letra distinta. Si la nube todavía no tiene perfiles, después se crea el de la Coordinadora.
 
 **Si la tabla ya existía antes de la versión 0.5:** actualiza la app en todos los dispositivos y luego ejecuta una vez [`supabase/migracion-0.5.sql`](supabase/migracion-0.5.sql), que cambia los nombres de los registros ya guardados.
 
 La dirección del proyecto y la clave pública están en `js/core/config.js`. Esa clave es pública por diseño: sin la cuenta del Centro no da acceso a ningún dato.
+
+### Seguridad
+
+- **Nadie configura la app sin la cuenta del Centro.** Tener el enlace no basta: la primera pantalla pide el correo y la contraseña de la cuenta, y los verifica el servidor de Supabase.
+- **Solo la cuenta del Centro ve los datos.** La tabla tiene seguridad por fila: la clave pública sola no da acceso, y con `blindaje.sql` tampoco otra cuenta, aunque alguien lograra crearla.
+- **Cada persona entra con su PIN.** Tras 30 minutos sin usarla, la app vuelve a pedirlo. Cada 5 PIN incorrectos se bloquea un rato que se duplica cada vez (30 s, 1 min, 2 min… hasta 15 min), aunque se recargue la página.
+- **Política de contenido (CSP).** La página solo carga archivos propios y solo se comunica con Supabase, así que un script inyectado no se ejecuta.
+- El código es público (GitHub Pages gratuito lo requiere). Eso no expone datos: no hay datos ni contraseñas en el código, solo la clave pública de Supabase y la huella de la contraseña de desarrollo.
+- Si se pierde un dispositivo: cambia la contraseña de la cuenta del Centro en Supabase y cierra sus sesiones (Authentication → Users). Los datos guardados en el dispositivo solo los protege su PIN y el bloqueo de pantalla del propio equipo.
 
 ### Cómo resuelve conflictos
 

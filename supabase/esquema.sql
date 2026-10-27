@@ -1,6 +1,7 @@
 -- Centro LIBRE Marquelia: tabla de sincronización.
 -- Ejecútalo una sola vez en Supabase → SQL Editor → New query → Run.
 -- Es seguro volver a ejecutarlo: no borra datos.
+-- Después ejecuta supabase/blindaje.sql para que solo la cuenta del Centro tenga acceso.
 
 -- Todos los registros de la app (perfiles, usuarias, actividades, asistencias)
 -- en una sola tabla. Cada fila es un registro tal como se guarda en el dispositivo.
