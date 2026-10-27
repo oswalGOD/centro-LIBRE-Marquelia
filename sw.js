@@ -1,7 +1,7 @@
 // Service worker: guarda la app en el dispositivo para que abra y funcione sin internet.
 // Al publicar cambios, sube el número de VERSION para que los dispositivos se actualicen.
 
-const VERSION = "clm-v0.6.0";
+const VERSION = "clm-v0.7.0";
 const ARCHIVOS = [
   "./",
   "index.html",
@@ -9,6 +9,7 @@ const ARCHIVOS = [
   "css/app.css",
   "css/fonts.css",
   "js/app.js",
+  "js/registro-sw.js",
   "js/core/auth.js",
   "js/core/catalogos.js",
   "js/core/config.js",

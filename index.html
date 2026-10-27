@@ -2,6 +2,9 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
+  <!-- Solo se cargan archivos de la propia app y solo se habla con Supabase: bloquea scripts inyectados -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://rukmlbjtahrsnjvysuru.supabase.co; media-src 'self' blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Centro LIBRE Marquelia</title>
   <meta name="description" content="Listas de asistencia del Centro LIBRE Marquelia: captura con firma, registro de usuarias e impresión del formato oficial.">
@@ -19,24 +22,6 @@
   <div id="actualizar" class="update" hidden role="status">Hay una versión nueva de la app. <button class="btn small" id="recargar">Actualizar</button></div>
   <noscript>Esta app necesita JavaScript activado.</noscript>
   <script type="module" src="js/app.js"></script>
-  <script>
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("sw.js").then(reg => {
-        reg.addEventListener("updatefound", () => {
-          const nuevo = reg.installing;
-          nuevo?.addEventListener("statechange", () => {
-            if (nuevo.state === "installed" && navigator.serviceWorker.controller) document.getElementById("actualizar").hidden = false;
-          });
-        });
-      });
-      document.getElementById("recargar").onclick = () => {
-        navigator.serviceWorker.getRegistration().then(r => r?.waiting?.postMessage("activar"));
-      };
-      // Recarga solo al actualizar una versión ya instalada, no en la primera visita
-      const habiaVersion = !!navigator.serviceWorker.controller;
-      let recargando = false;
-      navigator.serviceWorker.addEventListener("controllerchange", () => { if (habiaVersion && !recargando) { recargando = true; location.reload(); } });
-    }
-  </script>
+  <script src="js/registro-sw.js"></script>
 </body>
 </html>
