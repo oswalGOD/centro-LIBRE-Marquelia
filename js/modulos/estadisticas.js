@@ -1,7 +1,7 @@
 // Estadísticas por actividad, rango de edad, grupo y sexo, con exportación a Excel (CSV).
 
 import * as db from "../core/db.js";
-import { GRUPOS, RANGOS, SEXOS, edad, rangoDe, hoy, fechaCorta, fechaLarga, etiquetaGrupo, etiquetaRango } from "../core/catalogos.js";
+import { GRUPOS, RANGOS, SEXOS, edad, rangoDe, hoy, fechaCorta, fechaLarga, etiquetaGrupo, etiquetaRango, minutosEntre, duracion } from "../core/catalogos.js";
 import { esCoordinadora } from "../core/auth.js";
 import { puedeVer } from "../core/permisos.js";
 import { $, $$, esc, descargar, plural } from "../core/ui.js";
@@ -109,6 +109,11 @@ async function vista(ctx) {
       return { a, n: de.length, sexo: SEXO_COLUMNAS.map(([s]) => de.filter(x => x.sexo === s).length) };
     });
 
+    const minutos = r.acts.map(a => minutosEntre(a.horaInicio, a.horaFin));
+    const conHorario = minutos.filter(m => m != null);
+    const sinHorario = r.acts.length - conHorario.length;
+    const totalMin = conHorario.reduce((t, m) => t + m, 0);
+
     $("#resultado", c).innerHTML = `
       <p class="hint">Del ${fechaLarga(filtros.desde)} al ${fechaLarga(filtros.hasta)}${coord ? "" : " · solo tus actividades"}.</p>
       <div class="tiles">
@@ -116,6 +121,7 @@ async function vista(ctx) {
         <div class="tile"><span class="label">Usuarias distintas</span><span class="value">${r.usuarias.length}</span></div>
         <div class="tile"><span class="label">Usuarias nuevas</span><span class="value">${r.nuevas}</span><span class="sub">primera vez en el periodo</span></div>
         <div class="tile"><span class="label">Actividades</span><span class="value">${r.acts.length}</span></div>
+        <div class="tile"><span class="label">Horas de actividad</span><span class="value">${conHorario.length ? duracion(totalMin) : "—"}</span>${sinHorario ? `<span class="sub">${plural(sinHorario, "actividad", "actividades")} sin horario</span>` : ""}</div>
       </div>
       ${r.registros.length ? `
       <p class="hint">${nota}</p>
@@ -137,11 +143,12 @@ async function vista(ctx) {
 
     $("#csvActividades", c)?.addEventListener("click", () => {
       descargar(`resumen-actividades-${filtros.desde}-a-${filtros.hasta}.csv`, csv([
-        ["Fecha", "Folio", "Actividad", "Tipo", "Lugar", "Facilitadora", "Puesto", "Mujeres", "Hombres", "Otro", "Total",
+        ["Fecha", "Folio", "Actividad", "Tipo", "Lugar", "Facilitadora", "Puesto", "Hora de inicio", "Hora de término", "Horas", "Mujeres", "Hombres", "Otro", "Total",
           ...GRUPOS.map(([g, t]) => `${g}) ${t}`), ...RANGOS.map(([l, t]) => `${l}) ${t}`)],
         ...porAct.map(p => {
           const de = r.registros.filter(x => x.actividad.id === p.a.id);
-          return [fechaCorta(p.a.fecha), p.a.folio, p.a.nombre, p.a.tipo, p.a.lugar, p.a.facilitadora, p.a.puesto, ...p.sexo, p.n,
+          return [fechaCorta(p.a.fecha), p.a.folio, p.a.nombre, p.a.tipo, p.a.lugar, p.a.facilitadora, p.a.puesto,
+            p.a.horaInicio || "", p.a.horaFin || "", minutosEntre(p.a.horaInicio, p.a.horaFin) == null ? "" : (minutosEntre(p.a.horaInicio, p.a.horaFin) / 60).toFixed(2), ...p.sexo, p.n,
             ...GRUPOS.map(([g]) => de.filter(x => x.grupo === g).length), ...RANGOS.map(([l]) => de.filter(x => x.rango === l).length)];
         }),
       ]), "text/csv");

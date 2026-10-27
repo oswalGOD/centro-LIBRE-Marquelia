@@ -1,13 +1,23 @@
 // Registro de una persona en una actividad: datos, reconocimiento de usuarias que ya vinieron y firma.
 
 import * as db from "../core/db.js";
-import { GRUPOS, SEXOS, leerCurp, limpiarCurp, edad, rangoDe, etiquetaRango, normalizar } from "../core/catalogos.js";
-import { puedeEditar } from "../core/permisos.js";
+import { GRUPOS, SEXOS, leerCurp, limpiarCurp, edad, rangoDe, etiquetaRango, normalizar, fechaLarga } from "../core/catalogos.js";
+import { puedeVer, puedeEditar } from "../core/permisos.js";
 import { pedirFirma } from "../core/firma.js";
 import { escanearCurp } from "../core/escaner.js";
 import { $, $$, esc, aviso, errores, dobleToque } from "../core/ui.js";
 
 const CAMPOS = ["curp", "nombre", "fnac", "sexo", "lugar", "grupo", "ocupacion", "telefono"];
+
+/** La sesión anterior: la actividad de la que se repitió o, si no, la última con el mismo nombre. */
+async function sesionAnterior(yo, act) {
+  const previa = act.anteriorId && (await db.uno("actividades", act.anteriorId));
+  if (previa && puedeVer(yo, previa)) return previa;
+  const nombre = normalizar(act.nombre).trim();
+  return (await db.todos("actividades"))
+    .filter(a => a.id !== act.id && puedeVer(yo, a) && normalizar(a.nombre).trim() === nombre && (a.fecha < act.fecha || (a.fecha === act.fecha && a.creado < act.creado)))
+    .sort((a, b) => b.fecha.localeCompare(a.fecha) || b.creado - a.creado)[0] || null;
+}
 
 export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
   const act = await db.uno("actividades", actividadId);
@@ -16,6 +26,11 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
   if (asistenciaId && !existente) return ir(`#/actividad/${actividadId}`);
   const registradas = await db.todos("usuarias");
   const yaEnLista = new Set((await db.todos("asistencias", "actividadId", actividadId)).filter(x => x.id !== asistenciaId).map(x => x.usuariaId));
+  const anterior = existente ? null : await sesionAnterior(yo, act);
+  const deAntes = anterior
+    ? (await db.todos("asistencias", "actividadId", anterior.id)).sort((x, y) => x.orden - y.orden)
+        .map(x => registradas.find(p => p.id === x.usuariaId)).filter(p => p && !yaEnLista.has(p.id))
+    : [];
 
   // Borrador de la persona que se está capturando
   const d = existente
@@ -25,6 +40,12 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
   const volver = `#/actividad/${actividadId}`;
   const c = pintar(existente ? "Editar asistente" : "Registrar asistente", `
     <p class="hint context">${esc(act.nombre)} · <span class="mono">${esc(act.folio)}</span></p>
+    ${deAntes.length ? `
+    <section class="panel stack" id="deAntes">
+      <div><h2 class="h3">Vinieron la sesión anterior</h2>
+        <p class="hint">${esc(anterior.nombre)} · ${fechaLarga(anterior.fecha)}. Toca a la persona para llenar sus datos; solo falta confirmarlos y pedir su firma.</p></div>
+      <div class="results">${deAntes.map(p => `<button type="button" data-id="${p.id}"><b>${esc(p.nombre)}</b><small>${esc(p.curp || "Sin CURP")} · ${edad(p.fnac, act.fecha) ?? "?"} años</small></button>`).join("")}</div>
+    </section>` : ""}
     <section class="panel stack">
       ${existente ? "" : `
       <div class="field search-field"><label for="buscar">Buscar usuaria por nombre</label>
@@ -164,6 +185,13 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
       buscar.value = "";
     }));
   });
+
+  $$("#deAntes button", c).forEach(b => (b.onclick = () => {
+    reconocer(registradas.find(p => p.id === b.dataset.id));
+    $$("#deAntes button", c).forEach(x => x.removeAttribute("aria-current"));
+    b.setAttribute("aria-current", "true");
+    $("#firmar", c).scrollIntoView({ block: "center", behavior: "smooth" });
+  }));
 
   $("#firmar", c).onclick = async () => {
     const nueva = await pedirFirma({ titulo: d.nombre.trim() ? `Firma de ${d.nombre.trim()}` : "Firma de la persona asistente", existente: firma });

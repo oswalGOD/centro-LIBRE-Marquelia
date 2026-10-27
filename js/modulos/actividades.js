@@ -1,7 +1,7 @@
 // Módulo de actividades: lista, alta/edición y detalle con sus asistentes.
 
 import * as db from "../core/db.js";
-import { TIPOS_ACTIVIDAD, hoy, fechaLarga, mesCorto, edad, rangoDe, etiquetaGrupo, normalizar } from "../core/catalogos.js";
+import { TIPOS_ACTIVIDAD, hoy, fechaLarga, mesCorto, edad, rangoDe, etiquetaGrupo, normalizar, minutosEntre, duracion } from "../core/catalogos.js";
 import { esCoordinadora } from "../core/auth.js";
 import { puedeVer, puedeEditar } from "../core/permisos.js";
 import { $, $$, esc, aviso, errores, leerCampos, dobleToque, plural } from "../core/ui.js";
@@ -9,6 +9,7 @@ import { captura } from "./captura.js";
 import { formato } from "./formato.js";
 
 const ID = "([\\w-]+)";
+const OTRO = "__otro";
 
 async function lista({ yo, pintar }) {
   const acts = (await db.todos("actividades"))
@@ -40,44 +41,67 @@ async function lista({ yo, pintar }) {
   });
 }
 
-async function formulario({ yo, pintar, ir }, id) {
+/** Alta (id null), edición (id) o repetición de una actividad anterior (origenId). */
+async function formulario({ yo, pintar, ir }, id, origenId) {
   const act = id ? await db.uno("actividades", id) : null;
   if (id && (!act || !puedeEditar(yo, act))) return ir(id ? `#/actividad/${id}` : "#/");
+  const origen = origenId ? await db.uno("actividades", origenId) : null;
+  if (origenId && (!origen || !puedeVer(yo, origen))) return ir("#/");
   const perfiles = (await db.todos("perfiles")).filter(u => u.activa);
   const ultimoLugar = await db.leerMeta("ultimoLugar", "Marquelia, Gro.");
-  const a = act || { nombre: "", fecha: hoy(), lugar: ultimoLugar, facilitadoraId: yo.id, tipo: "Taller" };
+  const a = act || (origen
+    ? { nombre: origen.nombre, fecha: hoy(), lugar: origen.lugar, facilitadoraId: origen.facilitadoraId, tipo: origen.tipo, horaInicio: origen.horaInicio, horaFin: origen.horaFin }
+    : { nombre: "", fecha: hoy(), lugar: ultimoLugar, facilitadoraId: yo.id, tipo: "Taller" });
+  // Los tipos del catálogo más los que ya se escribieron a mano en otras actividades
+  const usados = (await db.todos("actividades")).map(x => x.tipo).filter(Boolean);
+  const tipos = [...new Set([...TIPOS_ACTIVIDAD, ...usados.sort((x, y) => x.localeCompare(y, "es")), a.tipo].filter(Boolean))];
+  const volver = act ? `#/actividad/${act.id}` : origen ? `#/actividad/${origen.id}` : "#/";
 
-  const c = pintar(act ? "Editar actividad" : "Nueva actividad", `
+  const c = pintar(act ? "Editar actividad" : origen ? "Repetir actividad" : "Nueva actividad", `
     <section class="panel stack">
-      <p class="hint">Estos datos forman el encabezado del formato.${act ? "" : " El folio se asigna al guardar."}</p>
+      <p class="hint">${origen ? `Copia de «${esc(origen.nombre)}» del ${fechaLarga(origen.fecha)}. Revisa la fecha y ajusta lo que haga falta. Al registrar asistentes verás a quienes vinieron esa vez.` : "Estos datos forman el encabezado del formato."}${act ? "" : " El folio se asigna al guardar."}</p>
       <div class="grid" id="f">
         <div class="field span-2"><label for="a-nombre">Nombre de la actividad</label><input id="a-nombre" data-campo="nombre" value="${esc(a.nombre)}"></div>
         <div class="field"><label for="a-fecha">Fecha</label><input id="a-fecha" type="date" data-campo="fecha" value="${esc(a.fecha)}"></div>
         <div class="field"><label for="a-lugar">Lugar de desarrollo</label><input id="a-lugar" data-campo="lugar" value="${esc(a.lugar)}"></div>
         <div class="field"><label for="a-facilitadora">Facilitadora</label>
           <select id="a-facilitadora" data-campo="facilitadoraId">${perfiles.map(u => `<option value="${u.id}" ${u.id === a.facilitadoraId ? "selected" : ""}>${esc(u.nombre)} · ${esc(u.rol)}</option>`).join("")}</select></div>
-        <div class="field"><label for="a-tipo">Tipo de actividad</label><input id="a-tipo" data-campo="tipo" list="tipos" value="${esc(a.tipo)}">
-          <datalist id="tipos">${TIPOS_ACTIVIDAD.map(t => `<option value="${t}">`).join("")}</datalist></div>
+        <div class="field"><label for="a-tipo">Tipo de actividad</label>
+          <select id="a-tipo" data-campo="tipo">${tipos.map(t => `<option ${t === a.tipo ? "selected" : ""}>${esc(t)}</option>`).join("")}<option value="${OTRO}">Otro tipo…</option></select>
+          <input id="a-tipoOtro" aria-label="Escribe el tipo de actividad" placeholder="Escribe el tipo de actividad" autocomplete="off" hidden></div>
+        <div class="field"><label for="a-inicio">Hora de inicio</label><input id="a-inicio" type="time" data-campo="horaInicio" value="${esc(a.horaInicio || "")}"></div>
+        <div class="field"><label for="a-fin">Hora de término</label><input id="a-fin" type="time" data-campo="horaFin" value="${esc(a.horaFin || "")}"></div>
         ${act ? `<div class="field"><label>Folio</label><input value="${esc(act.folio)}" disabled></div>` : ""}
       </div>
       <div id="err"></div>
-      <div class="actions"><button class="btn primary" id="guardar">${act ? "Guardar cambios" : "Crear actividad"}</button><a class="btn ghost" href="${act ? `#/actividad/${act.id}` : "#/"}">Cancelar</a></div>
-    </section>`, { atras: act ? `#/actividad/${act.id}` : "#/" });
+      <div class="actions"><button class="btn primary" id="guardar">${act ? "Guardar cambios" : "Crear actividad"}</button><a class="btn ghost" href="${volver}">Cancelar</a></div>
+    </section>`, { atras: volver });
+
+  const tipo = $("#a-tipo", c), tipoOtro = $("#a-tipoOtro", c);
+  tipo.addEventListener("change", () => {
+    tipoOtro.hidden = tipo.value !== OTRO;
+    if (!tipoOtro.hidden) tipoOtro.focus();
+  });
 
   $("#guardar", c).onclick = async () => {
     const d = leerCampos($("#f", c));
+    if (d.tipo === OTRO) d.tipo = tipoOtro.value.trim().replace(/\s+/g, " ");
     const e = [];
     if (!d.nombre) e.push("Escribe el nombre de la actividad.");
     if (!d.fecha) e.push("Elige la fecha.");
     if (!d.lugar) e.push("Escribe el lugar de desarrollo.");
     if (!d.tipo) e.push("Escribe el tipo de actividad.");
+    if (Boolean(d.horaInicio) !== Boolean(d.horaFin)) e.push("Escribe las dos horas, la de inicio y la de término, o deja ambas vacías.");
+    else if (d.horaInicio && !minutosEntre(d.horaInicio, d.horaFin)) e.push("La hora de término debe ser después de la de inicio.");
     errores($("#err", c), e);
     if (e.length) return;
     const f = perfiles.find(u => u.id === d.facilitadoraId);
     const registro = {
       ...(act || { id: db.uid(), folio: await db.siguienteFolio(d.fecha), creadaPor: yo.id, estado: "abierta" }),
       nombre: d.nombre, fecha: d.fecha, lugar: d.lugar, tipo: d.tipo,
+      horaInicio: d.horaInicio || "", horaFin: d.horaFin || "",
       facilitadoraId: f.id, facilitadora: f.nombre, puesto: f.rol,
+      ...(origen ? { anteriorId: origen.id } : {}),
     };
     await db.guardar("actividades", registro);
     await db.escribirMeta("ultimoLugar", d.lugar);
@@ -100,6 +124,7 @@ async function detalle({ yo, pintar, ir }, id) {
         <div><dt>Folio</dt><dd class="mono">${esc(a.folio)}</dd></div>
         <div><dt>Fecha</dt><dd>${fechaLarga(a.fecha)}</dd></div>
         <div><dt>Lugar</dt><dd>${esc(a.lugar)}</dd></div>
+        ${a.horaInicio ? `<div><dt>Horario</dt><dd>${esc(a.horaInicio)} a ${esc(a.horaFin)} · ${duracion(minutosEntre(a.horaInicio, a.horaFin))}</dd></div>` : ""}
         <div><dt>Facilitadora</dt><dd>${esc(a.facilitadora)} · ${esc(a.puesto)}</dd></div>
         <div><dt>Tipo</dt><dd>${esc(a.tipo)}</dd></div>
         <div><dt>Estado</dt><dd>${a.estado === "cerrada" ? `<span class="chip">Cerrada</span>` : `<span class="chip ok">Abierta</span>`}</dd></div>
@@ -109,6 +134,7 @@ async function detalle({ yo, pintar, ir }, id) {
       ${editable ? `<a class="btn primary" href="#/actividad/${a.id}/registrar">Registrar asistente</a>` : ""}
       <a class="btn" href="#/actividad/${a.id}/formato">Ver e imprimir formato</a>
       ${editable ? `<a class="btn ghost" href="#/actividad/${a.id}/editar">Editar datos</a>` : ""}
+      <a class="btn ghost" href="#/actividad/${a.id}/repetir">Repetir actividad</a>
     </div>
     <section class="stack">
       <div class="section-head"><h2>Asistentes</h2>
@@ -159,6 +185,7 @@ export default {
     [/^#\/$/, lista],
     [/^#\/actividad\/nueva$/, ctx => formulario(ctx, null)],
     [new RegExp(`^#/actividad/${ID}/editar$`), formulario],
+    [new RegExp(`^#/actividad/${ID}/repetir$`), (ctx, origenId) => formulario(ctx, null, origenId)],
     [new RegExp(`^#/actividad/${ID}/registrar(?:/${ID})?$`), captura],
     [new RegExp(`^#/actividad/${ID}/formato$`), formato],
     [new RegExp(`^#/actividad/${ID}$`), detalle],
