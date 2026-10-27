@@ -7,11 +7,11 @@ Es una app web instalable (PWA): se instala desde el navegador en Windows, Andro
 ## Qué hace hoy
 
 - **Perfiles y roles**: Coordinadora, Psicóloga y Abogada, cada perfil con su PIN. La Coordinadora ve todo y administra los perfiles; la Psicóloga y la Abogada ven solo las actividades que crean o facilitan.
-- **Actividades**: encabezado del formato, folio automático por mes y dispositivo (`OCT-2026-A001`), cierre de la lista.
+- **Actividades**: encabezado del formato, folio automático por mes y dispositivo (`OCT-2026-A001`), horario, notas, repetir una actividad, filtros por mes, tipo, facilitadora y estado, cierre de la lista. Las atenciones individuales (asesoría jurídica, atención psicológica) no van aquí: tendrán su propio módulo.
 - **Captura**: al escribir la CURP se llenan fecha de nacimiento, sexo, estado y rango de edad. Si la usuaria ya está registrada, se llenan todos sus datos. Admite personas sin CURP. Firma con el dedo o lápiz. No deja guardar con campos vacíos.
 - **Escanear CURP**: con la cámara se lee el código QR de la constancia de CURP (impresa o en el celular) y se llenan la CURP, el nombre completo, la fecha de nacimiento, el sexo y el estado. Funciona sin internet y no envía datos a ningún lado. Si no hay cámara, se puede usar una foto. Usa la biblioteca [jsQR](https://github.com/cozmo/jsQR) (Apache-2.0), incluida en `js/vendor/`.
 - **Usuarias**: las personas que usan los servicios del Centro. Búsqueda, edición de datos e historial de asistencia de cada una.
-- **Formato**: 10 personas por hoja con el resumen por grupo, rango de edad y sexo de cada hoja. Botón para imprimir o guardar en PDF.
+- **Formato**: 10 personas por hoja con el resumen por grupo, rango de edad y sexo de cada hoja. Si la actividad tiene notas, se agregan en una hoja aparte. Botón para imprimir o guardar en PDF.
 - **Estadísticas**: por periodo, tipo de actividad y facilitadora; tablas por rango de edad, grupo y sexo y por actividad, contando asistencias o usuarias distintas. Descarga del resumen y de la lista detallada en CSV para Excel.
 - **Sincronización**: los dispositivos conectados a la cuenta del Centro comparten perfiles, usuarias y actividades a través de Supabase. Cada uno sigue funcionando sin internet y envía sus cambios cuando vuelve la conexión.
 - **Desarrollo** (Ajustes → Opciones para desarrolladores): protegida con contraseña. Diagnóstico descargable (sin datos de usuarias), errores recientes del dispositivo, volver a enviar o recibir todo, forzar actualización y restablecer el dispositivo. La contraseña se guarda como huella en `CLAVE_DESARROLLO` de `js/core/config.js`; la propia sección la genera la primera vez.

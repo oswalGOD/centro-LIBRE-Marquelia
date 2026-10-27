@@ -1,7 +1,7 @@
 // Módulo de actividades: lista, alta/edición y detalle con sus asistentes.
 
 import * as db from "../core/db.js";
-import { TIPOS_ACTIVIDAD, hoy, fechaLarga, mesCorto, edad, rangoDe, etiquetaGrupo, normalizar, minutosEntre, duracion } from "../core/catalogos.js";
+import { TIPOS_ACTIVIDAD, TIPOS_RETIRADOS, hoy, fechaLarga, mesCorto, edad, rangoDe, etiquetaGrupo, normalizar, minutosEntre, duracion } from "../core/catalogos.js";
 import { esCoordinadora } from "../core/auth.js";
 import { puedeVer, puedeEditar } from "../core/permisos.js";
 import { $, $$, esc, aviso, errores, leerCampos, dobleToque, plural } from "../core/ui.js";
@@ -11,6 +11,9 @@ import { formato } from "./formato.js";
 const ID = "([\\w-]+)";
 const OTRO = "__otro";
 
+// Filtros de la lista, vigentes mientras la app está abierta
+const filtros = { mes: "", tipo: "", facilitadoraId: "", estado: "" };
+
 async function lista({ yo, pintar }) {
   const acts = (await db.todos("actividades"))
     .filter(a => puedeVer(yo, a))
@@ -18,15 +21,27 @@ async function lista({ yo, pintar }) {
   const asis = await db.todos("asistencias");
   const cuenta = id => asis.filter(x => x.actividadId === id).length;
   const abiertas = acts.filter(a => a.estado !== "cerrada").length;
+  const muchas = acts.length > 6;
+  const opciones = (lista, actual) => lista.map(([v, t]) => `<option value="${esc(v)}" ${v === actual ? "selected" : ""}>${esc(t)}</option>`).join("");
+  const meses = [...new Set(acts.map(a => a.fecha.slice(0, 7)))].map(m => [m, `${mesCorto(m + "-01")} ${m.slice(0, 4)}`]);
+  const tipos = [...new Set(acts.map(a => a.tipo))].sort((x, y) => x.localeCompare(y, "es")).map(t => [t, t]);
+  const facilitadoras = [...new Map(acts.map(a => [a.facilitadoraId, a.facilitadora]))].sort((x, y) => x[1].localeCompare(y[1], "es"));
 
   const c = pintar("Actividades", `
     <div class="toolbar">
       <a class="btn primary" href="#/actividad/nueva">Nueva actividad</a>
-      ${acts.length > 6 ? `<input type="search" id="buscar" class="search" placeholder="Buscar por nombre, folio o lugar" aria-label="Buscar actividad">` : ""}
-      <p class="hint">${plural(acts.length, "actividad", "actividades")} · ${plural(abiertas, "abierta", "abiertas")}</p>
+      ${muchas ? `<input type="search" id="buscar" class="search" placeholder="Buscar por nombre, folio o lugar" aria-label="Buscar actividad">` : ""}
+      <p class="hint" id="cuenta">${plural(acts.length, "actividad", "actividades")} · ${plural(abiertas, "abierta", "abiertas")}</p>
     </div>
+    ${muchas ? `<div class="filters" id="filtros">
+      <div class="field"><label for="f-mes">Mes</label><select id="f-mes" data-filtro="mes"><option value="">Todos</option>${opciones(meses, filtros.mes)}</select></div>
+      <div class="field"><label for="f-tipo">Tipo</label><select id="f-tipo" data-filtro="tipo"><option value="">Todos</option>${opciones(tipos, filtros.tipo)}</select></div>
+      ${esCoordinadora(yo) ? `<div class="field"><label for="f-fac">Facilitadora</label><select id="f-fac" data-filtro="facilitadoraId"><option value="">Todas</option>${opciones(facilitadoras, filtros.facilitadoraId)}</select></div>` : ""}
+      <div class="field"><label for="f-estado">Estado</label><select id="f-estado" data-filtro="estado"><option value="">Todas</option>${opciones([["abierta", "Abiertas"], ["cerrada", "Cerradas"]], filtros.estado)}</select></div>
+    </div>` : ""}
     ${acts.length ? `<div class="list" id="lista">${acts.map(a => `
-      <a class="row" href="#/actividad/${a.id}" data-buscar="${esc(normalizar(`${a.nombre} ${a.folio} ${a.lugar} ${a.tipo} ${a.facilitadora}`))}">
+      <a class="row" href="#/actividad/${a.id}" data-buscar="${esc(normalizar(`${a.nombre} ${a.folio} ${a.lugar} ${a.tipo} ${a.facilitadora}`))}"
+        data-mes="${a.fecha.slice(0, 7)}" data-tipo="${esc(a.tipo)}" data-facilitadora-id="${esc(a.facilitadoraId)}" data-estado="${a.estado === "cerrada" ? "cerrada" : "abierta"}">
         <span class="date"><b>${Number(a.fecha.slice(8, 10))}</b><small>${mesCorto(a.fecha)}</small></span>
         <span class="body"><span class="name">${esc(a.nombre)}</span>
           <span class="meta"><span>${esc(a.folio)}</span><span>${esc(a.tipo)}</span><span>${esc(a.lugar)}</span>${esCoordinadora(yo) ? `<span>${esc(a.facilitadora)}</span>` : ""}</span></span>
@@ -35,10 +50,28 @@ async function lista({ yo, pintar }) {
       </a>`).join("")}</div>`
     : `<div class="empty"><b>Todavía no hay actividades.</b><p>Crea la primera con “Nueva actividad”. Después podrás registrar a cada asistente con su firma e imprimir la lista.</p></div>`}
   `);
-  $("#buscar", c)?.addEventListener("input", e => {
-    const q = normalizar(e.target.value);
-    $$("#lista .row").forEach(r => (r.hidden = !r.dataset.buscar.includes(q)));
+  const buscar = $("#buscar", c);
+  function filtrar() {
+    if (!muchas) return;
+    const q = normalizar(buscar.value);
+    let n = 0;
+    $$("#lista .row", c).forEach(r => {
+      r.hidden = !r.dataset.buscar.includes(q) || Object.entries(filtros).some(([k, v]) => v && r.dataset[k] !== v);
+      if (!r.hidden) n++;
+    });
+    const activos = q || Object.values(filtros).some(Boolean);
+    $("#cuenta", c).textContent = activos
+      ? `${n} de ${plural(acts.length, "actividad", "actividades")}`
+      : `${plural(acts.length, "actividad", "actividades")} · ${plural(abiertas, "abierta", "abiertas")}`;
+    $("#sinResultados", c).hidden = n > 0;
+  }
+  if (muchas) $("#lista", c).insertAdjacentHTML("afterend", `<div class="empty" id="sinResultados" hidden><b>Ninguna actividad coincide.</b><p>Cambia la búsqueda o los filtros.</p></div>`);
+  buscar?.addEventListener("input", filtrar);
+  for (const k in filtros) filtros[k] = $(`[data-filtro=${k}]`, c)?.value || ""; // descarta filtros que ya no tienen opción
+  $$("[data-filtro]", c).forEach(el => {
+    el.addEventListener("change", () => { filtros[el.dataset.filtro] = el.value; filtrar(); });
   });
+  filtrar();
 }
 
 /** Alta (id null), edición (id) o repetición de una actividad anterior (origenId). */
@@ -53,7 +86,7 @@ async function formulario({ yo, pintar, ir }, id, origenId) {
     ? { nombre: origen.nombre, fecha: hoy(), lugar: origen.lugar, facilitadoraId: origen.facilitadoraId, tipo: origen.tipo, horaInicio: origen.horaInicio, horaFin: origen.horaFin }
     : { nombre: "", fecha: hoy(), lugar: ultimoLugar, facilitadoraId: yo.id, tipo: "Taller" });
   // Los tipos del catálogo más los que ya se escribieron a mano en otras actividades
-  const usados = (await db.todos("actividades")).map(x => x.tipo).filter(Boolean);
+  const usados = (await db.todos("actividades")).map(x => x.tipo).filter(t => t && !TIPOS_RETIRADOS.includes(t));
   const tipos = [...new Set([...TIPOS_ACTIVIDAD, ...usados.sort((x, y) => x.localeCompare(y, "es")), a.tipo].filter(Boolean))];
   const volver = act ? `#/actividad/${act.id}` : origen ? `#/actividad/${origen.id}` : "#/";
 
@@ -148,6 +181,12 @@ async function detalle({ yo, pintar, ir }, id) {
         return editable ? `<a class="row person" href="#/actividad/${a.id}/registrar/${x.id}">${inner}</a>` : `<div class="row person">${inner}</div>`;
       }).join("")}</div>` : `<div class="empty"><b>Sin asistentes todavía.</b><p>${editable ? "Toca “Registrar asistente” para capturar a la primera persona. Si ya vino antes, al escribir su CURP se llenan sus datos." : "Esta actividad está cerrada."}</p></div>`}
     </section>
+    <section class="panel stack">
+      <div><h2 class="h3">Notas de la actividad</h2>
+        <p class="hint">Temas tratados, acuerdos y observaciones. Se pueden escribir aunque la actividad esté cerrada y se imprimen en una hoja aparte después de la lista.</p></div>
+      <div class="field"><label for="notas" class="visually-hidden">Notas de la actividad</label><textarea id="notas" class="notas" rows="5" maxlength="4000">${esc(a.notas || "")}</textarea></div>
+      <div class="actions"><button class="btn" id="guardarNotas">Guardar notas</button></div>
+    </section>
     <section class="panel stack quiet">
       <h2 class="h3">Cierre</h2>
       <p class="hint">${a.estado === "cerrada" ? "La lista está cerrada y ya no admite cambios." + (esCoordinadora(yo) ? " Como Coordinadora puedes reabrirla." : "") : "Cierra la actividad cuando termines de registrar. Ya no se podrán agregar ni modificar asistentes."}</p>
@@ -159,14 +198,20 @@ async function detalle({ yo, pintar, ir }, id) {
     </section>
   `, { atras: "#/" });
 
+  $("#guardarNotas", c).addEventListener("click", async () => {
+    const notas = $("#notas", c).value.trim();
+    await db.guardar("actividades", { ...(await db.uno("actividades", id)), notas });
+    aviso("Notas guardadas");
+  });
+
   const cerrar = $("#cerrar", c);
   if (cerrar) dobleToque(cerrar, sinFirma ? `Hay ${sinFirma} sin firma. Toca otra vez para cerrar` : "Toca otra vez para cerrar", async () => {
-    await db.guardar("actividades", { ...a, estado: "cerrada", cerradaPor: yo.id, cerradaEn: Date.now() });
+    await db.guardar("actividades", { ...(await db.uno("actividades", id)), estado: "cerrada", cerradaPor: yo.id, cerradaEn: Date.now() });
     aviso("Actividad cerrada");
     detalle({ yo, pintar, ir }, id);
   });
   $("#reabrir", c)?.addEventListener("click", async () => {
-    await db.guardar("actividades", { ...a, estado: "abierta" });
+    await db.guardar("actividades", { ...(await db.uno("actividades", id)), estado: "abierta" });
     aviso("Actividad reabierta");
     detalle({ yo, pintar, ir }, id);
   });

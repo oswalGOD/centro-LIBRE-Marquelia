@@ -275,6 +275,8 @@ table.data tbody tr:hover { background: var(--surface-2); }
 .sheet .summary td, .sheet .summary th { font-size: 6.6px; padding: 0 2px; height: 8.6px; border-width: .5px; line-height: 1; text-align: center; }
 .sheet .summary td.l { text-align: left; }
 .sheet .summary th.band { background: var(--paper-band); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.sheet.notas-hoja .notas-cuerpo { flex: 1; border: 1px solid var(--paper-ink); padding: 10px 14px; font-size: 13px; line-height: 1.45; white-space: pre-wrap; overflow: hidden; position: relative; z-index: 1; }
+.sheet.notas-hoja .notas-titulo { font-weight: 700; font-size: 13px; text-align: center; padding: 4px 0 2px; position: relative; z-index: 1; }
 .sheet .summary td.n { font-variant-numeric: tabular-nums; font-weight: 700; }
 .sheet .total { border: 2px solid var(--paper-ink); display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 4px 6px; font-weight: 700; font-size: 10px; text-align: center; }
 .sheet .total .big { font-size: 20px; border-bottom: 1px solid var(--paper-ink); min-width: 70%; }
@@ -304,5 +306,7 @@ table.data tbody tr:hover { background: var(--surface-2); }
 .scan-msg:empty { display: none; }
 
 /* Desarrollo */
+textarea.notas { width: 100%; border: 2px solid var(--control-line); background: var(--field-bg); color: var(--ink); border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 1.05rem; resize: vertical; }
+textarea.notas:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
 textarea.mono { width: 100%; border: 2px solid var(--control-line); background: var(--field-bg); color: var(--ink); border-radius: 10px; padding: 10px 12px; font-size: .85rem; resize: vertical; word-break: break-all; }
 .results button[aria-current="true"] { background: var(--ok-soft); color: var(--ok); }
