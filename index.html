@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Centro LIBRE Marquelia</title>
+  <meta name="description" content="Listas de asistencia del Centro LIBRE Marquelia: captura con firma, padrón de asistentes e impresión del formato oficial.">
+  <meta name="theme-color" content="#8c1d4f">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/favicon-32.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Centro LIBRE">
+  <link rel="stylesheet" href="css/fonts.css">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div id="app"><main class="auth"><p class="hint">Cargando…</p></main></div>
+  <div id="actualizar" class="update" hidden role="status">Hay una versión nueva de la app. <button class="btn small" id="recargar">Actualizar</button></div>
+  <noscript>Esta app necesita JavaScript activado.</noscript>
+  <script type="module" src="js/app.js"></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js").then(reg => {
+        reg.addEventListener("updatefound", () => {
+          const nuevo = reg.installing;
+          nuevo?.addEventListener("statechange", () => {
+            if (nuevo.state === "installed" && navigator.serviceWorker.controller) document.getElementById("actualizar").hidden = false;
+          });
+        });
+      });
+      document.getElementById("recargar").onclick = () => {
+        navigator.serviceWorker.getRegistration().then(r => r?.waiting?.postMessage("activar"));
+      };
+      let recargando = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => { if (!recargando) { recargando = true; location.reload(); } });
+    }
+  </script>
+</body>
+</html>
