@@ -305,3 +305,4 @@ table.data tbody tr:hover { background: var(--surface-2); }
 
 /* Desarrollo */
 textarea.mono { width: 100%; border: 2px solid var(--control-line); background: var(--field-bg); color: var(--ink); border-radius: 10px; padding: 10px 12px; font-size: .85rem; resize: vertical; word-break: break-all; }
+.results button[aria-current="true"] { background: var(--ok-soft); color: var(--ok); }

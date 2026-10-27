@@ -73,3 +73,12 @@ export const fechaLarga = f => (f ? `${Number(f.slice(8, 10))} ${MESES[Number(f.
 export const mesCorto = f => MESES[Number(f.slice(5, 7)) - 1];
 
 export const normalizar = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+/** Minutos entre dos horas "HH:MM" del mismo día; null si falta alguna o no avanza. */
+export function minutosEntre(inicio, fin) {
+  if (!inicio || !fin) return null;
+  const m = h => Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5));
+  const d = m(fin) - m(inicio);
+  return d > 0 ? d : null;
+}
+export const duracion = min => (min == null ? "" : `${Math.floor(min / 60) ? `${Math.floor(min / 60)} h` : ""}${min % 60 ? ` ${min % 60} min` : ""}`.trim());
