@@ -2,6 +2,7 @@
 // Para agregar una función nueva, crea un módulo en js/modulos/ que exporte
 // { menu, rutas } y agrégalo a la lista MODULOS de abajo.
 
+import { anotar } from "./core/bitacora.js";
 import * as db from "./core/db.js";
 import { ROLES } from "./core/catalogos.js";
 import { crearPerfil, iniciarSesion, cerrarSesion, sesionActual, verificarPin, pinValido, esCoordinadora } from "./core/auth.js";
@@ -12,8 +13,9 @@ import usuarias from "./modulos/usuarias.js";
 import estadisticas from "./modulos/estadisticas.js";
 import perfiles from "./modulos/perfiles.js";
 import ajustes from "./modulos/ajustes.js";
+import desarrollo from "./modulos/desarrollo.js";
 
-const MODULOS = [actividades, usuarias, estadisticas, perfiles, ajustes];
+const MODULOS = [actividades, usuarias, estadisticas, perfiles, ajustes, desarrollo];
 
 const raiz = document.getElementById("app");
 let yo = null;
@@ -84,6 +86,7 @@ async function router() {
     location.hash = "#/";
   } catch (e) {
     console.error(e);
+    anotar(e.message, location.hash);
     raiz.innerHTML = `<main class="wrap"><div class="issues" role="alert"><b>Algo falló al abrir esta pantalla.</b><p>${esc(e.message)}</p><a class="btn" href="#/">Ir al inicio</a></div></main>`;
   }
 }
@@ -240,5 +243,5 @@ router();
 
 // Si llegan datos de otro dispositivo, se refresca la pantalla salvo que se esté llenando un formulario
 nube.iniciarAutomatica(() => {
-  if (!/(registrar|editar|nueva|ajustes|perfiles)/.test(location.hash) && !document.querySelector("#pinForm:not([hidden])")) router();
+  if (!/(registrar|editar|nueva|ajustes|perfiles|desarrollo)/.test(location.hash) && !document.querySelector("#pinForm:not([hidden])")) router();
 });
