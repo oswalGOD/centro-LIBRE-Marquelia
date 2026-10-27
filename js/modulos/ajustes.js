@@ -6,7 +6,7 @@ import { hoy } from "../core/catalogos.js";
 import { $, esc, aviso, errores, descargar, dobleToque, plural } from "../core/ui.js";
 import * as nube from "../core/sync.js";
 
-export const VERSION_APP = "0.4.0";
+export const VERSION_APP = "0.4.1";
 
 let eventoInstalar = null;
 addEventListener("beforeinstallprompt", e => { e.preventDefault(); eventoInstalar = e; });
