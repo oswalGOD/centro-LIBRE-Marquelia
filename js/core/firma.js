@@ -93,3 +93,54 @@ export function panelFirma(canvas, existente = "") {
     valor: () => (trazada ? recortada() : existente),
   };
 }
+
+/**
+ * Abre una ventana para firmar y devuelve la firma aceptada, o null si se canceló.
+ * La firma solo se puede trazar dentro de esta ventana: así, desplazarse por el
+ * formulario nunca la modifica por accidente.
+ */
+export function pedirFirma({ titulo = "Firma", existente = "" } = {}) {
+  return new Promise(resolve => {
+    const previo = document.activeElement;
+    const capa = document.createElement("div");
+    capa.className = "sig-modal";
+    capa.innerHTML = `
+      <div class="sig-sheet" role="dialog" aria-modal="true" aria-labelledby="sigTitulo">
+        <div class="sig-head"><h2 id="sigTitulo"></h2><p class="hint">Firme con el dedo o el lápiz dentro del recuadro.</p></div>
+        <div class="sigpad big"><canvas aria-label="Área para firmar"></canvas><div class="baseline"></div><div class="ph">Firma</div></div>
+        <p class="note warn" id="sigAviso" hidden>Firme dentro del recuadro antes de aceptar.</p>
+        <div class="actions">
+          <button type="button" class="btn primary" data-accion="aceptar">Aceptar firma</button>
+          <button type="button" class="btn" data-accion="borrar">Borrar y volver a firmar</button>
+          <button type="button" class="btn ghost push" data-accion="cancelar">Cancelar</button>
+        </div>
+      </div>`;
+    capa.querySelector("#sigTitulo").textContent = titulo;
+    document.body.append(capa);
+    const desbordePrevio = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = "hidden"; // la página de atrás no se mueve mientras se firma
+    const panel = panelFirma(capa.querySelector("canvas"), existente);
+
+    function cerrar(valor) {
+      document.documentElement.style.overflow = desbordePrevio;
+      removeEventListener("keydown", tecla);
+      capa.remove();
+      previo?.focus?.({ preventScroll: true });
+      resolve(valor);
+    }
+    const tecla = e => { if (e.key === "Escape") cerrar(null); };
+    addEventListener("keydown", tecla);
+
+    capa.addEventListener("click", e => {
+      const accion = e.target.closest("[data-accion]")?.dataset.accion;
+      if (accion === "cancelar") cerrar(null);
+      if (accion === "borrar") { panel.limpiar(); capa.querySelector("#sigAviso").hidden = true; }
+      if (accion === "aceptar") {
+        const valor = panel.valor();
+        if (!valor) { capa.querySelector("#sigAviso").hidden = false; return; }
+        cerrar(valor);
+      }
+    });
+    capa.querySelector("[data-accion=aceptar]").focus({ preventScroll: true });
+  });
+}

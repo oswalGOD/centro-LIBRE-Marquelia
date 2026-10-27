@@ -3,7 +3,7 @@
 import * as db from "../core/db.js";
 import { GRUPOS, SEXOS, leerCurp, limpiarCurp, edad, rangoDe, etiquetaRango, normalizar } from "../core/catalogos.js";
 import { puedeEditar } from "../core/permisos.js";
-import { panelFirma } from "../core/firma.js";
+import { pedirFirma } from "../core/firma.js";
 import { $, $$, esc, aviso, errores, dobleToque } from "../core/ui.js";
 
 const CAMPOS = ["curp", "nombre", "fnac", "sexo", "lugar", "grupo", "ocupacion", "telefono"];
@@ -44,8 +44,8 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
       <div class="field"><span class="legend">Sexo</span><div class="choices" data-elegir="sexo">${SEXOS.map(([v, t]) => `<button type="button" class="choice" data-v="${v}">${t}</button>`).join("")}</div></div>
       <div class="field"><span class="legend">Grupo</span><div class="choices" data-elegir="grupo">${GRUPOS.map(([v, t]) => `<button type="button" class="choice" data-v="${v}"><b>${v})</b> ${t}</button>`).join("")}</div></div>
       <div class="field"><span class="legend">Firma</span>
-        <div class="sigpad"><canvas id="firma" aria-label="Área para firmar"></canvas><div class="baseline"></div><div class="ph">Firme con el dedo o el lápiz sobre la línea</div></div>
-        <div class="actions"><button type="button" class="btn small ghost" id="borrarFirma">Borrar firma</button></div></div>
+        <div class="sig-row"><div class="sig-preview" id="firmaVista"></div>
+          <button type="button" class="btn" id="firmar"></button></div></div>
       <div id="err"></div>
       <div class="actions">
         <button class="btn primary" id="guardar">${existente ? "Guardar cambios" : "Guardar asistente"}</button>
@@ -55,7 +55,13 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
       </div>
     </section>`, { atras: volver });
 
-  const firma = panelFirma($("#firma", c), existente?.firma || "");
+  let firma = existente?.firma || "";
+  function pintarFirma() {
+    $("#firmaVista", c).innerHTML = firma ? `<img src="${firma}" alt="Firma capturada">` : `<span>Sin firma</span>`;
+    $("#firmaVista", c).classList.toggle("vacia", !firma);
+    $("#firmar", c).textContent = firma ? "Volver a firmar" : "Firmar";
+  }
+  pintarFirma();
 
   function pintarCampos() {
     $("#curp", c).value = d.curp;
@@ -141,7 +147,10 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
     }));
   });
 
-  $("#borrarFirma", c).onclick = () => firma.limpiar();
+  $("#firmar", c).onclick = async () => {
+    const nueva = await pedirFirma({ titulo: d.nombre.trim() ? `Firma de ${d.nombre.trim()}` : "Firma de la persona asistente", existente: firma });
+    if (nueva) { firma = nueva; pintarFirma(); }
+  };
 
   async function guardar(otra) {
     const e = [];
@@ -156,7 +165,7 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
     if (!d.ocupacion.trim()) e.push("Ocupación");
     const tel = d.telefono.replace(/\D/g, "");
     if (tel.length !== 10) e.push("Teléfono de 10 dígitos");
-    const imagenFirma = firma.valor();
+    const imagenFirma = firma;
     if (!imagenFirma) e.push("Firma");
 
     // CURP repetida en el padrón con otra persona

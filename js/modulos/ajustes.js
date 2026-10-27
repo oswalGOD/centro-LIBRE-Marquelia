@@ -5,7 +5,7 @@ import { esCoordinadora, cambiarPin, pinValido, verificarPin } from "../core/aut
 import { hoy } from "../core/catalogos.js";
 import { $, esc, aviso, errores, descargar, dobleToque, plural } from "../core/ui.js";
 
-export const VERSION_APP = "0.3.0";
+export const VERSION_APP = "0.3.1";
 
 let eventoInstalar = null;
 addEventListener("beforeinstallprompt", e => { e.preventDefault(); eventoInstalar = e; });
