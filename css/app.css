@@ -96,6 +96,11 @@ main.wrap.wide { max-width: 1240px; }
 .field label, .legend { font-size: .95rem; font-weight: 700; color: var(--ink); }
 .facts dt { font-size: .76rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .field input, .field select { width: 100%; border: 2px solid var(--control-line); background: var(--field-bg); border-radius: 10px; padding: 10px 12px; min-height: 48px; font-size: 1.05rem; }
+/* Safari (iPad, iPhone, Mac) da a los campos de fecha y hora un ancho propio que no se encoge
+   y se encima en los campos vecinos; así ocupan solo su columna */
+.field input, .field select { min-width: 0; max-width: 100%; }
+.field input[type="date"], .field input[type="time"] { -webkit-appearance: none; appearance: none; display: block; text-align: left; }
+.field input::-webkit-date-and-time-value { text-align: left; margin: 0; }
 .field input::placeholder, .search::placeholder { color: var(--muted); opacity: 1; }
 .field input:focus, .field select:focus, .search:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
 .field input:disabled { background: var(--surface-2); color: var(--muted); border-style: dashed; }
@@ -184,7 +189,7 @@ a.row:hover { border-color: var(--accent); }
 .segmented [aria-selected="true"] { background: var(--accent); color: var(--accent-ink); }
 
 /* ---------- Estadísticas ---------- */
-.filters { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: end; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+.filters { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: start; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
 .filters .field { flex: 1 1 160px; }
 .segmented { display: inline-flex; border: 2px solid var(--control-line); border-radius: 10px; overflow: hidden; background: var(--surface-2); min-height: 48px; }
 .filters .field:has(.segmented) { flex: 0 0 auto; }
