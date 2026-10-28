@@ -1,7 +1,7 @@
 // Service worker: guarda la app en el dispositivo para que abra y funcione sin internet.
 // Al publicar cambios, sube el número de VERSION para que los dispositivos se actualicen.
 
-const VERSION = "clm-v0.9.2";
+const VERSION = "clm-v0.10.0";
 const ARCHIVOS = [
   "./",
   "index.html",
@@ -29,6 +29,11 @@ const ARCHIVOS = [
   "js/core/bitacora.js",
   "js/modulos/desarrollo.js",
   "js/vendor/jsQR.min.js",
+  "js/core/ine.js",
+  "js/vendor/tesseract/tesseract.min.js",
+  "js/vendor/tesseract/worker.min.js",
+  "js/vendor/tesseract/tesseract-core-simd-lstm.wasm.js",
+  "js/vendor/tesseract/eng.traineddata.gz",
   "assets/logos.png",
   "assets/pie.png",
   "assets/marca-agua.jpg",
@@ -60,12 +65,19 @@ self.addEventListener("message", e => {
   if (e.data === "activar") self.skipWaiting();
 });
 
-// Primero la copia guardada; si no existe, la red.
+// Primero la copia guardada; si no existe, la red. Lo que se descarga del lector de texto
+// (la versión para dispositivos sin SIMD) también se guarda para usarlo después sin internet.
 self.addEventListener("fetch", e => {
   if (e.request.method !== "GET" || new URL(e.request.url).origin !== location.origin) return;
   e.respondWith(
     caches.match(e.request, { ignoreSearch: true }).then(guardado =>
-      guardado || fetch(e.request).catch(() => (e.request.mode === "navigate" ? caches.match("index.html") : Response.error()))
+      guardado || fetch(e.request).then(r => {
+        if (r.ok && e.request.url.includes("/js/vendor/tesseract/")) {
+          const copia = r.clone();
+          caches.open(VERSION).then(c => c.put(e.request, copia));
+        }
+        return r;
+      }).catch(() => (e.request.mode === "navigate" ? caches.match("index.html") : Response.error()))
     )
   );
 });
