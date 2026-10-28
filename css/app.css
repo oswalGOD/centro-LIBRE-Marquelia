@@ -310,3 +310,9 @@ textarea.notas { width: 100%; border: 2px solid var(--control-line); background:
 textarea.notas:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
 textarea.mono { width: 100%; border: 2px solid var(--control-line); background: var(--field-bg); color: var(--ink); border-radius: 10px; padding: 10px 12px; font-size: .85rem; resize: vertical; word-break: break-all; }
 .results button[aria-current="true"] { background: var(--ok-soft); color: var(--ok); }
+
+/* Escanear INE */
+.ine-cuerpo { min-height: 0; overflow: auto; align-content: start; }
+.ine-lados { display: flex; flex-wrap: wrap; gap: 10px; }
+.ine-lados .btn { flex: 1 1 160px; justify-content: center; }
+.btn.disabled { opacity: .6; pointer-events: none; }
