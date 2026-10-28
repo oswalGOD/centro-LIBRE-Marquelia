@@ -12,7 +12,7 @@ import actividades from "./modulos/actividades.js";
 import usuarias from "./modulos/usuarias.js";
 import estadisticas from "./modulos/estadisticas.js";
 import perfiles from "./modulos/perfiles.js";
-import ajustes from "./modulos/ajustes.js";
+import ajustes, { VERSION_APP } from "./modulos/ajustes.js";
 import desarrollo from "./modulos/desarrollo.js";
 
 const MODULOS = [actividades, usuarias, estadisticas, perfiles, ajustes, desarrollo];
@@ -98,6 +98,7 @@ async function primerUso() {
   const conectada = !!(await db.leerMeta("nube"));
   raiz.innerHTML = `
   <main class="auth">
+    <p class="version-app">Versión ${VERSION_APP}</p>
     <div class="auth-card stack">
       <div class="auth-brand"><img class="mark" src="icons/icon-192.png" alt="" aria-hidden="true"><div><h1>Centro LIBRE Marquelia</h1><p class="hint">Listas de asistencia</p></div></div>
       <h2>Configura este dispositivo</h2>
