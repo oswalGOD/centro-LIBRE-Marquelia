@@ -321,3 +321,6 @@ textarea.mono { width: 100%; border: 2px solid var(--control-line); background: 
 .ine-lados { display: flex; flex-wrap: wrap; gap: 10px; }
 .ine-lados .btn { flex: 1 1 160px; justify-content: center; }
 .btn.disabled { opacity: .6; pointer-events: none; }
+
+/* Versión en la pantalla de configuración de un dispositivo nuevo */
+.version-app { position: fixed; left: max(12px, env(safe-area-inset-left, 0px)); bottom: max(10px, env(safe-area-inset-bottom, 0px)); margin: 0; font-size: .75rem; color: var(--muted); pointer-events: none; }
