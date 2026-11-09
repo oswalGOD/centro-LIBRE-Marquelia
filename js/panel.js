@@ -279,9 +279,9 @@ async function panel() {
 
       <section class="stack">
         <h2>Tabletas</h2>
-        ${disp.length ? disp.map(d => tarjetaTableta(d, ultima, nube)).join("") : `<p class="panel hint">Todavía ninguna tableta ha reportado. Reportan al sincronizar una vez que tienen la versión 0.13 o posterior.</p>`}
+        ${disp.length ? disp.map(d => tarjetaTableta(d, ultima, nube)).join("") : `<p class="panel hint">Todavía ninguna tableta ha reportado. Reportan al sincronizar una vez que tienen la versión 0.14 o posterior.</p>`}
         ${callados.length ? `<section class="panel stack"><h3>Dispositivos que envían datos pero no reportan</h3>
-          <p class="hint">Probablemente tienen una versión anterior a la 0.13. Se arreglan al actualizar la app en ese equipo.</p>
+          <p class="hint">Probablemente tienen una versión anterior a la 0.14. Se arreglan al actualizar la app en ese equipo.</p>
           <div class="table-scroll"><table class="data"><thead><tr><th>Dispositivo</th><th class="num">Cambios enviados</th><th>Último cambio</th></tr></thead>
           <tbody>${callados.map(([id, c]) => `<tr><th scope="row" class="mono">${esc(id.slice(0, 8))}</th><td class="num">${c.cambios}</td><td>${hace(c.ultimo)}</td></tr>`).join("")}</tbody></table></div></section>` : ""}
       </section>

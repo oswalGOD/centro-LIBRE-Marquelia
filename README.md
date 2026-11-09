@@ -43,7 +43,7 @@ La dirección del proyecto y la clave pública están en `js/core/config.js`. Es
 2. **SQL Editor → New query**: pega [`supabase/panel-desarrollo.sql`](supabase/panel-desarrollo.sql), cambia el correo de ejemplo por el de tu cuenta de desarrollo y toca **Run**. Si pones el correo de la cuenta del Centro, el script se detiene.
 3. Abre `panel.html` en la misma dirección de la app (por ejemplo `https://…github.io/centro-LIBRE-Marquelia/panel.html`) y entra con esa cuenta. No hay enlace al panel dentro de la app.
 
-Las tabletas empiezan a aparecer cuando tienen la versión 0.13 y sincronizan. Reportan como mucho cada 30 minutos, o antes si cambió la versión o hubo un error nuevo. Los mensajes de error se envían sin CURP. La sesión del panel se cierra al cerrar la pestaña.
+Las tabletas empiezan a aparecer cuando tienen la versión 0.14 y sincronizan. Reportan como mucho cada 30 minutos, o antes si cambió la versión o hubo un error nuevo. Los mensajes de error se envían sin CURP. La sesión del panel se cierra al cerrar la pestaña.
 
 ### Seguridad
 

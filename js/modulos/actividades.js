@@ -49,7 +49,7 @@ async function lista({ yo, pintar }) {
           ${a.estado === "cerrada" ? `<span class="chip">Cerrada</span>` : `<span class="chip ok">Abierta</span>`}</span>
       </a>`).join("")}</div>`
     : `<div class="empty"><b>Todavía no hay actividades.</b><p>Crea la primera con “Nueva actividad”. Después podrás registrar a cada asistente con su firma e imprimir la lista.</p></div>`}
-  `);
+  `, { atras: "#/" });
   const buscar = $("#buscar", c);
   function filtrar() {
     if (!muchas) return;
@@ -77,9 +77,9 @@ async function lista({ yo, pintar }) {
 /** Alta (id null), edición (id) o repetición de una actividad anterior (origenId). */
 async function formulario({ yo, pintar, ir }, id, origenId) {
   const act = id ? await db.uno("actividades", id) : null;
-  if (id && (!act || !puedeEditar(yo, act))) return ir(id ? `#/actividad/${id}` : "#/");
+  if (id && (!act || !puedeEditar(yo, act))) return ir(id ? `#/actividad/${id}` : "#/asistencia");
   const origen = origenId ? await db.uno("actividades", origenId) : null;
-  if (origenId && (!origen || !puedeVer(yo, origen))) return ir("#/");
+  if (origenId && (!origen || !puedeVer(yo, origen))) return ir("#/asistencia");
   const perfiles = (await db.todos("perfiles")).filter(u => u.activa);
   const ultimoLugar = await db.leerMeta("ultimoLugar", "Marquelia, Gro.");
   const a = act || (origen
@@ -88,7 +88,7 @@ async function formulario({ yo, pintar, ir }, id, origenId) {
   // Los tipos del catálogo más los que ya se escribieron a mano en otras actividades
   const usados = (await db.todos("actividades")).map(x => x.tipo).filter(t => t && !TIPOS_RETIRADOS.includes(t));
   const tipos = [...new Set([...TIPOS_ACTIVIDAD, ...usados.sort((x, y) => x.localeCompare(y, "es")), a.tipo].filter(Boolean))];
-  const volver = act ? `#/actividad/${act.id}` : origen ? `#/actividad/${origen.id}` : "#/";
+  const volver = act ? `#/actividad/${act.id}` : origen ? `#/actividad/${origen.id}` : "#/asistencia";
 
   const c = pintar(act ? "Editar actividad" : origen ? "Repetir actividad" : "Nueva actividad", `
     <section class="panel stack">
@@ -145,7 +145,7 @@ async function formulario({ yo, pintar, ir }, id, origenId) {
 
 async function detalle({ yo, pintar, ir }, id) {
   const a = await db.uno("actividades", id);
-  if (!a || !puedeVer(yo, a)) return ir("#/");
+  if (!a || !puedeVer(yo, a)) return ir("#/asistencia");
   const editable = puedeEditar(yo, a);
   const asis = (await db.todos("asistencias", "actividadId", id)).sort((x, y) => x.orden - y.orden);
   const n = s => asis.filter(x => x.datos.sexo === s).length;
@@ -196,7 +196,7 @@ async function detalle({ yo, pintar, ir }, id) {
         ${esCoordinadora(yo) ? `<button class="btn danger" id="eliminar">Eliminar actividad</button>` : ""}
       </div>
     </section>
-  `, { atras: "#/" });
+  `, { atras: "#/asistencia" });
 
   $("#guardarNotas", c).addEventListener("click", async () => {
     const notas = $("#notas", c).value.trim();
@@ -220,14 +220,14 @@ async function detalle({ yo, pintar, ir }, id) {
     for (const x of asis) await db.borrar("asistencias", x.id);
     await db.borrar("actividades", a.id);
     aviso("Actividad eliminada");
-    ir("#/");
+    ir("#/asistencia");
   });
 }
 
 export default {
-  menu: [{ href: "#/", texto: "Actividades", activa: /^#\/(actividad.*)?$/ }],
+  menu: [{ href: "#/asistencia", texto: "Actividades", activa: /^#\/(asistencia|actividad.*)$/ }],
   rutas: [
-    [/^#\/$/, lista],
+    [/^#\/asistencia$/, lista],
     [/^#\/actividad\/nueva$/, ctx => formulario(ctx, null)],
     [new RegExp(`^#/actividad/${ID}/editar$`), formulario],
     [new RegExp(`^#/actividad/${ID}/repetir$`), (ctx, origenId) => formulario(ctx, null, origenId)],

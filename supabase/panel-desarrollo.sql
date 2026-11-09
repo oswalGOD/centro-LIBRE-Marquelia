@@ -1,4 +1,4 @@
--- Centro LIBRE Marquelia: panel del desarrollador (panel.html), versión 0.13.
+-- Centro LIBRE Marquelia: panel del desarrollador (panel.html), versión 0.14.
 --
 -- Qué hace:
 --   · Crea la tabla `estado_dispositivos`, donde cada tableta deja su estado técnico al sincronizar

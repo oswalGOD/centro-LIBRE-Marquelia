@@ -14,8 +14,9 @@ import estadisticas from "./modulos/estadisticas.js";
 import perfiles from "./modulos/perfiles.js";
 import ajustes, { VERSION_APP } from "./modulos/ajustes.js";
 import desarrollo from "./modulos/desarrollo.js";
+import inicio from "./modulos/inicio.js";
 
-const MODULOS = [actividades, usuarias, estadisticas, perfiles, ajustes, desarrollo];
+const MODULOS = [inicio, actividades, usuarias, estadisticas, perfiles, ajustes, desarrollo];
 
 const raiz = document.getElementById("app");
 let yo = null;
@@ -26,22 +27,20 @@ let tocada = false;
 /** Pinta una pantalla dentro del marco de la app (barra superior y menú). */
 function pintar(titulo, contenido, { atras, ancho } = {}) {
   const ruta = location.hash || "#/";
-  const menu = MODULOS.flatMap(m => m.menu || []).filter(i => !i.soloCoordinadora || esCoordinadora(yo));
+  // Sin menú superior: el Inicio es el menú. Toda pantalla sin otro destino regresa al Inicio.
+  if (atras === undefined && ruta !== "#/") atras = "#/";
   tocada = false;
   raiz.innerHTML = `
     <header class="topbar">
       <div class="wrap">
         <a class="brand" href="#/"><img class="mark" src="icons/icon-192.png" alt="" aria-hidden="true"><span><b>Centro LIBRE</b><small>Marquelia</small></span></a>
-        <nav class="menu" aria-label="Secciones">
-          ${menu.map(i => `<a href="${i.href}" ${i.activa.test(ruta) ? 'aria-current="page"' : ""}>${esc(i.texto)}</a>`).join("")}
-        </nav>
         <div class="who"><a class="sync-pill" id="nube" href="#/ajustes" hidden></a><span class="avatar" aria-hidden="true">${esc(yo.nombre[0] || "?")}</span><span><b>${esc(yo.nombre.split(" ")[0])}</b><small>${esc(yo.rol)}</small></span>
           <button class="btn small ghost" id="salir">Salir</button></div>
       </div>
     </header>
     <main class="wrap ${ancho ? "wide" : ""}">
       <div class="page-head">
-        ${atras ? `<a class="back" href="${atras}">← Volver</a>` : ""}
+        ${atras ? `<a class="back" href="${atras}">${atras === "#/" ? "← Inicio" : "← Volver"}</a>` : ""}
         <h1>${esc(titulo)}</h1>
       </div>
       <div id="contenido" class="stack">${contenido}</div>
