@@ -43,7 +43,9 @@ La dirección del proyecto y la clave pública están en `js/core/config.js`. Es
 
 - Si dos dispositivos cambian el mismo registro, gana el cambio más reciente.
 - Si dos dispositivos dan de alta a la misma usuaria (misma CURP) sin conexión, se fusionan en una sola y sus asistencias pasan a la que queda.
-- Los folios llevan el ID del dispositivo, así que no se repiten. Si dos dispositivos usan el mismo ID, Ajustes lo avisa.
+- Los folios llevan el ID del dispositivo, así que no se repiten. Si un dispositivo se restablece y vuelve a usar su letra, sigue después del folio más alto que ya existe. Si dos dispositivos usan el mismo ID, Ajustes lo avisa.
+- Si una renovación de la sesión falla por la señal, el dispositivo sigue conectado y lo vuelve a intentar; solo se desconecta si Supabase dice que la sesión ya no sirve.
+- Al restaurar un respaldo, el dispositivo vuelve a recibir todo de la nube para quedarse con lo más nuevo.
 
 ## Probar en tu computadora
 
