@@ -37,7 +37,7 @@ async function pedirToken(cuerpo, tipo) {
   const j = (await leerJson(r)) || {};
   if (!r.ok) {
     if (r.status === 400 && tipo === "password") throw new Error("Correo o contraseña incorrectos.");
-    throw new Error(j.error_description || j.msg || `El servidor respondió ${r.status}.`);
+    throw Object.assign(new Error(j.error_description || j.msg || `El servidor respondió ${r.status}.`), { status: r.status });
   }
   const nube = { cuenta: j.user?.email || cuerpo.email, acceso: j.access_token, renovar: j.refresh_token, expira: Date.now() + j.expires_in * 1000 };
   await db.escribirMeta("nube", nube);
@@ -63,8 +63,13 @@ async function token(forzar) {
     try {
       nube = await pedirToken({ refresh_token: nube.renovar }, "refresh_token");
     } catch (e) {
-      if (navigator.onLine) await db.escribirMeta("nube", null);
-      throw new Error("La sesión con la cuenta del Centro venció. Vuelve a conectar este dispositivo en Ajustes.");
+      // Solo se olvida la sesión si Supabase dice que ya no sirve. Una falla de red o del servidor
+      // (señal débil, Wi-Fi con página de acceso) no desconecta el dispositivo: se reintenta después.
+      if (e.status === 400 || e.status === 401) {
+        await db.escribirMeta("nube", null);
+        throw new Error("La sesión con la cuenta del Centro venció. Vuelve a conectar este dispositivo en Ajustes.");
+      }
+      throw new Error("No se pudo conectar con la cuenta del Centro. Se volverá a intentar.");
     }
   }
   return nube.acceso;
@@ -85,10 +90,13 @@ async function api(ruta, opciones = {}, reintento = false) {
 }
 
 /* ---------- Envío ---------- */
+// Lo que llegó de otro dispositivo se guarda con `_recibido` igual a su `actualizado`: así no se vuelve
+// a enviar (y no aparece como «por enviar»). Si aquí se cambia, `actualizado` cambia y sí se envía.
+// Con ultimoEnvio en 0 («Volver a enviar todo» o tras restaurar un respaldo) se envía todo.
 async function porEnviar() {
   const desde = (await db.leerMeta("ultimoEnvio")) || 0;
   const lista = [];
-  for (const a of SINCRONIZADOS) for (const r of await db.crudos(a)) if (r.actualizado > desde) lista.push([a, r]);
+  for (const a of SINCRONIZADOS) for (const r of await db.crudos(a)) if (r.actualizado > desde && (!desde || r._recibido !== r.actualizado)) lista.push([a, r]);
   return lista;
 }
 
@@ -97,7 +105,7 @@ async function enviar() {
   const dispositivo = await db.uuidDispositivo();
   const lista = await porEnviar();
   for (let i = 0; i < lista.length; i += LOTE) {
-    const filas = lista.slice(i, i + LOTE).map(([almacen, r]) => ({ almacen, id: r.id, datos: r, actualizado: r.actualizado, borrado: !!r.borrado, dispositivo }));
+    const filas = lista.slice(i, i + LOTE).map(([almacen, { _recibido, ...r }]) => ({ almacen, id: r.id, datos: r, actualizado: r.actualizado, borrado: !!r.borrado, dispositivo }));
     await api("registros?on_conflict=almacen,id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify(filas) });
   }
   await db.escribirMeta("ultimoEnvio", inicio);
@@ -110,6 +118,7 @@ const fin = t => new Promise((ok, mal) => { t.oncomplete = ok; t.onerror = t.ona
 
 /** Guarda un registro recibido si es más nuevo que el local. Devuelve true si hubo que fusionar usuarias. */
 async function aplicar(almacen, remoto) {
+  remoto = { ...remoto, _recibido: remoto.actualizado };
   const d = await db.abrir();
   const t = d.transaction(["usuarias", "asistencias"].includes(almacen) ? ["usuarias", "asistencias"] : [almacen], "readwrite");
   const s = t.objectStore(almacen);
@@ -124,7 +133,8 @@ async function aplicar(almacen, remoto) {
       // Misma CURP con dos ids: se queda el id menor en todos los dispositivos
       fusion = true;
       const [queda, sale] = otra.id < remoto.id ? [otra, remoto] : [remoto, otra];
-      const fusionada = { ...sale, borrado: true, fusionadaEn: queda.id, actualizado: ahora };
+      const { _recibido, ...resto } = sale;
+      const fusionada = { ...resto, borrado: true, fusionadaEn: queda.id, actualizado: ahora };
       delete fusionada.curp;
       s.put(fusionada);
       if (queda === remoto) s.put(remoto);
@@ -137,7 +147,7 @@ async function aplicar(almacen, remoto) {
 
   if (almacen === "asistencias") {
     const p = await pedirIdb(t.objectStore("usuarias").get(remoto.usuariaId));
-    if (p?.fusionadaEn) { remoto = { ...remoto, usuariaId: p.fusionadaEn, actualizado: ahora }; fusion = true; }
+    if (p?.fusionadaEn) { const { _recibido, ...resto } = remoto; remoto = { ...resto, usuariaId: p.fusionadaEn, actualizado: ahora }; fusion = true; }
   }
   s.put(remoto);
   await fin(t);
@@ -149,16 +159,20 @@ async function recibir() {
   const desde = cursor ? new Date(new Date(cursor).getTime() - MARGEN_RECEPCION).toISOString() : "1970-01-01T00:00:00Z";
   const yo = await db.uuidDispositivo();
   const idDisp = await db.leerMeta("idDispositivo", "A");
+  // Actividades creadas antes de configurar este dispositivo (p. ej. las suyas de antes de restablecerlo) no cuentan como ID repetido
+  const configurado = (await db.leerMeta("configuradoEn")) || 0;
   let maximo = cursor, recibidos = 0, fusiones = 0, idRepetido = false;
   for (let pagina = 0; ; pagina++) {
     const filas = await api(`registros?select=almacen,id,datos,dispositivo,recibido&recibido=gte.${encodeURIComponent(desde)}&order=recibido.asc,almacen.asc,id.asc&limit=${LOTE}&offset=${pagina * LOTE}`);
     for (const f of filas) {
       if (!SINCRONIZADOS.includes(f.almacen)) continue;
       if ((f.almacen === "usuarias" && "pin" in f.datos) || (f.almacen === "asistencias" && !f.datos.usuariaId)) continue; // nombres anteriores a la versión 0.5
-      if (f.dispositivo !== yo) {
+      if (f.dispositivo !== yo && !db.registroValido(f.almacen, f.datos)) {
+        anotar(`Registro inválido ignorado (${f.almacen} ${String(f.id).slice(0, 8)})`, "sincronización");
+      } else if (f.dispositivo !== yo) {
         if (await aplicar(f.almacen, f.datos)) fusiones++;
         recibidos++;
-        if (f.almacen === "actividades" && new RegExp(`-${idDisp}\\d+$`).test(f.datos.folio || "")) idRepetido = true;
+        if (f.almacen === "actividades" && (f.datos.creado || 0) > configurado && new RegExp(`-${idDisp}\\d+$`).test(f.datos.folio || "")) idRepetido = true;
       }
       if (!maximo || f.recibido > maximo) maximo = f.recibido;
     }

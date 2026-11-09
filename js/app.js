@@ -19,11 +19,15 @@ const MODULOS = [actividades, usuarias, estadisticas, perfiles, ajustes, desarro
 
 const raiz = document.getElementById("app");
 let yo = null;
+// Se escribió o eligió algo en la pantalla actual: si llegan datos de otro dispositivo no se vuelve a dibujar
+let tocada = false;
+["input", "change"].forEach(t => raiz.addEventListener(t, () => (tocada = true)));
 
 /** Pinta una pantalla dentro del marco de la app (barra superior y menú). */
 function pintar(titulo, contenido, { atras, ancho } = {}) {
   const ruta = location.hash || "#/";
   const menu = MODULOS.flatMap(m => m.menu || []).filter(i => !i.soloCoordinadora || esCoordinadora(yo));
+  tocada = false;
   raiz.innerHTML = `
     <header class="topbar">
       <div class="wrap">
@@ -96,6 +100,20 @@ async function router() {
 // el servidor (Supabase), así que tener el enlace de la app no basta para usarla.
 async function primerUso() {
   const conectada = !!(await db.leerMeta("nube"));
+  // Ya se entró con la cuenta pero no hay perfiles: antes de ofrecer crear a la Coordinadora hay que
+  // confirmar con la nube que de verdad no hay ninguno (si la primera descarga falló, se crearían perfiles repetidos).
+  if (conectada) {
+    raiz.innerHTML = `<main class="auth"><div class="auth-card stack"><p class="hint">Revisando los datos de la cuenta del Centro…</p><div id="err"></div></div></main>`;
+    try {
+      await nube.sincronizar();
+      if ((await db.todos("perfiles")).length) return router();
+    } catch (e) {
+      errores($("#err"), [e.message, "Revisa el internet y vuelve a intentar. Sin esta revisión no se puede crear el perfil de la Coordinadora."], "No se pudo revisar la cuenta del Centro.");
+      $("#err").insertAdjacentHTML("beforeend", `<div class="actions"><button class="btn primary" id="reintentar">Volver a intentar</button></div>`);
+      $("#reintentar").onclick = () => router();
+      return;
+    }
+  }
   raiz.innerHTML = `
   <main class="auth">
     <p class="version-app">Versión ${VERSION_APP}</p>
@@ -221,5 +239,6 @@ router();
 
 // Si llegan datos de otro dispositivo, se refresca la pantalla salvo que se esté llenando un formulario
 nube.iniciarAutomatica(() => {
-  if (!/(registrar|editar|nueva|ajustes|perfiles|desarrollo)/.test(location.hash) && !document.querySelector("#pinForm:not([hidden])")) router();
+  if (tocada || /(registrar|editar|nueva|repetir|ajustes|perfiles|desarrollo)/.test(location.hash) || document.querySelector("#pinForm:not([hidden]), .sig-modal, .scan-modal")) return;
+  router();
 });
