@@ -1,3 +1,6 @@
+// Versión de la app. Súbela junto con VERSION de sw.js al publicar cambios.
+export const VERSION_APP = "0.13.0";
+
 // Proyecto de Supabase para sincronizar dispositivos.
 // La clave "anon" es pública por diseño: sin la cuenta del Centro no da acceso a ningún dato
 // (ver supabase/esquema.sql). Nunca pongas aquí la clave "service_role".

@@ -1,0 +1,18 @@
+/* Panel del desarrollador (panel.html). Usa los estilos de app.css y agrega solo lo propio. */
+
+.dev-head { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+.dev-head .who { margin-left: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.tablet { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; min-width: 0; }
+.tablet-head { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; }
+.tablet-head h3 { font-size: 1.2rem; }
+.meter { height: 10px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); overflow: hidden; }
+.meter span { display: block; height: 100%; width: var(--w); background: var(--accent); }
+.meter.warn span { background: var(--warn); }
+.dev-errors { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.dev-errors li { display: grid; gap: 2px; padding: 8px 12px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); overflow-wrap: anywhere; }
+.dev-errors .meta { display: flex; flex-wrap: wrap; gap: 2px 12px; color: var(--muted); font-size: .85rem; }
+details.dev summary { cursor: pointer; font-weight: 700; color: var(--accent); }
+details.dev[open] summary { margin-bottom: 10px; }
+.tile.warn { border-color: var(--warn); }
+.tile.warn .value { color: var(--warn); }
