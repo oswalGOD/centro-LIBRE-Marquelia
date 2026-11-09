@@ -5,7 +5,7 @@
 import { prefijoFolio } from "./catalogos.js";
 
 const NOMBRE = "centro-libre-marquelia";
-const VERSION = 2;
+const VERSION = 3;
 
 let conexion;
 
@@ -27,7 +27,16 @@ export function convertirV1(datos) {
   };
 }
 
-function migrarV1(d, t) {
+/** Versión 3: índice por fecha de cambio, para que la sincronización lea solo lo que cambió y no toda la base. */
+const CON_INDICE_CAMBIO = ["perfiles", "usuarias", "actividades", "asistencias"];
+function agregarIndiceCambio(t) {
+  for (const a of CON_INDICE_CAMBIO) {
+    const s = t.objectStore(a);
+    if (!s.indexNames.contains("actualizado")) s.createIndex("actualizado", "actualizado");
+  }
+}
+
+function migrarV1(d, t, despues) {
   const leer = nombre => new Promise(ok => { t.objectStore(nombre).getAll().onsuccess = e => ok(e.target.result); });
   Promise.all(["usuarias", "personas", "asistencias"].map(leer)).then(([usuarias, personas, asistencias]) => {
     const nuevo = convertirV1({ usuarias, personas, asistencias });
@@ -43,6 +52,7 @@ function migrarV1(d, t) {
     const meta = t.objectStore("meta");
     meta.put({ clave: "ultimoEnvio", valor: 0, actualizado: Date.now() });
     meta.delete("ultimaRecepcion");
+    despues();
   });
 }
 
@@ -50,8 +60,9 @@ export function abrir() {
   conexion ??= new Promise((resolve, reject) => {
     const r = indexedDB.open(NOMBRE, VERSION);
     r.onupgradeneeded = e => {
-      const d = r.result;
-      if (e.oldVersion >= 1) return migrarV1(d, r.transaction);
+      const d = r.result, t = r.transaction;
+      if (e.oldVersion === 1) return migrarV1(d, t, () => agregarIndiceCambio(t));
+      if (e.oldVersion === 2) return agregarIndiceCambio(t);
       d.createObjectStore("perfiles", { keyPath: "id" });
       crearAlmacenUsuarias(d);
       const actividades = d.createObjectStore("actividades", { keyPath: "id" });
@@ -60,6 +71,7 @@ export function abrir() {
       asistencias.createIndex("actividadId", "actividadId");
       asistencias.createIndex("usuariaId", "usuariaId");
       d.createObjectStore("meta", { keyPath: "clave" });
+      agregarIndiceCambio(t);
     };
     r.onsuccess = () => renombrarMeta(r.result).then(() => resolve(r.result), reject);
     r.onerror = () => reject(r.error);
@@ -105,7 +117,7 @@ export const cambios = new EventTarget();
 const avisarCambio = almacen => cambios.dispatchEvent(new CustomEvent("cambio", { detail: { almacen } }));
 
 /** Claves de `meta` que pertenecen a este dispositivo y no viajan en respaldos. */
-export const META_LOCAL = ["uuidDispositivo", "configuradoEn", "idDispositivo", "nube", "ultimoEnvio", "ultimaRecepcion", "ultimaSincronizacion", "avisoIdRepetido", "ultimoRespaldo"];
+export const META_LOCAL = ["uuidDispositivo", "configuradoEn", "idDispositivo", "nube", "ultimoEnvio", "ultimaRecepcion", "ultimaSincronizacion", "avisoIdRepetido", "ultimoRespaldo", "desfaseReloj"];
 
 /**
  * Revisa que un registro que llega de la nube o de un respaldo tenga lo mínimo para que la app no falle al mostrarlo.
@@ -156,6 +168,12 @@ export async function guardar(almacen, registro) {
 /** Todos los registros, incluidos los borrados (para sincronizar y respaldar). */
 export async function crudos(almacen) {
   return pedir((await abrir()).transaction(almacen).objectStore(almacen).getAll());
+}
+
+/** Registros (incluidos los borrados) cambiados después de `desde` (ms), usando el índice por fecha de cambio. */
+export async function cambiadosDesde(almacen, desde) {
+  const s = (await abrir()).transaction(almacen).objectStore(almacen);
+  return pedir(desde ? s.index("actualizado").getAll(IDBKeyRange.lowerBound(desde, true)) : s.getAll());
 }
 
 /** Borrado lógico: el registro queda marcado para que otros dispositivos también lo eliminen. */

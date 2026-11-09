@@ -3,10 +3,11 @@
 import * as db from "../core/db.js";
 import { esCoordinadora, cambiarPin, pinValido, verificarPin } from "../core/auth.js";
 import { hoy, prefijoFolio } from "../core/catalogos.js";
-import { $, esc, aviso, errores, descargar, dobleToque, plural } from "../core/ui.js";
+import { $, esc, aviso, errores, descargar, dobleToque, plural, unaVez } from "../core/ui.js";
 import * as nube from "../core/sync.js";
+import { cifrar, descifrar, estaCifrado } from "../core/cifrado.js";
 
-export const VERSION_APP = "0.11.1";
+export const VERSION_APP = "0.12.0";
 
 let eventoInstalar = null;
 addEventListener("beforeinstallprompt", e => { e.preventDefault(); eventoInstalar = e; });
@@ -42,6 +43,7 @@ async function vista(ctx) {
           <div><dt>Última sincronización</dt><dd>${e.ultima ? new Date(e.ultima).toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" }) : "Todavía no"}</dd></div>
         </dl>
         ${e.error ? `<div class="issues">${esc(e.error)}</div>` : ""}
+        ${nube.avisoReloj() ? `<div class="issues"><b>Revisa la hora del equipo.</b> ${esc(nube.avisoReloj())}</div>` : ""}
         ${avisoIdRepetido ? `<div class="issues"><b>Otro dispositivo también usa el ID ${esc(idDisp)} en sus folios.</b> ${coord ? "Cambia el ID de este dispositivo abajo, en Folios." : "Pide a la Coordinadora que cambie el ID de este dispositivo."}</div>` : ""}
         <p class="hint">Se sincroniza sola al abrir la app, al volver el internet, unos segundos después de cada cambio y cada 5 minutos.</p>
         <div class="actions"><button class="btn primary" id="sincronizar">Sincronizar ahora</button>
@@ -71,6 +73,19 @@ async function vista(ctx) {
       ${coord ? `<div class="actions">
         <button class="btn primary" id="respaldo">Descargar respaldo</button>
         <label class="btn" for="restaurar">Restaurar desde respaldo</label><input type="file" id="restaurar" accept="application/json,.json" class="visually-hidden">
+      </div>
+      <div class="stack" id="respaldoForm" hidden>
+        <p class="hint">El respaldo trae CURP, teléfonos y firmas, así que se descarga cifrado. Elige una contraseña de al menos 8 caracteres y guárdala en un lugar seguro: <b>sin ella no se puede abrir el respaldo</b>.</p>
+        <div class="grid">
+          <div class="field"><label for="r-clave">Contraseña del respaldo</label><input id="r-clave" type="password" autocomplete="new-password"></div>
+          <div class="field"><label for="r-clave2">Repítela</label><input id="r-clave2" type="password" autocomplete="new-password"></div>
+        </div>
+        <div id="errRespaldo"></div>
+        <div class="actions"><button class="btn primary" id="descargarCifrado">Descargar respaldo cifrado</button></div>
+      </div>
+      <div class="stack" id="abrirForm" hidden>
+        <div class="field"><label for="a-clave">Contraseña del respaldo</label><input id="a-clave" type="password" autocomplete="current-password"></div>
+        <div class="actions"><button class="btn" id="abrirRespaldo">Abrir respaldo</button></div>
       </div>` : ""}
       <div id="restaurarConfirma"></div>
     </section>
@@ -134,24 +149,56 @@ async function vista(ctx) {
     eventoInstalar = null;
   });
 
-  $("#respaldo", c)?.addEventListener("click", async () => {
-    const datos = await db.exportar();
-    descargar(`respaldo-centro-libre-${hoy()}.json`, JSON.stringify(datos));
-    await db.escribirMeta("ultimoRespaldo", Date.now());
-    aviso("Respaldo descargado");
-    vista(ctx);
+  $("#respaldo", c)?.addEventListener("click", () => {
+    $("#respaldoForm", c).hidden = false;
+    $("#r-clave", c).focus();
   });
+  $("#descargarCifrado", c)?.addEventListener("click", unaVez(async () => {
+    const clave = $("#r-clave", c).value;
+    const e = [];
+    if (clave.length < 8) e.push("La contraseña debe tener al menos 8 caracteres.");
+    else if (clave !== $("#r-clave2", c).value) e.push("Las dos contraseñas no coinciden.");
+    errores($("#errRespaldo", c), e);
+    if (e.length) return;
+    const sobre = await cifrar(JSON.stringify(await db.exportar()), clave);
+    descargar(`respaldo-centro-libre-${hoy()}.json`, JSON.stringify(sobre));
+    await db.escribirMeta("ultimoRespaldo", Date.now());
+    aviso("Respaldo cifrado descargado");
+    vista(ctx);
+  }));
 
   $("#restaurar", c)?.addEventListener("change", async ev => {
     const caja = $("#restaurarConfirma", c);
-    let respaldo;
+    caja.innerHTML = "";
+    $("#abrirForm", c).hidden = true;
+    let archivo;
     try {
-      respaldo = JSON.parse(await ev.target.files[0].text());
-      if (respaldo.app !== "centro-libre-marquelia") throw new Error();
-      if ((respaldo.version || 1) < 2) respaldo = { ...respaldo, version: 2, datos: db.convertirV1(respaldo.datos) };
+      archivo = JSON.parse(await ev.target.files[0].text());
+      if (archivo.app !== "centro-libre-marquelia") throw new Error();
     } catch {
       return errores(caja, ["El archivo no es un respaldo de esta app."]);
+    } finally {
+      ev.target.value = "";
     }
+    if (!estaCifrado(archivo)) return confirmarRestauracion(archivo); // respaldos de antes de la versión 0.12
+    $("#abrirForm", c).hidden = false;
+    $("#a-clave", c).value = "";
+    $("#a-clave", c).focus();
+    $("#abrirRespaldo", c).onclick = unaVez(async () => {
+      try {
+        const respaldo = JSON.parse(await descifrar(archivo, $("#a-clave", c).value));
+        $("#abrirForm", c).hidden = true;
+        confirmarRestauracion(respaldo);
+      } catch (err) {
+        errores(caja, [err.message]);
+      }
+    });
+  });
+
+  function confirmarRestauracion(respaldo) {
+    const caja = $("#restaurarConfirma", c);
+    if (respaldo?.app !== "centro-libre-marquelia" || !respaldo.datos) return errores(caja, ["El archivo no es un respaldo de esta app."]);
+    if ((respaldo.version || 1) < 2) respaldo = { ...respaldo, version: 2, datos: db.convertirV1(respaldo.datos) };
     const n = a => (respaldo.datos[a] || []).filter(x => !x.borrado).length;
     caja.innerHTML = `<div class="confirm"><span>El respaldo del ${new Date(respaldo.exportado).toLocaleDateString("es-MX")} tiene ${plural(n("actividades"), "actividad", "actividades")} y ${plural(n("usuarias"), "usuaria", "usuarias")}. Reemplazará todo lo que hay en este dispositivo.</span><button class="btn danger" id="siRestaurar">Reemplazar datos</button></div>`;
     dobleToque($("#siRestaurar", caja), "Toca otra vez para confirmar", async () => {
@@ -159,7 +206,7 @@ async function vista(ctx) {
       aviso("Datos restaurados");
       ctx.recargar();
     });
-  });
+  }
 
   $("#guardarFolio", c)?.addEventListener("click", async () => {
     const l = $("#idDisp", c).value.trim().toUpperCase();

@@ -17,7 +17,26 @@ const MARGEN_RECEPCION = 2 * 60 * 1000; // se vuelve a pedir un poco de atrás p
 const CADA = 5 * 60 * 1000;
 
 /* ---------- Estado visible para la interfaz ---------- */
-export const estado = { conectada: false, cuenta: "", enCurso: false, ultima: null, error: "", pendientes: 0, sinInternet: !navigator.onLine };
+export const estado = { conectada: false, cuenta: "", enCurso: false, ultima: null, error: "", pendientes: 0, sinInternet: !navigator.onLine, desfase: 0 };
+
+/* ---------- Reloj del dispositivo ----------
+   «Gana el cambio más reciente» usa la hora de cada dispositivo. Si un equipo tiene la fecha mal
+   (p. ej. tras agotarse la pila), sus cambios ganan o pierden siempre. Cada vez que Supabase entrega
+   un token se compara la hora del servidor (campo iat) con la del dispositivo. */
+export const DESFASE_TOLERADO = 5 * 60 * 1000;
+/** Aviso para la persona si el reloj está desfasado, o "" si está bien. */
+export function avisoReloj(desfase = estado.desfase) {
+  if (Math.abs(desfase) < DESFASE_TOLERADO) return "";
+  const min = Math.round(Math.abs(desfase) / 60000);
+  const cuanto = min >= 2880 ? `${Math.round(min / 1440)} días` : min >= 120 ? `${Math.round(min / 60)} horas` : `${min} minutos`;
+  return `La fecha u hora de este dispositivo va ${desfase > 0 ? "adelantada" : "atrasada"} unos ${cuanto}. Corrígela en la configuración del equipo (fecha y hora automáticas): si no, al sincronizar se pueden quedar datos viejos.`;
+}
+function horaDelServidor(token) {
+  try {
+    const b64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    return JSON.parse(atob(b64 + "===".slice((b64.length + 3) % 4))).iat * 1000 || null;
+  } catch { return null; }
+}
 export const avisos = new EventTarget();
 const publicar = () => avisos.dispatchEvent(new Event("estado"));
 
@@ -40,6 +59,8 @@ async function pedirToken(cuerpo, tipo) {
     throw Object.assign(new Error(j.error_description || j.msg || `El servidor respondió ${r.status}.`), { status: r.status });
   }
   const nube = { cuenta: j.user?.email || cuerpo.email, acceso: j.access_token, renovar: j.refresh_token, expira: Date.now() + j.expires_in * 1000 };
+  const servidor = horaDelServidor(j.access_token);
+  if (servidor) await db.escribirMeta("desfaseReloj", Date.now() - servidor); // positivo: el dispositivo va adelantado
   await db.escribirMeta("nube", nube);
   return nube;
 }
@@ -101,7 +122,7 @@ async function api(ruta, opciones = {}, reintento = false) {
 async function porEnviar() {
   const desde = (await db.leerMeta("ultimoEnvio")) || 0;
   const lista = [];
-  for (const a of SINCRONIZADOS) for (const r of await db.crudos(a)) if (r.actualizado > desde && (!desde || r._recibido !== r.actualizado)) lista.push([a, r]);
+  for (const a of SINCRONIZADOS) for (const r of await db.cambiadosDesde(a, desde)) if (r.actualizado > desde && (!desde || r._recibido !== r.actualizado)) lista.push([a, r]);
   return lista;
 }
 
@@ -196,6 +217,7 @@ export async function actualizarEstado() {
   estado.ultima = await db.leerMeta("ultimaSincronizacion");
   estado.pendientes = nube ? (await porEnviar()).length : 0;
   estado.sinInternet = !navigator.onLine;
+  estado.desfase = nube ? (await db.leerMeta("desfaseReloj")) || 0 : 0;
   publicar();
 }
 
