@@ -64,4 +64,17 @@ export function descargar(nombre, contenido, tipo = "application/json") {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+/**
+ * Envuelve la acción de un botón de guardar para que un doble toque no la ejecute dos veces
+ * (crearía usuarias, asistencias o actividades repetidas). Mientras guarda, los toques se ignoran.
+ */
+export function unaVez(accion) {
+  let enCurso = false;
+  return async (...args) => {
+    if (enCurso) return;
+    enCurso = true;
+    try { return await accion(...args); } finally { enCurso = false; }
+  };
+}
+
 export const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;

@@ -1,7 +1,7 @@
 // Service worker: guarda la app en el dispositivo para que abra y funcione sin internet.
 // Al publicar cambios, sube el número de VERSION para que los dispositivos se actualicen.
 
-const VERSION = "clm-v0.11.0";
+const VERSION = "clm-v0.11.1";
 const ARCHIVOS = [
   "./",
   "index.html",
@@ -50,7 +50,8 @@ const ARCHIVOS = [
 ];
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(ARCHIVOS)));
+  // cache: "reload" evita tomar copias viejas de la memoria del navegador (GitHub Pages las guarda 10 minutos)
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(ARCHIVOS.map(u => new Request(u, { cache: "reload" })))));
 });
 
 self.addEventListener("activate", e => {

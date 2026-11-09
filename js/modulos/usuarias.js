@@ -4,7 +4,7 @@ import * as db from "../core/db.js";
 import { GRUPOS, SEXOS, leerCurp, limpiarCurp, edad, etiquetaGrupo, etiquetaSexo, fechaLarga, normalizar } from "../core/catalogos.js";
 import { esCoordinadora } from "../core/auth.js";
 import { puedeVer } from "../core/permisos.js";
-import { $, $$, esc, aviso, errores, dobleToque, plural } from "../core/ui.js";
+import { $, $$, esc, aviso, errores, dobleToque, plural, unaVez } from "../core/ui.js";
 
 async function lista({ pintar }) {
   const usuarias = (await db.todos("usuarias")).sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
@@ -17,7 +17,7 @@ async function lista({ pintar }) {
       <p class="hint" id="conteo">${plural(usuarias.length, "usuaria", "usuarias")}</p>
     </div>
     ${usuarias.length ? `<div class="list" id="lista">${usuarias.map(p => `
-      <a class="row" href="#/usuarias/${p.id}" data-buscar="${esc(normalizar(`${p.nombre} ${p.curp || ""} ${p.telefono}`))}">
+      <a class="row" href="#/usuarias/${esc(p.id)}" data-buscar="${esc(normalizar(`${p.nombre} ${p.curp || ""} ${p.telefono}`))}">
         <span class="body"><span class="name">${esc(p.nombre)}</span>
           <span class="meta"><span class="mono">${esc(p.curp || "Sin CURP")}</span><span>${edad(p.fnac) ?? "?"} años</span><span>${esc(etiquetaSexo(p.sexo))}</span><span>${esc(etiquetaGrupo(p.grupo))}</span></span></span>
         <span class="end"><span class="big">${visitas(p.id)}</span><small>${visitas(p.id) === 1 ? "actividad" : "actividades"}</small></span>
@@ -59,13 +59,13 @@ async function ficha({ yo, pintar, ir }, id) {
     </section>
     <section class="stack">
       <h2>Historial de asistencia</h2>
-      ${visibles.length ? `<div class="list">${visibles.map(a => `<a class="row" href="#/actividad/${a.id}"><span class="body"><span class="name">${esc(a.nombre)}</span><span class="meta"><span>${fechaLarga(a.fecha)}</span><span class="mono">${esc(a.folio)}</span><span>${esc(a.tipo)}</span></span></span></a>`).join("")}</div>` : ""}
+      ${visibles.length ? `<div class="list">${visibles.map(a => `<a class="row" href="#/actividad/${esc(a.id)}"><span class="body"><span class="name">${esc(a.nombre)}</span><span class="meta"><span>${fechaLarga(a.fecha)}</span><span class="mono">${esc(a.folio)}</span><span>${esc(a.tipo)}</span></span></span></a>`).join("")}</div>` : ""}
       ${ocultas ? `<p class="hint">Además asistió a ${plural(ocultas, "actividad", "actividades")} de otras facilitadoras.</p>` : ""}
       ${!acts.length ? `<p class="hint">Todavía no asiste a ninguna actividad.</p>` : ""}
     </section>
   `, { atras: "#/usuarias" });
 
-  $("#guardar", c).onclick = async () => {
+  $("#guardar", c).onclick = unaVez(async () => {
     const v = k => $(`#p-${k}`, c).value.trim();
     const curp = limpiarCurp(v("curp"));
     const e = [];
@@ -82,7 +82,7 @@ async function ficha({ yo, pintar, ir }, id) {
     await db.guardar("usuarias", nuevo);
     aviso("Datos actualizados");
     ficha({ yo, pintar, ir }, id);
-  };
+  });
   const eliminar = $("#eliminar", c);
   if (eliminar) dobleToque(eliminar, "Toca otra vez para eliminar", async () => {
     await db.borrar("usuarias", id);

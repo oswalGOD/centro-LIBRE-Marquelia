@@ -15,7 +15,7 @@ Es una app web instalable (PWA): se instala desde el navegador en Windows, Andro
 - **Formato**: 10 personas por hoja con el resumen por grupo, rango de edad y sexo de cada hoja. Si la actividad tiene notas, se agregan en una hoja aparte. Botón para imprimir o guardar en PDF.
 - **Estadísticas**: por periodo, tipo de actividad y facilitadora; tablas por rango de edad, grupo y sexo y por actividad, contando asistencias o usuarias distintas. Descarga del resumen y de la lista detallada en CSV para Excel.
 - **Sincronización**: los dispositivos conectados a la cuenta del Centro comparten perfiles, usuarias y actividades a través de Supabase. Cada uno sigue funcionando sin internet y envía sus cambios cuando vuelve la conexión.
-- **Desarrollo** (Ajustes → Opciones para desarrolladores): protegida con contraseña. Diagnóstico descargable (sin datos de usuarias), errores recientes del dispositivo, volver a enviar o recibir todo, forzar actualización y restablecer el dispositivo. La contraseña se guarda como huella en `CLAVE_DESARROLLO` de `js/core/config.js`; la propia sección la genera la primera vez.
+- **Desarrollo** (Ajustes → Opciones para desarrolladores): solo para la Coordinadora y protegida con contraseña. Diagnóstico descargable (sin datos de usuarias), errores recientes del dispositivo, volver a enviar o recibir todo, forzar actualización y restablecer el dispositivo. La contraseña se guarda como huella en `CLAVE_DESARROLLO` de `js/core/config.js`; la propia sección la genera la primera vez.
 - **Respaldo**: la Coordinadora descarga y restaura un archivo `.json` con todos los datos.
 
 ## Configurar la sincronización (una sola vez)
@@ -27,6 +27,10 @@ Es una app web instalable (PWA): se instala desde el navegador en Windows, Andro
 5. En cada tableta o computadora, la primera pantalla pide la cuenta del Centro y un ID de dispositivo distinto (una letra). Si la nube todavía no tiene perfiles, después se crea el de la Coordinadora.
 
 **Si la tabla ya existía antes de la versión 0.5:** actualiza la app en todos los dispositivos y luego ejecuta una vez [`supabase/migracion-0.5.sql`](supabase/migracion-0.5.sql), que cambia los nombres de los registros ya guardados.
+
+**Si la tabla ya existía antes de la versión 0.11:** ejecuta una vez [`supabase/ajuste-0.11.sql`](supabase/ajuste-0.11.sql). Solo ajusta una función del servidor; no toca datos ni permisos.
+
+**Ojo:** volver a ejecutar `esquema.sql` regresa los permisos a «cualquier cuenta». Si lo haces, ejecuta `blindaje.sql` justo después.
 
 La dirección del proyecto y la clave pública están en `js/core/config.js`. Esa clave es pública por diseño: sin la cuenta del Centro no da acceso a ningún dato.
 
