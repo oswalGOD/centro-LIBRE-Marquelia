@@ -84,7 +84,7 @@ export function ajustarHojas(contenedor) {
 
 export async function formato({ yo, pintar, ir }, id) {
   const act = await db.uno("actividades", id);
-  if (!act || !puedeVer(yo, act)) return ir("#/");
+  if (!act || !puedeVer(yo, act)) return ir("#/asistencia");
   const asis = (await db.todos("asistencias", "actividadId", id)).sort((a, b) => a.orden - b.orden);
   const hojas = Math.max(1, Math.ceil(asis.length / POR_HOJA)) + (act.notas ? 1 : 0);
   const sinFirma = asis.filter(x => !x.firma).length;

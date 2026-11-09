@@ -7,7 +7,7 @@ import { $, esc, aviso, errores, descargar, dobleToque, plural, unaVez } from ".
 import * as nube from "../core/sync.js";
 import { cifrar, descifrar, estaCifrado } from "../core/cifrado.js";
 
-export const VERSION_APP = "0.12.0";
+export const VERSION_APP = "0.13.0";
 
 let eventoInstalar = null;
 addEventListener("beforeinstallprompt", e => { e.preventDefault(); eventoInstalar = e; });

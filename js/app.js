@@ -14,8 +14,9 @@ import estadisticas from "./modulos/estadisticas.js";
 import perfiles from "./modulos/perfiles.js";
 import ajustes, { VERSION_APP } from "./modulos/ajustes.js";
 import desarrollo from "./modulos/desarrollo.js";
+import inicio from "./modulos/inicio.js";
 
-const MODULOS = [actividades, usuarias, estadisticas, perfiles, ajustes, desarrollo];
+const MODULOS = [inicio, actividades, usuarias, estadisticas, perfiles, ajustes, desarrollo];
 
 const raiz = document.getElementById("app");
 let yo = null;
@@ -41,7 +42,7 @@ function pintar(titulo, contenido, { atras, ancho } = {}) {
     </header>
     <main class="wrap ${ancho ? "wide" : ""}">
       <div class="page-head">
-        ${atras ? `<a class="back" href="${atras}">← Volver</a>` : ""}
+        ${atras ? `<a class="back" href="${atras}">${atras === "#/" ? "← Inicio" : "← Volver"}</a>` : ""}
         <h1>${esc(titulo)}</h1>
       </div>
       <div id="contenido" class="stack">${contenido}</div>
