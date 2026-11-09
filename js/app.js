@@ -61,12 +61,13 @@ function pintarNube() {
   const [clase, texto] = e.enCurso ? ["busy", "Sincronizando…"]
     : e.sinInternet ? ["off", e.pendientes ? `Sin internet · ${e.pendientes} por enviar` : "Sin internet"]
     : e.error ? ["warn", "No se pudo sincronizar"]
+    : nube.avisoReloj() ? ["warn", "Revisa la hora del equipo"]
     : e.pendientes ? ["busy", `${e.pendientes} por enviar`]
     : ["ok", "Sincronizado"];
   el.className = `sync-pill ${clase}`;
   el.innerHTML = `<span class="sync-text">${esc(texto)}</span>`;
   el.setAttribute("aria-label", texto);
-  el.title = [texto, e.error || (e.ultima ? `Última sincronización: ${new Date(e.ultima).toLocaleString("es-MX")}` : "")].filter(Boolean).join(" · ");
+  el.title = [texto, e.error || nube.avisoReloj() || (e.ultima ? `Última sincronización: ${new Date(e.ultima).toLocaleString("es-MX")}` : "")].filter(Boolean).join(" · ");
 }
 nube.avisos.addEventListener("estado", pintarNube);
 

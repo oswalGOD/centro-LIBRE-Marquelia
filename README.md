@@ -16,7 +16,7 @@ Es una app web instalable (PWA): se instala desde el navegador en Windows, Andro
 - **Estadísticas**: por periodo, tipo de actividad y facilitadora; tablas por rango de edad, grupo y sexo y por actividad, contando asistencias o usuarias distintas. Descarga del resumen y de la lista detallada en CSV para Excel.
 - **Sincronización**: los dispositivos conectados a la cuenta del Centro comparten perfiles, usuarias y actividades a través de Supabase. Cada uno sigue funcionando sin internet y envía sus cambios cuando vuelve la conexión.
 - **Desarrollo** (Ajustes → Opciones para desarrolladores): solo para la Coordinadora y protegida con contraseña. Diagnóstico descargable (sin datos de usuarias), errores recientes del dispositivo, volver a enviar o recibir todo, forzar actualización y restablecer el dispositivo. La contraseña se guarda como huella en `CLAVE_DESARROLLO` de `js/core/config.js`; la propia sección la genera la primera vez.
-- **Respaldo**: la Coordinadora descarga y restaura un archivo `.json` con todos los datos.
+- **Respaldo**: la Coordinadora descarga y restaura un archivo `.json` con todos los datos, cifrado con una contraseña que ella elige (sin esa contraseña no se puede abrir). Los respaldos sin cifrar de versiones anteriores se pueden seguir restaurando.
 
 ## Configurar la sincronización (una sola vez)
 
@@ -50,6 +50,7 @@ La dirección del proyecto y la clave pública están en `js/core/config.js`. Es
 - Los folios llevan el ID del dispositivo, así que no se repiten. Si un dispositivo se restablece y vuelve a usar su letra, sigue después del folio más alto que ya existe. Si dos dispositivos usan el mismo ID, Ajustes lo avisa.
 - Si una renovación de la sesión falla por la señal, el dispositivo sigue conectado y lo vuelve a intentar; solo se desconecta si Supabase dice que la sesión ya no sirve.
 - Al restaurar un respaldo, el dispositivo vuelve a recibir todo de la nube para quedarse con lo más nuevo.
+- «Gana el más reciente» depende de la hora de cada equipo. Si la fecha u hora de un dispositivo está desfasada más de 5 minutos respecto al servidor, la app lo avisa en la barra superior y en Ajustes.
 
 ## Probar en tu computadora
 
