@@ -8,8 +8,8 @@
 // en una sola y sus asistencias pasan a la que queda.
 
 import * as db from "./db.js";
-import { SUPABASE_URL, SUPABASE_ANON } from "./config.js";
-import { anotar } from "./bitacora.js";
+import { SUPABASE_URL, SUPABASE_ANON, VERSION_APP } from "./config.js";
+import { anotar, leer as leerErrores } from "./bitacora.js";
 
 const SINCRONIZADOS = ["perfiles", "usuarias", "actividades", "asistencias"];
 const LOTE = 200;
@@ -209,6 +209,58 @@ async function recibir() {
   return { recibidos, fusiones };
 }
 
+/* ---------- Estado técnico para el panel del desarrollador (panel.html) ----------
+   Tras sincronizar, el dispositivo deja en Supabase su versión, cuándo sincronizó, cuántos cambios
+   le faltan por enviar, su espacio, su reloj y sus errores recientes. Nunca datos de usuarias.
+   Se manda como mucho cada 30 minutos, o antes si cambió la versión o hubo un error nuevo.
+   Si todavía no se ejecutó supabase/panel-desarrollo.sql, falla en silencio. */
+const REPORTE_CADA = 30 * 60 * 1000;
+const CLAVE_REPORTE = "clm-ultimo-reporte";
+const sinCurp = t => String(t ?? "").replace(/[A-Z]{4}\d{6}[HMX][A-Z]{5}[A-Z0-9]\d/gi, "[CURP]");
+
+async function contarLocales() {
+  const d = await db.abrir();
+  const conteos = {};
+  for (const a of SINCRONIZADOS) conteos[a] = await pedirIdb(d.transaction(a).objectStore(a).count());
+  return conteos;
+}
+
+async function reportarEstado() {
+  try {
+    const errores = leerErrores().slice(0, 15).map(x => ({ ...x, mensaje: sinCurp(x.mensaje), ruta: sinCurp(x.ruta) }));
+    const huella = `${VERSION_APP}|${errores[0]?.hora || ""}|${estado.error}`;
+    let previo = null;
+    try { previo = JSON.parse(localStorage.getItem(CLAVE_REPORTE)); } catch {}
+    if (previo?.huella === huella && Date.now() - previo.hora < REPORTE_CADA) return;
+    try { localStorage.setItem(CLAVE_REPORTE, JSON.stringify({ hora: Date.now(), huella })); } catch {}
+
+    const estimado = await navigator.storage?.estimate?.().catch(() => null);
+    const sw = await navigator.serviceWorker?.getRegistration?.().catch(() => null);
+    const p_estado = {
+      version: VERSION_APP,
+      cache: (await caches?.keys?.().catch(() => [])) || [],
+      serviceWorker: !!sw?.active,
+      instalada: matchMedia("(display-mode: standalone)").matches || navigator.standalone === true,
+      navegador: navigator.userAgent.slice(0, 300),
+      pantalla: `${screen.width}×${screen.height} @${devicePixelRatio}`,
+      almacenamientoMB: estimado ? +(estimado.usage / 1048576).toFixed(2) : null,
+      cuotaMB: estimado ? Math.round(estimado.quota / 1048576) : null,
+      persistente: !!(await navigator.storage?.persisted?.().catch(() => false)),
+      pendientes: estado.pendientes,
+      error: sinCurp(estado.error),
+      desfaseMs: (await db.leerMeta("desfaseReloj")) || 0,
+      ultimaSincronizacion: await db.leerMeta("ultimaSincronizacion"),
+      ultimoEnvio: await db.leerMeta("ultimoEnvio"),
+      ultimaRecepcion: await db.leerMeta("ultimaRecepcion"),
+      configuradoEn: await db.leerMeta("configuradoEn"),
+      registrosLocales: await contarLocales(),
+      errores,
+      hora: Date.now(),
+    };
+    await api("rpc/reportar_estado", { method: "POST", body: JSON.stringify({ p_dispositivo: await db.uuidDispositivo(), p_id_corto: await db.leerMeta("idDispositivo", "A"), p_estado }) });
+  } catch {}
+}
+
 /* ---------- Ciclo completo ---------- */
 export async function actualizarEstado() {
   const nube = await db.leerMeta("nube");
@@ -244,6 +296,7 @@ export function sincronizar() {
       estado.enCurso = false;
       promesa = null;
       await actualizarEstado();
+      if (estado.conectada && navigator.onLine) reportarEstado();
     }
   })();
   return promesa;

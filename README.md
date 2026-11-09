@@ -16,6 +16,7 @@ Es una app web instalable (PWA): se instala desde el navegador en Windows, Andro
 - **Estadísticas**: por periodo, tipo de actividad y facilitadora; tablas por rango de edad, grupo y sexo y por actividad, contando asistencias o usuarias distintas. Descarga del resumen y de la lista detallada en CSV para Excel.
 - **Sincronización**: los dispositivos conectados a la cuenta del Centro comparten perfiles, usuarias y actividades a través de Supabase. Cada uno sigue funcionando sin internet y envía sus cambios cuando vuelve la conexión.
 - **Desarrollo** (Ajustes → Opciones para desarrolladores): solo para la Coordinadora y protegida con contraseña. Diagnóstico descargable (sin datos de usuarias), errores recientes del dispositivo, volver a enviar o recibir todo, forzar actualización y restablecer el dispositivo. La contraseña se guarda como huella en `CLAVE_DESARROLLO` de `js/core/config.js`; la propia sección la genera la primera vez.
+- **Panel del desarrollador** (`panel.html`, aparte de la app): con tu propia cuenta de Supabase ves desde cualquier lugar el estado técnico de todas las tabletas (versión, última sincronización, cambios sin enviar, reloj, espacio y errores recientes), el espacio usado de la base de datos, conteos de registros y si la tarea «Mantener Supabase activo» está funcionando. Supabase solo deja ver datos técnicos a esa cuenta: no puede leer usuarias, firmas, perfiles ni actividades. Ver [Configurar el panel del desarrollador](#configurar-el-panel-del-desarrollador).
 - **Respaldo**: la Coordinadora descarga y restaura un archivo `.json` con todos los datos, cifrado con una contraseña que ella elige (sin esa contraseña no se puede abrir). Los respaldos sin cifrar de versiones anteriores se pueden seguir restaurando.
 
 ## Configurar la sincronización (una sola vez)
@@ -35,6 +36,14 @@ Es una app web instalable (PWA): se instala desde el navegador en Windows, Andro
 **Ojo:** volver a ejecutar `esquema.sql` regresa los permisos a «cualquier cuenta». Si lo haces, ejecuta `blindaje.sql` justo después.
 
 La dirección del proyecto y la clave pública están en `js/core/config.js`. Esa clave es pública por diseño: sin la cuenta del Centro no da acceso a ningún dato.
+
+### Configurar el panel del desarrollador
+
+1. En Supabase, **Authentication → Users → Add user → Create new user**: crea tu cuenta de desarrollo con un correo **distinto** al de la cuenta del Centro y marca **Auto Confirm User**.
+2. **SQL Editor → New query**: pega [`supabase/panel-desarrollo.sql`](supabase/panel-desarrollo.sql), cambia el correo de ejemplo por el de tu cuenta de desarrollo y toca **Run**. Si pones el correo de la cuenta del Centro, el script se detiene.
+3. Abre `panel.html` en la misma dirección de la app (por ejemplo `https://…github.io/centro-LIBRE-Marquelia/panel.html`) y entra con esa cuenta. No hay enlace al panel dentro de la app.
+
+Las tabletas empiezan a aparecer cuando tienen la versión 0.14 y sincronizan. Reportan como mucho cada 30 minutos, o antes si cambió la versión o hubo un error nuevo. Los mensajes de error se envían sin CURP. La sesión del panel se cierra al cerrar la pestaña.
 
 ### Seguridad
 
@@ -75,6 +84,7 @@ css/                    estilos (incluye el formato imprimible)
 js/app.js               arranque, inicio de sesión y rutas
 js/core/                piezas compartidas: base de datos, sesión, catálogos, firma, permisos, sincronización
 supabase/esquema.sql    tabla y permisos de la sincronización
+panel.html, js/panel.js panel del desarrollador (solo en línea, con su propia cuenta)
 js/modulos/             una pantalla o función por archivo
 assets/                 logotipos, marca de agua y aviso de privacidad del formato oficial
 fonts/                  tipografías incluidas para funcionar sin internet
