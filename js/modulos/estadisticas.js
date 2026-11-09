@@ -74,7 +74,13 @@ function tablaCruzada(titulo, filas, clave, catalogo, etiqueta) {
   </section>`;
 }
 
-const celdaCsv = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+// Un texto que empieza con = + - @ (o tabulador) Excel lo toma como fórmula: se le antepone un apóstrofo.
+// Los números se dejan tal cual para que Excel pueda sumarlos.
+const celdaCsv = v => {
+  let t = String(v ?? "");
+  if (typeof v !== "number" && /^[=+\-@\t\r]/.test(t)) t = "'" + t;
+  return `"${t.replace(/"/g, '""')}"`;
+};
 const csv = filas => "﻿" + filas.map(f => f.map(celdaCsv).join(",")).join("\r\n");
 
 async function vista(ctx) {
@@ -89,7 +95,7 @@ async function vista(ctx) {
       <div class="field"><label for="e-desde">Desde</label><input id="e-desde" type="date" data-filtro="desde" value="${filtros.desde}"></div>
       <div class="field"><label for="e-hasta">Hasta</label><input id="e-hasta" type="date" data-filtro="hasta" value="${filtros.hasta}"></div>
       <div class="field"><label for="e-tipo">Tipo de actividad</label><select id="e-tipo" data-filtro="tipo"><option value="">Todos</option>${tipos.map(t => `<option ${t === filtros.tipo ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></div>
-      ${coord ? `<div class="field"><label for="e-fac">Facilitadora</label><select id="e-fac" data-filtro="facilitadoraId"><option value="">Todas</option>${perfiles.map(u => `<option value="${u.id}" ${u.id === filtros.facilitadoraId ? "selected" : ""}>${esc(u.nombre)}</option>`).join("")}</select></div>` : ""}
+      ${coord ? `<div class="field"><label for="e-fac">Facilitadora</label><select id="e-fac" data-filtro="facilitadoraId"><option value="">Todas</option>${perfiles.map(u => `<option value="${esc(u.id)}" ${u.id === filtros.facilitadoraId ? "selected" : ""}>${esc(u.nombre)}</option>`).join("")}</select></div>` : ""}
       <div class="field"><span class="legend">Contar</span><div class="segmented" role="radiogroup" aria-label="Qué contar">
         <button type="button" role="radio" data-contar="asistencias">Asistencias</button>
         <button type="button" role="radio" data-contar="usuarias">Usuarias distintas</button></div></div>

@@ -193,7 +193,7 @@ function entrar(lista) {
     <div class="auth-card stack">
       <div class="auth-brand"><img class="mark" src="icons/icon-192.png" alt="" aria-hidden="true"><div><h1>Centro LIBRE Marquelia</h1><p class="hint">Listas de asistencia</p></div></div>
       <h2>¿Quién va a capturar?</h2>
-      <div class="people">${lista.map(u => `<button class="person-btn" data-id="${u.id}"><span class="avatar">${esc(u.nombre[0])}</span><span><b>${esc(u.nombre)}</b><small>${esc(u.rol)}</small></span></button>`).join("")}</div>
+      <div class="people">${lista.map(u => `<button class="person-btn" data-id="${esc(u.id)}"><span class="avatar">${esc(u.nombre[0])}</span><span><b>${esc(u.nombre)}</b><small>${esc(u.rol)}</small></span></button>`).join("")}</div>
       <form id="pinForm" class="stack" hidden>
         <div class="field"><label for="pin" id="pinLabel">PIN</label><input id="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password"></div>
         <div id="err"></div>

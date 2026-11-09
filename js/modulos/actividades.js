@@ -4,7 +4,7 @@ import * as db from "../core/db.js";
 import { TIPOS_ACTIVIDAD, TIPOS_RETIRADOS, hoy, fechaLarga, mesCorto, edad, rangoDe, etiquetaGrupo, normalizar, minutosEntre, duracion } from "../core/catalogos.js";
 import { esCoordinadora } from "../core/auth.js";
 import { puedeVer, puedeEditar } from "../core/permisos.js";
-import { $, $$, esc, aviso, errores, leerCampos, dobleToque, plural } from "../core/ui.js";
+import { $, $$, esc, aviso, errores, leerCampos, dobleToque, plural, unaVez } from "../core/ui.js";
 import { captura } from "./captura.js";
 import { formato } from "./formato.js";
 
@@ -40,7 +40,7 @@ async function lista({ yo, pintar }) {
       <div class="field"><label for="f-estado">Estado</label><select id="f-estado" data-filtro="estado"><option value="">Todas</option>${opciones([["abierta", "Abiertas"], ["cerrada", "Cerradas"]], filtros.estado)}</select></div>
     </div>` : ""}
     ${acts.length ? `<div class="list" id="lista">${acts.map(a => `
-      <a class="row" href="#/actividad/${a.id}" data-buscar="${esc(normalizar(`${a.nombre} ${a.folio} ${a.lugar} ${a.tipo} ${a.facilitadora}`))}"
+      <a class="row" href="#/actividad/${esc(a.id)}" data-buscar="${esc(normalizar(`${a.nombre} ${a.folio} ${a.lugar} ${a.tipo} ${a.facilitadora}`))}"
         data-mes="${a.fecha.slice(0, 7)}" data-tipo="${esc(a.tipo)}" data-facilitadora-id="${esc(a.facilitadoraId)}" data-estado="${a.estado === "cerrada" ? "cerrada" : "abierta"}">
         <span class="date"><b>${Number(a.fecha.slice(8, 10))}</b><small>${mesCorto(a.fecha)}</small></span>
         <span class="body"><span class="name">${esc(a.nombre)}</span>
@@ -98,7 +98,7 @@ async function formulario({ yo, pintar, ir }, id, origenId) {
         <div class="field"><label for="a-fecha">Fecha</label><input id="a-fecha" type="date" data-campo="fecha" value="${esc(a.fecha)}"></div>
         <div class="field"><label for="a-lugar">Lugar de desarrollo</label><input id="a-lugar" data-campo="lugar" value="${esc(a.lugar)}"></div>
         <div class="field"><label for="a-facilitadora">Facilitadora</label>
-          <select id="a-facilitadora" data-campo="facilitadoraId">${perfiles.map(u => `<option value="${u.id}" ${u.id === a.facilitadoraId ? "selected" : ""}>${esc(u.nombre)} · ${esc(u.rol)}</option>`).join("")}</select></div>
+          <select id="a-facilitadora" data-campo="facilitadoraId">${perfiles.map(u => `<option value="${esc(u.id)}" ${u.id === a.facilitadoraId ? "selected" : ""}>${esc(u.nombre)} · ${esc(u.rol)}</option>`).join("")}</select></div>
         <div class="field"><label for="a-tipo">Tipo de actividad</label>
           <select id="a-tipo" data-campo="tipo">${tipos.map(t => `<option ${t === a.tipo ? "selected" : ""}>${esc(t)}</option>`).join("")}<option value="${OTRO}">Otro tipo…</option></select>
           <input id="a-tipoOtro" aria-label="Escribe el tipo de actividad" placeholder="Escribe el tipo de actividad" autocomplete="off" hidden></div>
@@ -116,7 +116,7 @@ async function formulario({ yo, pintar, ir }, id, origenId) {
     if (!tipoOtro.hidden) tipoOtro.focus();
   });
 
-  $("#guardar", c).onclick = async () => {
+  $("#guardar", c).onclick = unaVez(async () => {
     const d = leerCampos($("#f", c));
     if (d.tipo === OTRO) d.tipo = tipoOtro.value.trim().replace(/\s+/g, " ");
     const e = [];
@@ -140,7 +140,7 @@ async function formulario({ yo, pintar, ir }, id, origenId) {
     await db.escribirMeta("ultimoLugar", d.lugar);
     aviso(act ? "Cambios guardados" : `Actividad creada con folio ${registro.folio}`);
     ir(`#/actividad/${registro.id}`);
-  };
+  });
 }
 
 async function detalle({ yo, pintar, ir }, id) {
@@ -164,10 +164,10 @@ async function detalle({ yo, pintar, ir }, id) {
       </dl>
     </section>
     <div class="toolbar">
-      ${editable ? `<a class="btn primary" href="#/actividad/${a.id}/registrar">Registrar asistente</a>` : ""}
-      <a class="btn" href="#/actividad/${a.id}/formato">Ver e imprimir formato</a>
-      ${editable ? `<a class="btn ghost" href="#/actividad/${a.id}/editar">Editar datos</a>` : ""}
-      <a class="btn ghost" href="#/actividad/${a.id}/repetir">Repetir actividad</a>
+      ${editable ? `<a class="btn primary" href="#/actividad/${esc(a.id)}/registrar">Registrar asistente</a>` : ""}
+      <a class="btn" href="#/actividad/${esc(a.id)}/formato">Ver e imprimir formato</a>
+      ${editable ? `<a class="btn ghost" href="#/actividad/${esc(a.id)}/editar">Editar datos</a>` : ""}
+      <a class="btn ghost" href="#/actividad/${esc(a.id)}/repetir">Repetir actividad</a>
     </div>
     <section class="stack">
       <div class="section-head"><h2>Asistentes</h2>
@@ -177,8 +177,8 @@ async function detalle({ yo, pintar, ir }, id) {
         const inner = `<span class="num">${i + 1}</span>
           <span class="body"><span class="name">${esc(p.nombre)}</span>
             <span class="meta"><span class="mono">${esc(p.curp || "Sin CURP")}</span><span>${e ?? "?"} años · ${rangoDe(e) || ""}</span><span>${esc(etiquetaGrupo(p.grupo))}</span><span>${esc(p.ocupacion)}</span></span></span>
-          ${x.firma ? `<img class="sig" src="${x.firma}" alt="Firma">` : `<span class="chip warn">Falta firma</span>`}`;
-        return editable ? `<a class="row person" href="#/actividad/${a.id}/registrar/${x.id}">${inner}</a>` : `<div class="row person">${inner}</div>`;
+          ${x.firma ? `<img class="sig" src="${esc(x.firma)}" alt="Firma">` : `<span class="chip warn">Falta firma</span>`}`;
+        return editable ? `<a class="row person" href="#/actividad/${esc(a.id)}/registrar/${esc(x.id)}">${inner}</a>` : `<div class="row person">${inner}</div>`;
       }).join("")}</div>` : `<div class="empty"><b>Sin asistentes todavía.</b><p>${editable ? "Toca “Registrar asistente” para capturar a la primera persona. Si ya vino antes, al escribir su CURP se llenan sus datos." : "Esta actividad está cerrada."}</p></div>`}
     </section>
     <section class="panel stack">

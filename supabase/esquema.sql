@@ -1,6 +1,7 @@
 -- Centro LIBRE Marquelia: tabla de sincronización.
 -- Ejecútalo una sola vez en Supabase → SQL Editor → New query → Run.
--- Es seguro volver a ejecutarlo: no borra datos.
+-- No borra datos, pero si lo vuelves a ejecutar regresa los permisos a «cualquier cuenta»:
+-- en ese caso ejecuta otra vez supabase/blindaje.sql justo después.
 -- Después ejecuta supabase/blindaje.sql para que solo la cuenta del Centro tenga acceso.
 
 -- Todos los registros de la app (perfiles, usuarias, actividades, asistencias)
@@ -23,6 +24,7 @@ create index if not exists registros_recibido on public.registros (recibido);
 create or replace function public.registros_ultimo_gana()
 returns trigger
 language plpgsql
+set search_path = ''
 as $$
 begin
   if tg_op = 'UPDATE' and new.actualizado < old.actualizado then

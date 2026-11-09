@@ -53,7 +53,7 @@ async function vista(ctx) {
     cuotaMB: estimado ? Math.round(estimado.quota / 1048576) : null,
     persistente: !!persistente,
     registros: conteos,
-    nube: { conectada: e.conectada, cuenta: e.cuenta, pendientes: e.pendientes, error: e.error,
+    nube: { conectada: e.conectada, pendientes: e.pendientes, error: e.error,
       ultimoEnvio: await db.leerMeta("ultimoEnvio"), ultimaRecepcion: await db.leerMeta("ultimaRecepcion"), ultimaSincronizacion: e.ultima },
     errores: errs,
     generado: new Date().toISOString(),
@@ -219,5 +219,5 @@ function candado(ctx) {
 }
 
 export default {
-  rutas: [[/^#\/desarrollo$/, vista]],
+  rutas: [[/^#\/desarrollo$/, vista, { soloCoordinadora: true }]],
 };

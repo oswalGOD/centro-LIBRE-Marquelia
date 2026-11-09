@@ -52,6 +52,11 @@ export async function conectar(email, password) {
 }
 
 export async function desconectar() {
+  // Cierra también la sesión en Supabase para que el token guardado deje de servir (si no hay internet, solo se olvida aquí)
+  const nube = await db.leerMeta("nube");
+  if (nube?.acceso && navigator.onLine) {
+    await fetch(`${SUPABASE_URL}/auth/v1/logout`, { method: "POST", headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${nube.acceso}` } }).catch(() => {});
+  }
   await db.escribirMeta("nube", null);
   await actualizarEstado();
 }

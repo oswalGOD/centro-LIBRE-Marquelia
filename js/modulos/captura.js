@@ -6,7 +6,7 @@ import { puedeVer, puedeEditar } from "../core/permisos.js";
 import { pedirFirma } from "../core/firma.js";
 import { escanearCurp } from "../core/escaner.js";
 import { escanearIne } from "../core/ine.js";
-import { $, $$, esc, aviso, errores, dobleToque } from "../core/ui.js";
+import { $, $$, esc, aviso, errores, dobleToque, unaVez } from "../core/ui.js";
 
 const CAMPOS = ["curp", "nombre", "fnac", "sexo", "lugar", "grupo", "ocupacion", "telefono"];
 
@@ -45,7 +45,7 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
     <section class="panel stack" id="deAntes">
       <div><h2 class="h3">Vinieron la sesión anterior</h2>
         <p class="hint">${esc(anterior.nombre)} · ${fechaLarga(anterior.fecha)}. Toca a la persona para llenar sus datos; solo falta confirmarlos y pedir su firma.</p></div>
-      <div class="results">${deAntes.map(p => `<button type="button" data-id="${p.id}"><b>${esc(p.nombre)}</b><small>${esc(p.curp || "Sin CURP")} · ${edad(p.fnac, act.fecha) ?? "?"} años</small></button>`).join("")}</div>
+      <div class="results">${deAntes.map(p => `<button type="button" data-id="${esc(p.id)}"><b>${esc(p.nombre)}</b><small>${esc(p.curp || "Sin CURP")} · ${edad(p.fnac, act.fecha) ?? "?"} años</small></button>`).join("")}</div>
     </section>` : ""}
     <section class="panel stack">
       ${existente ? "" : `
@@ -81,7 +81,7 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
 
   let firma = existente?.firma || "";
   function pintarFirma() {
-    $("#firmaVista", c).innerHTML = firma ? `<img src="${firma}" alt="Firma capturada">` : `<span>Sin firma</span>`;
+    $("#firmaVista", c).innerHTML = firma ? `<img src="${esc(firma)}" alt="Firma capturada">` : `<span>Sin firma</span>`;
     $("#firmaVista", c).classList.toggle("vacia", !firma);
     $("#firmar", c).textContent = firma ? "Volver a firmar" : "Firmar";
   }
@@ -203,7 +203,7 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
     const hallados = registradas.filter(p => palabras.every(w => normalizar(p.nombre).includes(w))).slice(0, 6);
     res.hidden = false;
     res.innerHTML = hallados.length
-      ? hallados.map(p => `<button type="button" data-id="${p.id}"><b>${esc(p.nombre)}</b><small>${esc(p.curp || "Sin CURP")} · ${edad(p.fnac, act.fecha) ?? "?"} años</small></button>`).join("")
+      ? hallados.map(p => `<button type="button" data-id="${esc(p.id)}"><b>${esc(p.nombre)}</b><small>${esc(p.curp || "Sin CURP")} · ${edad(p.fnac, act.fecha) ?? "?"} años</small></button>`).join("")
       : `<p class="hint">No hay ninguna usuaria con ese nombre. Captura sus datos abajo.</p>`;
     $$("button", res).forEach(b => (b.onclick = () => {
       reconocer(registradas.find(p => p.id === b.dataset.id));
@@ -224,7 +224,7 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
     if (nueva) { firma = nueva; pintarFirma(); }
   };
 
-  async function guardar(otra) {
+  const guardar = unaVez(async otra => {
     const e = [];
     if (!d.sinCurp && !leerCurp(d.curp)) e.push("CURP válida de 18 caracteres (o marca que no tiene CURP)");
     const nombre = d.nombre.trim().replace(/\s+/g, " ");
@@ -262,7 +262,7 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
     aviso(existente ? "Cambios guardados" : `${nombre.split(" ")[0]} quedó registrada`);
     if (otra) captura({ yo, pintar, ir }, actividadId); // la ruta no cambia: se abre un formulario en blanco
     else ir(volver);
-  }
+  });
   $("#guardar", c).onclick = () => guardar(false);
   $("#guardarOtra", c)?.addEventListener("click", () => guardar(true));
 

@@ -3,7 +3,7 @@
 import * as db from "../core/db.js";
 import { ROLES } from "../core/catalogos.js";
 import { crearPerfil, cambiarPin, pinValido } from "../core/auth.js";
-import { $, $$, esc, aviso, errores, leerCampos } from "../core/ui.js";
+import { $, $$, esc, aviso, errores, leerCampos, unaVez } from "../core/ui.js";
 
 async function vista(ctx) {
   const { yo, pintar } = ctx;
@@ -12,7 +12,7 @@ async function vista(ctx) {
 
   const c = pintar("Perfiles", `
     <div class="list">${lista.map(u => `
-      <div class="row user ${u.activa ? "" : "inactive"}" data-id="${u.id}">
+      <div class="row user ${u.activa ? "" : "inactive"}" data-id="${esc(u.id)}">
         <span class="avatar" aria-hidden="true">${esc(u.nombre[0])}</span>
         <span class="body"><span class="name">${esc(u.nombre)}${u.id === yo.id ? " (tú)" : ""}</span><span class="meta"><span>${esc(u.rol)}</span>${u.activa ? "" : `<span class="chip">Desactivado</span>`}</span></span>
         <span class="end actions">
@@ -21,7 +21,7 @@ async function vista(ctx) {
           ${u.activa ? "" : `<button class="btn small ghost" data-accion="activar">Activar</button>`}
         </span>
         <div class="pin-form span-all" hidden>
-          <div class="field"><label for="pin-${u.id}">PIN nuevo de 4 a 6 números</label><input id="pin-${u.id}" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>
+          <div class="field"><label for="pin-${esc(u.id)}">PIN nuevo de 4 a 6 números</label><input id="pin-${esc(u.id)}" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>
           <button class="btn small primary" data-accion="guardarPin">Guardar PIN</button>
         </div>
       </div>`).join("")}</div>
@@ -59,7 +59,7 @@ async function vista(ctx) {
     });
   });
 
-  $("#agregar", c).onclick = async () => {
+  $("#agregar", c).onclick = unaVez(async () => {
     const d = leerCampos($("#f", c));
     const e = [];
     if (d.nombre.split(/\s+/).filter(Boolean).length < 2) e.push("Escribe nombre y apellido.");
@@ -69,7 +69,7 @@ async function vista(ctx) {
     await crearPerfil(d);
     aviso(`${d.nombre.split(" ")[0]} ya puede entrar con su PIN`);
     vista(ctx);
-  };
+  });
 }
 
 export default {
