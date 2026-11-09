@@ -30,6 +30,8 @@ Es una app web instalable (PWA): se instala desde el navegador en Windows, Andro
 
 **Si la tabla ya existía antes de la versión 0.11:** ejecuta una vez [`supabase/ajuste-0.11.sql`](supabase/ajuste-0.11.sql). Solo ajusta una función del servidor; no toca datos ni permisos.
 
+**Para que Supabase no pause el proyecto** (en el plan gratis lo hace tras unos 7 días sin uso), la tarea automática `.github/workflows/mantener-supabase.yml` hace una consulta pequeña cada 3 días. Se ve en GitHub → Actions; si falla, probablemente el proyecto está pausado y hay que reanudarlo en supabase.com.
+
 **Ojo:** volver a ejecutar `esquema.sql` regresa los permisos a «cualquier cuenta». Si lo haces, ejecuta `blindaje.sql` justo después.
 
 La dirección del proyecto y la clave pública están en `js/core/config.js`. Esa clave es pública por diseño: sin la cuenta del Centro no da acceso a ningún dato.

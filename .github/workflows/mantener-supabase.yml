@@ -1,0 +1,41 @@
+# Evita que Supabase pause el proyecto gratuito por inactividad (lo hace tras unos 7 días sin uso).
+# Cada 3 días hace una consulta pequeña a la base de datos con la clave pública de js/core/config.js.
+# Esa clave no da acceso a ningún dato (la respuesta esperada es «permiso denegado»), pero la consulta
+# llega a la base y cuenta como actividad. No lee ni cambia nada.
+# Se puede correr a mano en GitHub → Actions → «Mantener Supabase activo» → Run workflow.
+
+name: Mantener Supabase activo
+
+on:
+  schedule:
+    - cron: "17 14 */3 * *" # cada 3 días, 8:17 h en Marquelia
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  consultar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: js/core/config.js
+          sparse-checkout-cone-mode: false
+      - name: Consultar la base de datos
+        run: |
+          URL=$(sed -n 's/^export const SUPABASE_URL = "\(.*\)";/\1/p' js/core/config.js)
+          CLAVE=$(sed -n 's/^export const SUPABASE_ANON = "\(.*\)";/\1/p' js/core/config.js)
+          test -n "$URL" && test -n "$CLAVE" || { echo "No se encontró la dirección o la clave en js/core/config.js"; exit 1; }
+          CODIGO=$(curl -s -o respuesta.txt -w "%{http_code}" --max-time 60 \
+            -H "apikey: $CLAVE" -H "Authorization: Bearer $CLAVE" \
+            "$URL/rest/v1/registros?select=id&limit=1")
+          echo "Supabase respondió $CODIGO"
+          cat respuesta.txt; echo
+          # 401/403 = la base respondió y negó el acceso (lo esperado). 200 sería que la clave pública ve datos: revisar el blindaje.
+          case "$CODIGO" in
+            401|403) echo "Proyecto activo." ;;
+            200) echo "::warning::La clave pública pudo leer la tabla. Revisa que blindaje.sql esté aplicado."; ;;
+            *) echo "::error::Supabase no respondió como se esperaba ($CODIGO). Puede que el proyecto esté pausado: reanúdalo en supabase.com."; exit 1 ;;
+          esac
