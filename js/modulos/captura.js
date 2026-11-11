@@ -43,21 +43,21 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
     <p class="hint context">${esc(act.nombre)} · <span class="mono">${esc(act.folio)}</span></p>
     ${deAntes.length ? `
     <section class="panel stack" id="deAntes">
-      <div><h2 class="h3">Vinieron la sesión anterior</h2>
-        <p class="hint">${esc(anterior.nombre)} · ${fechaLarga(anterior.fecha)}. Toca a la persona para llenar sus datos; solo falta confirmarlos y pedir su firma.</p></div>
+      <div><h2 class="h3">Asistentes de la sesión anterior</h2>
+        <p class="hint">${esc(anterior.nombre)} · ${fechaLarga(anterior.fecha)}. Seleccione a la persona para completar sus datos; solo resta confirmarlos y solicitar su firma.</p></div>
       <div class="results">${deAntes.map(p => `<button type="button" data-id="${esc(p.id)}"><b>${esc(p.nombre)}</b><small>${esc(p.curp || "Sin CURP")} · ${edad(p.fnac, act.fecha) ?? "?"} años</small></button>`).join("")}</div>
     </section>` : ""}
     <section class="panel stack">
       ${existente ? "" : `
       <div class="field search-field"><label for="buscar">Buscar usuaria por nombre</label>
-        <input id="buscar" type="search" autocomplete="off" placeholder="Para quien ya vino antes y no trae su CURP">
+        <input id="buscar" type="search" autocomplete="off" placeholder="Para quien ya asistió antes y no presenta su CURP">
         <div class="results" id="resultados" hidden></div></div>`}
       <div class="grid">
         <div class="field span-2"><label for="curp">CURP</label>
           <div class="input-row"><input id="curp" class="upper" maxlength="18" autocomplete="off" spellcheck="false" placeholder="18 caracteres" value="${esc(d.curp)}">
             ${existente ? "" : `<button type="button" class="btn" id="escanear">Escanear CURP</button><button type="button" class="btn" id="escanearIne">Escanear INE</button>`}</div>
           <span class="note" id="curpNota"></span>
-          <label class="check"><input type="checkbox" id="sinCurp" ${d.sinCurp ? "checked" : ""}> La persona no tiene CURP</label></div>
+          <label class="check"><input type="checkbox" id="sinCurp" ${d.sinCurp ? "checked" : ""}> La persona no cuenta con CURP</label></div>
         <div id="reconocida" class="span-2" hidden></div>
         <div class="field span-2"><label for="nombre">Nombre completo</label><input id="nombre" data-c="nombre" autocomplete="off" placeholder="Nombre(s) y apellidos, sin abreviaturas"></div>
         <div class="field"><label for="fnac">Fecha de nacimiento</label><input id="fnac" type="date" data-c="fnac"><span class="note ok" id="edadNota"></span></div>
@@ -106,7 +106,7 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
     r.hidden = false;
     r.innerHTML = yaEnLista.has(p.id)
       ? `<div class="issues"><b>${esc(p.nombre)} ya está registrada en esta actividad.</b></div>`
-      : `<div class="recognized">Usuaria ya registrada${visitas ? ` · ${visitas} ${visitas === 1 ? "actividad anterior" : "actividades anteriores"}` : ""}. Confirma que sus datos sigan vigentes y pide su firma.</div>`;
+      : `<div class="recognized">Usuaria ya registrada${visitas ? ` · ${visitas} ${visitas === 1 ? "actividad anterior" : "actividades anteriores"}` : ""}. Confirme que sus datos sigan vigentes y solicite su firma.</div>`;
     pintarCampos();
   }
 
@@ -128,7 +128,7 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
     nota.className = "note";
     if (d.curp.length < 18) { nota.textContent = d.curp ? `${d.curp.length} de 18 caracteres` : ""; return; }
     const info = leerCurp(d.curp);
-    if (!info) { nota.className = "note warn"; nota.textContent = "La CURP no tiene un formato válido. Revisa letras y números."; return; }
+    if (!info) { nota.className = "note warn"; nota.textContent = "La CURP no tiene un formato válido. Verifique letras y números."; return; }
     const conocida = registradas.find(p => p.curp === d.curp && p.id !== d.usuariaId);
     if (conocida && !existente) {
       nota.textContent = "";
@@ -177,8 +177,8 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
     const nota = $("#curpNota", c);
     nota.className = r.nombre && !r.nombreVerificado ? "note warn" : "note ok";
     nota.textContent = r.nombre && !r.nombreVerificado
-      ? "Datos tomados de la INE. Revisa que el nombre esté bien escrito."
-      : r.curp ? "Datos tomados de la INE." : "Datos tomados de la INE. Falta escribir la CURP.";
+      ? "Datos tomados de la INE. Verifique que el nombre esté correctamente escrito."
+      : r.curp ? "Datos tomados de la INE." : "Datos tomados de la INE. Falta ingresar la CURP.";
     pintarCampos();
     $(r.curp ? "#ocupacion" : "#curp", c).focus();
   });
@@ -186,7 +186,7 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
   $("#sinCurp", c).addEventListener("change", ev => {
     d.sinCurp = ev.target.checked;
     if (d.sinCurp) d.curp = "";
-    $("#curpNota", c).textContent = d.sinCurp ? "En el formato aparecerá “SIN CURP”. Captura la fecha de nacimiento y el sexo a mano." : "";
+    $("#curpNota", c).textContent = d.sinCurp ? "En el formato aparecerá “SIN CURP”. Capture la fecha de nacimiento y el sexo manualmente." : "";
     pintarCampos();
   });
 
@@ -204,7 +204,7 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
     res.hidden = false;
     res.innerHTML = hallados.length
       ? hallados.map(p => `<button type="button" data-id="${esc(p.id)}"><b>${esc(p.nombre)}</b><small>${esc(p.curp || "Sin CURP")} · ${edad(p.fnac, act.fecha) ?? "?"} años</small></button>`).join("")
-      : `<p class="hint">No hay ninguna usuaria con ese nombre. Captura sus datos abajo.</p>`;
+      : `<p class="hint">No se encontró ninguna usuaria con ese nombre. Capture sus datos a continuación.</p>`;
     $$("button", res).forEach(b => (b.onclick = () => {
       reconocer(registradas.find(p => p.id === b.dataset.id));
       res.hidden = true;
@@ -226,7 +226,7 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
 
   const guardar = unaVez(async otra => {
     const e = [];
-    if (!d.sinCurp && !leerCurp(d.curp)) e.push("CURP válida de 18 caracteres (o marca que no tiene CURP)");
+    if (!d.sinCurp && !leerCurp(d.curp)) e.push("CURP válida de 18 caracteres (o indique que la persona no cuenta con CURP)");
     const nombre = d.nombre.trim().replace(/\s+/g, " ");
     if (nombre.split(" ").length < 2) e.push("Nombre completo con apellidos");
     if (!d.fnac) e.push("Fecha de nacimiento");
@@ -267,7 +267,7 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
   $("#guardarOtra", c)?.addEventListener("click", () => guardar(true));
 
   const quitar = $("#quitar", c);
-  if (quitar) dobleToque(quitar, "Toca otra vez para quitarla", async () => {
+  if (quitar) dobleToque(quitar, "Toque nuevamente para quitarla", async () => {
     await db.borrar("asistencias", existente.id);
     aviso("Usuaria quitada de la lista");
     ir(volver);

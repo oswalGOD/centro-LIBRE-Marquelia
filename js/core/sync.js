@@ -29,7 +29,7 @@ export function avisoReloj(desfase = estado.desfase) {
   if (Math.abs(desfase) < DESFASE_TOLERADO) return "";
   const min = Math.round(Math.abs(desfase) / 60000);
   const cuanto = min >= 2880 ? `${Math.round(min / 1440)} días` : min >= 120 ? `${Math.round(min / 60)} horas` : `${min} minutos`;
-  return `La fecha u hora de este dispositivo va ${desfase > 0 ? "adelantada" : "atrasada"} unos ${cuanto}. Corrígela en la configuración del equipo (fecha y hora automáticas): si no, al sincronizar se pueden quedar datos viejos.`;
+  return `La fecha u hora de este dispositivo está ${desfase > 0 ? "adelantada" : "atrasada"} aproximadamente ${cuanto}. Corríjala en la configuración del equipo (fecha y hora automáticas); de lo contrario, al sincronizar podrían conservarse datos desactualizados.`;
 }
 function horaDelServidor(token) {
   try {
@@ -66,7 +66,7 @@ async function pedirToken(cuerpo, tipo) {
 }
 
 export async function conectar(email, password) {
-  if (!navigator.onLine) throw new Error("Este dispositivo no tiene internet en este momento.");
+  if (!navigator.onLine) throw new Error("Este dispositivo no tiene conexión a internet en este momento.");
   await pedirToken({ email: email.trim(), password }, "password");
   await db.escribirMeta("ultimaRecepcion", null);
   await actualizarEstado();
@@ -93,9 +93,9 @@ async function token(forzar) {
       // (señal débil, Wi-Fi con página de acceso) no desconecta el dispositivo: se reintenta después.
       if (e.status === 400 || e.status === 401) {
         await db.escribirMeta("nube", null);
-        throw new Error("La sesión con la cuenta del Centro venció. Vuelve a conectar este dispositivo en Ajustes.");
+        throw new Error("La sesión con la cuenta del Centro ha caducado. Vuelva a conectar este dispositivo desde Ajustes.");
       }
-      throw new Error("No se pudo conectar con la cuenta del Centro. Se volverá a intentar.");
+      throw new Error("No fue posible conectar con la cuenta del Centro. Se reintentará más adelante.");
     }
   }
   return nube.acceso;
@@ -282,7 +282,7 @@ export function sincronizar() {
     publicar();
     try {
       if (!(await db.leerMeta("nube"))) return { recibidos: 0 };
-      if (!navigator.onLine) throw new Error("Sin internet. Los cambios se enviarán cuando vuelva la conexión.");
+      if (!navigator.onLine) throw new Error("Sin conexión a internet. Los cambios se enviarán cuando se restablezca la conexión.");
       await enviar();
       const r = await recibir();
       if (r.fusiones) await enviar(); // las fusiones generan cambios que los demás deben recibir

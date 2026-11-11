@@ -43,10 +43,10 @@ async function pedirToken(cuerpo, tipo) {
 
 async function token() {
   let s = leerSesion();
-  if (!s) throw Object.assign(new Error("Inicia sesión."), { sinSesion: true });
+  if (!s) throw Object.assign(new Error("Inicie sesión."), { sinSesion: true });
   if (s.expira - 60000 < Date.now()) {
     try { s = await pedirToken({ refresh_token: s.renovar }, "refresh_token"); }
-    catch (e) { guardarSesion(null); throw Object.assign(new Error("La sesión venció. Vuelve a entrar."), { sinSesion: true }); }
+    catch (e) { guardarSesion(null); throw Object.assign(new Error("La sesión ha caducado. Vuelva a ingresar."), { sinSesion: true }); }
   }
   return s.acceso;
 }
@@ -59,7 +59,7 @@ async function rpc(nombre, args = {}) {
   });
   const j = await leerJson(r);
   if (!r.ok) {
-    if (j?.code === "42501") throw Object.assign(new Error("Esta cuenta no es de desarrollo. Entra con tu cuenta de desarrollador, no con la del Centro."), { sinPermiso: true });
+    if (j?.code === "42501") throw Object.assign(new Error("Esta cuenta no corresponde a desarrollo. Ingrese con su cuenta de desarrollador, no con la del Centro."), { sinPermiso: true });
     if (j?.code === "PGRST202" || r.status === 404) throw new Error("Falta ejecutar supabase/panel-desarrollo.sql en Supabase.");
     throw new Error(j?.message || `El servidor respondió ${r.status}.`);
   }
@@ -104,28 +104,28 @@ function entrar(mensaje = "") {
   <main class="auth">
     <form class="auth-card stack" id="f" novalidate>
       <div class="auth-brand"><img class="mark" src="icons/icon-192.png" alt="" aria-hidden="true"><div><h1>Panel del desarrollador</h1><p class="hint">Centro LIBRE Marquelia</p></div></div>
-      <p class="hint">Entra con tu cuenta de desarrollo de Supabase (no la del Centro). Este panel solo muestra datos técnicos de las tabletas; no da acceso a usuarias, firmas ni perfiles.</p>
+      <p class="hint">Ingrese con su cuenta de desarrollo de Supabase (no con la del Centro). Este panel solo muestra datos técnicos de las tabletas; no otorga acceso a usuarias, firmas ni perfiles.</p>
       <div class="grid">
         <div class="field span-2"><label for="correo">Correo</label><input id="correo" type="email" autocomplete="username" required></div>
         <div class="field span-2"><label for="clave">Contraseña</label><input id="clave" type="password" autocomplete="current-password" required></div>
       </div>
       <div id="err"></div>
-      <div class="actions"><button class="btn primary" id="entrar">Entrar</button></div>
+      <div class="actions"><button class="btn primary" id="entrar">Ingresar</button></div>
     </form>
   </main>`;
-  if (mensaje) errores($("#err"), [mensaje], "No se pudo abrir el panel.");
+  if (mensaje) errores($("#err"), [mensaje], "No fue posible abrir el panel.");
   $("#f").onsubmit = async ev => {
     ev.preventDefault();
     const correo = $("#correo").value.trim(), clave = $("#clave").value;
-    if (!correo || !clave) return errores($("#err"), ["Escribe el correo y la contraseña."]);
+    if (!correo || !clave) return errores($("#err"), ["Ingrese el correo y la contraseña."]);
     const b = $("#entrar");
-    b.disabled = true; b.textContent = "Entrando…";
+    b.disabled = true; b.textContent = "Ingresando…";
     try {
       await pedirToken({ email: correo, password: clave }, "password");
       await panel();
     } catch (e) {
-      b.disabled = false; b.textContent = "Entrar";
-      errores($("#err"), [e.message], "No se pudo entrar.");
+      b.disabled = false; b.textContent = "Ingresar";
+      errores($("#err"), [e.message], "No fue posible ingresar.");
     }
   };
   $("#correo").focus();
@@ -221,7 +221,7 @@ async function panel() {
     nube = await rpc("resumen_panel");
   } catch (e) {
     if (e.sinSesion || e.sinPermiso) { if (e.sinPermiso) await salir(); return entrar(e.message); }
-    raiz.innerHTML = `<main class="wrap"><div class="issues" role="alert"><b>No se pudo consultar Supabase.</b><p>${esc(e.message)}</p><p>Si dice que no hay conexión o tarda mucho, el proyecto puede estar pausado: reanúdalo en supabase.com.</p><button class="btn" id="otra">Intentar de nuevo</button> <button class="btn ghost" id="salir">Salir</button></div></main>`;
+    raiz.innerHTML = `<main class="wrap"><div class="issues" role="alert"><b>No fue posible consultar Supabase.</b><p>${esc(e.message)}</p><p>Si indica que no hay conexión o tarda demasiado, es posible que el proyecto esté en pausa: reactívelo en supabase.com.</p><button class="btn" id="otra">Reintentar</button> <button class="btn ghost" id="salir">Salir</button></div></main>`;
     $("#otra").onclick = panel;
     $("#salir").onclick = salir;
     return;
@@ -241,7 +241,7 @@ async function panel() {
   const todosErrores = disp.flatMap(d => (d.estado?.errores || []).map(x => ({ ...x, tableta: d.id_corto || "?" })))
     .sort((a, b) => String(b.hora).localeCompare(String(a.hora))).slice(0, 40);
 
-  const tareaTexto = !tarea ? `<dd>No se pudo consultar GitHub · <a href="https://github.com/${REPO}/actions/workflows/mantener-supabase.yml" target="_blank" rel="noopener">ver en GitHub</a></dd>`
+  const tareaTexto = !tarea ? `<dd>No fue posible consultar GitHub · <a href="https://github.com/${REPO}/actions/workflows/mantener-supabase.yml" target="_blank" rel="noopener">ver en GitHub</a></dd>`
     : tarea.nunca ? `<dd>${chip("No ha corrido", "warn")}</dd>`
     : `<dd>${tarea.estado !== "completed" ? chip("Corriendo") : tarea.resultado === "success" ? chip("Bien", "ok") : chip("Falló", "warn")} ${hace(tarea.hora)} · <a href="${esc(tarea.url)}" target="_blank" rel="noopener">detalle</a></dd>`;
 
@@ -256,7 +256,7 @@ async function panel() {
 
       <div class="tiles">
         <div class="tile"><span class="label">Tabletas</span><span class="value">${disp.length}</span><span class="sub">${callados.length ? `${callados.length} más sin reportar` : "todas reportan"}</span></div>
-        <div class="tile ${conProblemas ? "warn" : ""}"><span class="label">Con algo que revisar</span><span class="value">${conProblemas}</span><span class="sub">de ${disp.length}</span></div>
+        <div class="tile ${conProblemas ? "warn" : ""}"><span class="label">Con observaciones</span><span class="value">${conProblemas}</span><span class="sub">de ${disp.length}</span></div>
         <div class="tile ${usoBase > 80 ? "warn" : ""}"><span class="label">Base de datos</span><span class="value">${mb(nube.base_bytes)} MB</span><span class="sub">de ${LIMITE_GRATIS_MB} MB del plan gratis</span></div>
         <div class="tile"><span class="label">Registros en la nube</span><span class="value">${vigentes}</span><span class="sub">último cambio ${hace(ultimoCambio)}</span></div>
       </div>
@@ -279,9 +279,9 @@ async function panel() {
 
       <section class="stack">
         <h2>Tabletas</h2>
-        ${disp.length ? disp.map(d => tarjetaTableta(d, ultima, nube)).join("") : `<p class="panel hint">Todavía ninguna tableta ha reportado. Reportan al sincronizar una vez que tienen la versión 0.14 o posterior.</p>`}
+        ${disp.length ? disp.map(d => tarjetaTableta(d, ultima, nube)).join("") : `<p class="panel hint">Aún ninguna tableta ha enviado reportes. Reportan al sincronizar, una vez que tienen la versión 0.14 o posterior.</p>`}
         ${callados.length ? `<section class="panel stack"><h3>Dispositivos que envían datos pero no reportan</h3>
-          <p class="hint">Probablemente tienen una versión anterior a la 0.14. Se arreglan al actualizar la app en ese equipo.</p>
+          <p class="hint">Probablemente tienen una versión anterior a la 0.14. Se resuelve al actualizar la aplicación en ese equipo.</p>
           <div class="table-scroll"><table class="data"><thead><tr><th>Dispositivo</th><th class="num">Cambios enviados</th><th>Último cambio</th></tr></thead>
           <tbody>${callados.map(([id, c]) => `<tr><th scope="row" class="mono">${esc(id.slice(0, 8))}</th><td class="num">${c.cambios}</td><td>${hace(c.ultimo)}</td></tr>`).join("")}</tbody></table></div></section>` : ""}
       </section>
@@ -295,7 +295,7 @@ async function panel() {
 
   $("#recargar").onclick = panel;
   $("#salir").onclick = salir;
-  $$("[data-olvidar]").forEach(b => dobleToque(b, "Toca otra vez para quitarla", async () => {
+  $$("[data-olvidar]").forEach(b => dobleToque(b, "Toque nuevamente para quitarla", async () => {
     try { await rpc("olvidar_dispositivo", { p_dispositivo: b.dataset.olvidar }); } catch (e) { alertaEn(b, e.message); return; }
     panel();
   }));

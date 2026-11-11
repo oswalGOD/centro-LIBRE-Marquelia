@@ -22,7 +22,7 @@ async function lista({ pintar }) {
           <span class="meta"><span class="mono">${esc(p.curp || "Sin CURP")}</span><span>${edad(p.fnac) ?? "?"} años</span><span>${esc(etiquetaSexo(p.sexo))}</span><span>${esc(etiquetaGrupo(p.grupo))}</span></span></span>
         <span class="end"><span class="big">${visitas(p.id)}</span><small>${visitas(p.id) === 1 ? "actividad" : "actividades"}</small></span>
       </a>`).join("")}</div>`
-    : `<div class="empty"><b>Todavía no hay usuarias.</b><p>Cada persona que registres en una actividad se agrega aquí. La próxima vez que asista, basta con escribir su CURP o buscar su nombre.</p></div>`}
+    : `<div class="empty"><b>Aún no hay usuarias registradas.</b><p>Cada persona que se registre en una actividad se agrega aquí. En su siguiente asistencia, bastará con ingresar su CURP o buscar su nombre.</p></div>`}
   `);
   $("#buscar", c).addEventListener("input", e => {
     const q = normalizar(e.target.value).replace(/\s+/g, " ").trim().split(" ");
@@ -42,9 +42,9 @@ async function ficha({ yo, pintar, ir }, id) {
 
   const c = pintar(p.nombre, `
     <section class="panel stack">
-      <div class="section-head"><h2 class="h3">Datos personales</h2><p class="hint">Los cambios se usarán la próxima vez que asista. Las listas ya firmadas conservan los datos de ese día.</p></div>
+      <div class="section-head"><h2 class="h3">Datos personales</h2><p class="hint">Los cambios se aplicarán a partir de su siguiente asistencia. Las listas ya firmadas conservan los datos vigentes en su fecha.</p></div>
       <div class="grid" id="f">
-        <div class="field span-2"><label for="p-curp">CURP</label><input id="p-curp" class="upper" maxlength="18" value="${esc(p.curp || "")}" placeholder="Vacío si no tiene CURP"></div>
+        <div class="field span-2"><label for="p-curp">CURP</label><input id="p-curp" class="upper" maxlength="18" value="${esc(p.curp || "")}" placeholder="Dejar vacío si no cuenta con CURP"></div>
         <div class="field span-2"><label for="p-nombre">Nombre completo</label><input id="p-nombre" value="${esc(p.nombre)}"></div>
         <div class="field"><label for="p-fnac">Fecha de nacimiento</label><input id="p-fnac" type="date" value="${esc(p.fnac)}"></div>
         <div class="field"><label for="p-lugar">Lugar de nacimiento</label><input id="p-lugar" value="${esc(p.lugar)}"></div>
@@ -61,7 +61,7 @@ async function ficha({ yo, pintar, ir }, id) {
       <h2>Historial de asistencia</h2>
       ${visibles.length ? `<div class="list">${visibles.map(a => `<a class="row" href="#/actividad/${esc(a.id)}"><span class="body"><span class="name">${esc(a.nombre)}</span><span class="meta"><span>${fechaLarga(a.fecha)}</span><span class="mono">${esc(a.folio)}</span><span>${esc(a.tipo)}</span></span></span></a>`).join("")}</div>` : ""}
       ${ocultas ? `<p class="hint">Además asistió a ${plural(ocultas, "actividad", "actividades")} de otras facilitadoras.</p>` : ""}
-      ${!acts.length ? `<p class="hint">Todavía no asiste a ninguna actividad.</p>` : ""}
+      ${!acts.length ? `<p class="hint">Aún no registra asistencia a ninguna actividad.</p>` : ""}
     </section>
   `, { atras: "#/usuarias" });
 
@@ -71,8 +71,8 @@ async function ficha({ yo, pintar, ir }, id) {
     const e = [];
     if (curp && !leerCurp(curp)) e.push("La CURP no tiene un formato válido.");
     const otra = curp && (await db.porIndice("usuarias", "curp", curp));
-    if (otra && otra.id !== p.id) e.push(`Esa CURP ya pertenece a ${otra.nombre}.`);
-    if (v("nombre").split(/\s+/).length < 2) e.push("Escribe el nombre completo con apellidos.");
+    if (otra && otra.id !== p.id) e.push(`Esa CURP ya está registrada a nombre de ${otra.nombre}.`);
+    if (v("nombre").split(/\s+/).length < 2) e.push("Ingrese el nombre completo con apellidos.");
     if (!v("fnac")) e.push("Falta la fecha de nacimiento.");
     if (v("telefono").replace(/\D/g, "").length !== 10) e.push("El teléfono debe tener 10 dígitos.");
     errores($("#err", c), e);
@@ -84,7 +84,7 @@ async function ficha({ yo, pintar, ir }, id) {
     ficha({ yo, pintar, ir }, id);
   });
   const eliminar = $("#eliminar", c);
-  if (eliminar) dobleToque(eliminar, "Toca otra vez para eliminar", async () => {
+  if (eliminar) dobleToque(eliminar, "Toque nuevamente para eliminar", async () => {
     await db.borrar("usuarias", id);
     aviso("Usuaria eliminada");
     ir("#/usuarias");

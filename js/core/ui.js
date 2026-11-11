@@ -41,7 +41,7 @@ export function dobleToque(boton, textoConfirmar, accion) {
   });
 }
 
-export function errores(contenedor, lista, titulo = "Revisa lo siguiente:") {
+export function errores(contenedor, lista, titulo = "Verifique lo siguiente:") {
   contenedor.innerHTML = lista.length
     ? `<div class="issues" role="alert"><b>${esc(titulo)}</b><ul>${lista.map(e => `<li>${esc(e)}</li>`).join("")}</ul></div>`
     : "";

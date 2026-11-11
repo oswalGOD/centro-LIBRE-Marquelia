@@ -93,7 +93,7 @@ export async function formato({ yo, pintar, ir }, id) {
       <button class="btn primary" id="imprimir">Imprimir o guardar PDF</button>
       <p class="hint">${plural(hojas, "hoja", "hojas")} · ${plural(asis.length, "asistente", "asistentes")} · carta horizontal${act.notas ? " · incluye la hoja de notas" : ""}${sinFirma ? ` · <span class="chip warn">${sinFirma} sin firma</span>` : ""}</p>
     </div>
-    <p class="hint no-print">En el cuadro de impresión elige tamaño <b>Carta</b>, orientación <b>Horizontal</b> y márgenes <b>Ninguno</b>. Para guardar en PDF, elige “Guardar como PDF” como impresora.</p>
+    <p class="hint no-print">En el cuadro de impresión, seleccione tamaño <b>Carta</b>, orientación <b>Horizontal</b> y márgenes <b>Ninguno</b>. Para guardar en PDF, seleccione “Guardar como PDF” como impresora.</p>
     <div class="sheets" id="hojas">${hojasHTML(act, asis)}${hojaNotasHTML(act)}</div>
   `, { atras: `#/actividad/${id}`, ancho: true });
   const hojasEl = $("#hojas", c);

@@ -60,7 +60,7 @@ async function vista(ctx) {
   };
 
   const c = pintar("Desarrollo", `
-    <p class="hint">Herramientas de mantenimiento. Se cierran solas a los 15 minutos.</p>
+    <p class="hint">Herramientas de mantenimiento. Se cierran automáticamente a los 15 minutos.</p>
 
     <section class="panel stack">
       <h2 class="h3">Diagnóstico</h2>
@@ -92,7 +92,7 @@ async function vista(ctx) {
 
     <section class="panel stack">
       <h2 class="h3">Sincronización</h2>
-      <p class="hint">Útil si un dispositivo quedó desfasado. No borra nada: solo vuelve a enviar o a pedir los registros.</p>
+      <p class="hint">Útil cuando un dispositivo queda desfasado. No elimina información: únicamente vuelve a enviar o a solicitar los registros.</p>
       <div class="actions">
         <button class="btn" id="reenviar" ${e.conectada ? "" : "disabled"}>Volver a enviar todo</button>
         <button class="btn" id="recibir" ${e.conectada ? "" : "disabled"}>Volver a recibir todo</button>
@@ -101,14 +101,14 @@ async function vista(ctx) {
 
     <section class="panel stack">
       <h2 class="h3">Actualización</h2>
-      <p class="hint">Borra los archivos guardados de la app y la descarga de nuevo. Los datos no se tocan. Necesita internet.</p>
+      <p class="hint">Elimina los archivos guardados de la aplicación y los descarga nuevamente. Los datos no se modifican. Requiere conexión a internet.</p>
       <div class="actions"><button class="btn" id="forzar">Forzar actualización</button></div>
     </section>
 
     <section class="panel stack">
-      <h2 class="h3">Restablecer la app</h2>
-      <p class="hint">Borra <b>todo</b> lo guardado en este dispositivo (perfiles, usuarias, actividades, firmas y ajustes) y la deja como recién instalada. No borra nada de la nube; si el dispositivo estaba sincronizado, al volver a conectarlo recupera los datos. Descarga un respaldo antes.</p>
-      <div class="field"><label for="confirmar">Escribe RESTABLECER para confirmar</label><input id="confirmar" class="upper" autocomplete="off"></div>
+      <h2 class="h3">Restablecer la aplicación</h2>
+      <p class="hint">Elimina <b>toda</b> la información guardada en este dispositivo (perfiles, usuarias, actividades, firmas y ajustes) y deja la aplicación como recién instalada. No elimina nada de la nube; si el dispositivo estaba sincronizado, al conectarlo de nuevo recuperará los datos. Descargue un respaldo antes de continuar.</p>
+      <div class="field"><label for="confirmar">Escriba RESTABLECER para confirmar</label><input id="confirmar" class="upper" autocomplete="off"></div>
       <div id="errReset"></div>
       <div class="actions"><button class="btn danger" id="restablecer">Restablecer este dispositivo</button></div>
     </section>
@@ -119,7 +119,7 @@ async function vista(ctx) {
   $("#descargarDiag", c).onclick = () => descargar(`diagnostico-${diagnostico.idDispositivo}-${diagnostico.generado.slice(0, 10)}.json`, JSON.stringify(diagnostico, null, 2));
   $("#proteger", c)?.addEventListener("click", async () => {
     const ok = await navigator.storage?.persist?.();
-    aviso(ok ? "Almacenamiento protegido" : "El navegador no lo permitió. Instalar la app suele ayudar.");
+    aviso(ok ? "Almacenamiento protegido" : "El navegador no lo permitió. Instalar la aplicación suele resolverlo.");
     vista(ctx);
   });
   $("#vaciarErrores", c)?.addEventListener("click", () => { bitacora.vaciar(); vista(ctx); });
@@ -132,15 +132,15 @@ async function vista(ctx) {
   $("#reenviar", c).onclick = () => sincronizarDeNuevo("ultimoEnvio", 0, "Se volvió a enviar todo");
   $("#recibir", c).onclick = () => sincronizarDeNuevo("ultimaRecepcion", null, "Se volvió a recibir todo");
 
-  dobleToque($("#forzar", c), "Toca otra vez para actualizar", async () => {
-    if (!navigator.onLine) return aviso("Necesitas internet para descargar la app de nuevo.");
+  dobleToque($("#forzar", c), "Toque nuevamente para actualizar", async () => {
+    if (!navigator.onLine) return aviso("Se requiere conexión a internet para descargar la aplicación de nuevo.");
     await Promise.all((await caches.keys()).map(k => caches.delete(k)));
     await Promise.all((await navigator.serviceWorker?.getRegistrations?.() || []).map(r => r.unregister()));
     location.reload();
   });
 
   $("#restablecer", c).onclick = async () => {
-    if ($("#confirmar", c).value.trim().toUpperCase() !== "RESTABLECER") return errores($("#errReset", c), ["Escribe RESTABLECER en el campo para confirmar."]);
+    if ($("#confirmar", c).value.trim().toUpperCase() !== "RESTABLECER") return errores($("#errReset", c), ["Escriba RESTABLECER en el campo para confirmar."]);
     await db.eliminarTodo();
     try { localStorage.clear(); sessionStorage.clear(); } catch {}
     await Promise.all((await caches?.keys?.() || []).map(k => caches.delete(k)));
@@ -155,26 +155,26 @@ async function vista(ctx) {
 function candado(ctx) {
   const c = ctx.pintar("Desarrollo", CLAVE_DESARROLLO ? `
     <section class="panel stack">
-      <p class="hint">Esta sección es para mantenimiento de la app.</p>
+      <p class="hint">Esta sección es de uso exclusivo para el mantenimiento de la aplicación.</p>
       <form id="f" class="stack">
         <div class="field"><label for="clave">Contraseña de desarrollo</label><input id="clave" type="password" autocomplete="current-password"></div>
         <div id="err"></div>
-        <div class="actions"><button class="btn primary" type="submit">Entrar</button></div>
+        <div class="actions"><button class="btn primary" type="submit">Ingresar</button></div>
       </form>
     </section>` : `
     <section class="panel stack">
-      <h2 class="h3">Todavía no hay contraseña de desarrollo</h2>
-      <p class="hint">Escribe la contraseña que quieras usar (al menos 10 caracteres; mejor una frase). La app genera su huella para guardarla en <span class="mono">js/core/config.js</span>. La contraseña nunca se guarda.</p>
+      <h2 class="h3">Aún no hay contraseña de desarrollo</h2>
+      <p class="hint">Escriba la contraseña que desee utilizar (al menos 10 caracteres; se recomienda una frase). La aplicación genera su huella para guardarla en <span class="mono">js/core/config.js</span>. La contraseña nunca se almacena.</p>
       <form id="g" class="stack">
         <div class="grid">
           <div class="field"><label for="n1">Contraseña nueva</label><input id="n1" type="password" autocomplete="new-password"></div>
-          <div class="field"><label for="n2">Repítela</label><input id="n2" type="password" autocomplete="new-password"></div>
+          <div class="field"><label for="n2">Confirme la contraseña</label><input id="n2" type="password" autocomplete="new-password"></div>
         </div>
         <div id="err"></div>
         <div class="actions"><button class="btn primary" type="submit">Generar huella</button></div>
       </form>
       <div id="resultado" hidden class="stack">
-        <p class="hint">Reemplaza en <span class="mono">js/core/config.js</span> la línea <span class="mono">export const CLAVE_DESARROLLO = null;</span> por esta:</p>
+        <p class="hint">Reemplace en <span class="mono">js/core/config.js</span> la línea <span class="mono">export const CLAVE_DESARROLLO = null;</span> por la siguiente:</p>
         <textarea id="linea" class="mono" rows="4" readonly></textarea>
         <div class="actions"><button class="btn" type="button" id="copiar">Copiar</button></div>
       </div>
@@ -182,7 +182,7 @@ function candado(ctx) {
 
   $("#f", c)?.addEventListener("submit", async ev => {
     ev.preventDefault();
-    if (Date.now() < bloqueoHasta) return errores($("#err", c), [`Demasiados intentos. Espera ${Math.ceil((bloqueoHasta - Date.now()) / 1000)} segundos.`]);
+    if (Date.now() < bloqueoHasta) return errores($("#err", c), [`Demasiados intentos. Espere ${Math.ceil((bloqueoHasta - Date.now()) / 1000)} segundos.`]);
     const boton = $("button", ev.target);
     boton.disabled = true;
     const { sal, huella: esperada, iteraciones } = CLAVE_DESARROLLO;
@@ -202,8 +202,8 @@ function candado(ctx) {
     ev.preventDefault();
     const n1 = $("#n1", c).value, n2 = $("#n2", c).value;
     const e = [];
-    if (n1.length < 10) e.push("Usa al menos 10 caracteres.");
-    if (n1 !== n2) e.push("Las dos contraseñas no coinciden.");
+    if (n1.length < 10) e.push("Utilice al menos 10 caracteres.");
+    if (n1 !== n2) e.push("Las contraseñas ingresadas no coinciden.");
     errores($("#err", c), e);
     if (e.length) return;
     const sal = db.uid();
@@ -214,7 +214,7 @@ function candado(ctx) {
   });
   $("#copiar", c)?.addEventListener("click", async () => {
     try { await navigator.clipboard.writeText($("#linea", c).value); aviso("Copiado"); }
-    catch { $("#linea", c).select(); aviso("Selecciona el texto y cópialo"); }
+    catch { $("#linea", c).select(); aviso("Seleccione el texto y cópielo"); }
   });
 }
 

@@ -157,7 +157,7 @@ function cargarLector() {
     const s = document.createElement("script");
     s.src = BASE + "tesseract.min.js";
     s.onload = listo;
-    s.onerror = () => mal(new Error("No se pudo cargar el lector de texto."));
+    s.onerror = () => mal(new Error("No fue posible cargar el lector de texto."));
     document.head.append(s);
   }).catch(e => { trabajador = null; throw e; });
   return trabajador;
@@ -283,11 +283,11 @@ export function escanearIne() {
     capa.innerHTML = `
       <div class="sig-sheet" role="dialog" aria-modal="true" aria-labelledby="ineTitulo">
         <div class="sig-head"><h2 id="ineTitulo">Escanear INE</h2>
-          <p class="hint">Toma una foto de cada lado, de cerca, derecha y con buena luz. Del frente se lee la CURP y del reverso, el nombre. La foto no se guarda.</p></div>
+          <p class="hint">Tome una fotografía de cada lado, de cerca, con la credencial derecha y buena iluminación. Del frente se lee la CURP y del reverso, el nombre. La fotografía no se guarda.</p></div>
         <div class="ine-cuerpo stack">
           <div class="ine-lados">
-            <label class="btn" for="ineFrente">Foto del frente</label><input type="file" id="ineFrente" accept="image/*" capture="environment" class="visually-hidden" data-lado="frente">
-            <label class="btn" for="ineReverso">Foto del reverso</label><input type="file" id="ineReverso" accept="image/*" capture="environment" class="visually-hidden" data-lado="reverso">
+            <label class="btn" for="ineFrente">Fotografía del frente</label><input type="file" id="ineFrente" accept="image/*" capture="environment" class="visually-hidden" data-lado="frente">
+            <label class="btn" for="ineReverso">Fotografía del reverso</label><input type="file" id="ineReverso" accept="image/*" capture="environment" class="visually-hidden" data-lado="reverso">
           </div>
           <p class="hint" id="ineEstado" role="status"></p>
           <dl class="facts" id="ineDatos"></dl>
@@ -332,9 +332,9 @@ export function escanearIne() {
       const r = resultado();
       const fila = (t, v) => `<div><dt>${t}</dt><dd>${v ? v.replace(/[&<>"]/g, ch => `&#${ch.charCodeAt(0)};`) : `<span class="chip warn">Falta</span>`}</dd></div>`;
       $c("#ineDatos").innerHTML = fila("CURP", r.curp) + fila("Nombre", r.nombre) + fila("Fecha de nacimiento", r.fnac.split("-").reverse().join("/")) + fila("Sexo", NOMBRE_SEXO[r.sexo]);
-      const aviso = !r.curp && r.nombre ? "Falta la CURP: toma la foto del frente o escríbela en el formulario."
-        : r.curp && !r.nombre ? "Para el nombre, toma la foto del reverso. También puedes escribirlo en el formulario."
-        : r.nombre && !r.nombreVerificado ? "Revisa que el nombre esté bien escrito: no coincide del todo con la CURP."
+      const aviso = !r.curp && r.nombre ? "Falta la CURP: tome la fotografía del frente o ingrésela en el formulario."
+        : r.curp && !r.nombre ? "Para obtener el nombre, tome la fotografía del reverso. También puede ingresarlo en el formulario."
+        : r.nombre && !r.nombreVerificado ? "Verifique que el nombre esté correctamente escrito: no coincide por completo con la CURP."
         : "";
       $c("#ineAviso").textContent = aviso;
       $c("#ineAviso").hidden = !aviso;
@@ -355,10 +355,10 @@ export function escanearIne() {
         if (r.partes) datos.partes = r.partes;
         estado.textContent = r.curp || r.partes || r.fnac
           ? `Listo: se leyó ${[r.curp && "la CURP", r.partes && "el nombre", !r.partes && r.fnac && "la fecha de nacimiento"].filter(Boolean).join(" y ")}.`
-          : `No se pudo leer esta foto. Tómala más de cerca, sin reflejos y con la credencial derecha.`;
+          : `No fue posible leer esta fotografía. Tómela más de cerca, sin reflejos y con la credencial derecha.`;
         pintar();
       } catch (e) {
-        estado.textContent = e.message || "No se pudo leer la foto.";
+        estado.textContent = e.message || "No fue posible leer la fotografía.";
       } finally {
         ocupado = false;
         capa.querySelectorAll(".disabled").forEach(b => b.classList.remove("disabled"));

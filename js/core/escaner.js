@@ -23,7 +23,7 @@ function cargarLector() {
     const s = document.createElement("script");
     s.src = new URL("../vendor/jsQR.min.js", import.meta.url).href;
     s.onload = () => ok(window.jsQR);
-    s.onerror = () => { cargando = null; mal(new Error("No se pudo cargar el lector de códigos.")); };
+    s.onerror = () => { cargando = null; mal(new Error("No fue posible cargar el lector de códigos.")); };
     document.head.append(s);
   });
   return cargando;
@@ -51,11 +51,11 @@ export function escanearCurp() {
     capa.className = "sig-modal scan-modal";
     capa.innerHTML = `
       <div class="sig-sheet" role="dialog" aria-modal="true" aria-labelledby="scanTitulo">
-        <div class="sig-head"><h2 id="scanTitulo">Escanear CURP</h2><p class="hint">Apunta la cámara al código QR de la constancia de CURP, impresa o en la pantalla del celular.</p></div>
+        <div class="sig-head"><h2 id="scanTitulo">Escanear CURP</h2><p class="hint">Apunte la cámara al código QR de la constancia de CURP, impresa o en la pantalla del celular.</p></div>
         <div class="scan-view"><video playsinline muted aria-label="Vista de la cámara"></video><div class="scan-frame" aria-hidden="true"></div><p class="scan-msg" role="status"></p></div>
         <p class="note warn" id="scanAviso" hidden></p>
         <div class="actions">
-          <label class="btn" for="scanFoto">Usar una foto</label><input type="file" id="scanFoto" accept="image/*" capture="environment" class="visually-hidden">
+          <label class="btn" for="scanFoto">Usar una fotografía</label><input type="file" id="scanFoto" accept="image/*" capture="environment" class="visually-hidden">
           <button type="button" class="btn ghost push" data-accion="cancelar">Cancelar</button>
         </div>
       </div>`;
@@ -88,7 +88,7 @@ export function escanearCurp() {
       if (!texto) return false;
       const datos = leerQrCurp(texto);
       if (datos) { navigator.vibrate?.(60); cerrar(datos); return true; }
-      if (texto !== ultimoAviso) avisar("Ese código no es de una constancia de CURP.");
+      if (texto !== ultimoAviso) avisar("Ese código no corresponde a una constancia de CURP.");
       ultimoAviso = texto;
       return false;
     }
@@ -101,12 +101,12 @@ export function escanearCurp() {
           const foto = await createImageBitmap(archivo);
           const texto = decodificar(jsQR, foto, foto.width, foto.height, lienzo);
           if (texto) revisar(texto);
-          else avisar("No se encontró el código QR en la foto. Tómala de cerca y con buena luz.");
-        } catch { avisar("No se pudo abrir la foto."); }
+          else avisar("No se encontró el código QR en la fotografía. Tómela de cerca y con buena iluminación.");
+        } catch { avisar("No fue posible abrir la fotografía."); }
         ev.target.value = "";
       };
 
-      if (!navigator.mediaDevices?.getUserMedia) { msg.textContent = "Este dispositivo no permite usar la cámara aquí. Usa una foto."; return; }
+      if (!navigator.mediaDevices?.getUserMedia) { msg.textContent = "Este dispositivo no permite usar la cámara en este contexto. Utilice una fotografía."; return; }
       msg.textContent = "Abriendo la cámara…";
       navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false })
         .then(f => {
@@ -123,7 +123,7 @@ export function escanearCurp() {
             ciclo();
           });
         })
-        .catch(() => { msg.textContent = "No se pudo abrir la cámara. Revisa el permiso de cámara o usa una foto."; });
+        .catch(() => { msg.textContent = "No fue posible abrir la cámara. Verifique el permiso de cámara o utilice una fotografía."; });
     }).catch(e => { msg.textContent = e.message; });
   });
 }
