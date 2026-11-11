@@ -231,7 +231,7 @@ export async function exportar() {
 
 /** Reemplaza todo el contenido con un respaldo. Conserva los ajustes propios de este dispositivo. */
 export async function importar(respaldo) {
-  if (respaldo?.app !== NOMBRE || !respaldo.datos) throw new Error("El archivo no es un respaldo de esta app.");
+  if (respaldo?.app !== NOMBRE || !respaldo.datos) throw new Error("El archivo no es un respaldo de esta aplicación.");
   if ((respaldo.version || 1) < 2) respaldo = { ...respaldo, datos: convertirV1(respaldo.datos) };
   const d = await abrir();
   const locales = (await pedir(d.transaction("meta").objectStore("meta").getAll())).filter(m => META_LOCAL.includes(m.clave));

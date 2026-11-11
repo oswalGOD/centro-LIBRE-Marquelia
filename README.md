@@ -1,58 +1,58 @@
 # Centro LIBRE Marquelia
 
-App para el Centro LIBRE Marquelia. El primer módulo es la **lista de asistencia**: captura de asistentes con firma en pantalla, registro de usuarias, folios automáticos e impresión del formato oficial "Lista de asistencia" (carta horizontal).
+Aplicación para el Centro LIBRE Marquelia. El primer módulo es la **lista de asistencia**: captura de asistentes con firma en pantalla, registro de usuarias, folios automáticos e impresión del formato oficial "Lista de asistencia" (carta horizontal).
 
-Es una app web instalable (PWA): se instala desde el navegador en Windows, Android e iPad/iPhone, funciona sin internet y no requiere tiendas de apps ni pagos.
+Es una aplicación web instalable (PWA): se instala desde el navegador en Windows, Android e iPad/iPhone, funciona sin conexión a internet y no requiere tiendas de aplicaciones ni pagos.
 
 ## Qué hace hoy
 
-- **Perfiles y roles**: Coordinadora, Psicóloga y Abogada, cada perfil con su PIN. La Coordinadora ve todo y administra los perfiles; la Psicóloga y la Abogada ven solo las actividades que crean o facilitan.
+- **Perfiles y roles**: Coordinadora, Psicóloga y Abogada, cada perfil con su PIN. La Coordinadora puede ver toda la información y administra los perfiles; la Psicóloga y la Abogada pueden ver solo las actividades que crean o facilitan.
 - **Actividades**: encabezado del formato, folio automático por mes y dispositivo (`OCT-2026-A001`), horario, notas, repetir una actividad, filtros por mes, tipo, facilitadora y estado, cierre de la lista. Las atenciones individuales (asesoría jurídica, atención psicológica) no van aquí: tendrán su propio módulo.
-- **Captura**: al escribir la CURP se llenan fecha de nacimiento, sexo, estado y rango de edad. Si la usuaria ya está registrada, se llenan todos sus datos. Admite personas sin CURP. Firma con el dedo o lápiz. No deja guardar con campos vacíos.
-- **Escanear CURP**: con la cámara se lee el código QR de la constancia de CURP (impresa o en el celular) y se llenan la CURP, el nombre completo, la fecha de nacimiento, el sexo y el estado. Funciona sin internet y no envía datos a ningún lado. Si no hay cámara, se puede usar una foto. Usa la biblioteca [jsQR](https://github.com/cozmo/jsQR) (Apache-2.0), incluida en `js/vendor/`.
-- **Escanear INE**: con una foto del frente se lee la CURP (se comprueba con su dígito verificador) y con una del reverso, el nombre, la fecha de nacimiento y el sexo (zona de lectura automática). Funciona sin internet con [Tesseract](https://github.com/naptha/tesseract.js) (Apache-2.0), incluido en `js/vendor/tesseract/`; la foto no se guarda ni se envía.
+- **Captura**: al ingresar la CURP se completan fecha de nacimiento, sexo, estado y rango de edad. Si la usuaria ya está registrada, se completan todos sus datos. Admite personas sin CURP. La firma se captura con el dedo o con lápiz. No permite guardar con campos vacíos.
+- **Escanear CURP**: con la cámara se lee el código QR de la constancia de CURP (impresa o en el celular) y se completan la CURP, el nombre completo, la fecha de nacimiento, el sexo y el estado. Funciona sin internet y no envía datos a ningún lado. Si no hay cámara, se puede usar una fotografía. Usa la biblioteca [jsQR](https://github.com/cozmo/jsQR) (Apache-2.0), incluida en `js/vendor/`.
+- **Escanear INE**: con una fotografía del frente se lee la CURP (se comprueba con su dígito verificador) y con una del reverso, el nombre, la fecha de nacimiento y el sexo (zona de lectura automática). Funciona sin internet con [Tesseract](https://github.com/naptha/tesseract.js) (Apache-2.0), incluido en `js/vendor/tesseract/`; la fotografía no se guarda ni se envía.
 - **Usuarias**: las personas que usan los servicios del Centro. Búsqueda, edición de datos e historial de asistencia de cada una.
 - **Formato**: 10 personas por hoja con el resumen por grupo, rango de edad y sexo de cada hoja. Si la actividad tiene notas, se agregan en una hoja aparte. Botón para imprimir o guardar en PDF.
 - **Estadísticas**: por periodo, tipo de actividad y facilitadora; tablas por rango de edad, grupo y sexo y por actividad, contando asistencias o usuarias distintas. Descarga del resumen y de la lista detallada en CSV para Excel.
-- **Sincronización**: los dispositivos conectados a la cuenta del Centro comparten perfiles, usuarias y actividades a través de Supabase. Cada uno sigue funcionando sin internet y envía sus cambios cuando vuelve la conexión.
+- **Sincronización**: los dispositivos conectados a la cuenta del Centro comparten perfiles, usuarias y actividades a través de Supabase. Cada uno sigue funcionando sin conexión a internet y envía sus cambios cuando se restablece la conexión.
 - **Desarrollo** (Ajustes → Opciones para desarrolladores): solo para la Coordinadora y protegida con contraseña. Diagnóstico descargable (sin datos de usuarias), errores recientes del dispositivo, volver a enviar o recibir todo, forzar actualización y restablecer el dispositivo. La contraseña se guarda como huella en `CLAVE_DESARROLLO` de `js/core/config.js`; la propia sección la genera la primera vez.
-- **Panel del desarrollador** (`panel.html`, aparte de la app): con tu propia cuenta de Supabase ves desde cualquier lugar el estado técnico de todas las tabletas (versión, última sincronización, cambios sin enviar, reloj, espacio y errores recientes), el espacio usado de la base de datos, conteos de registros y si la tarea «Mantener Supabase activo» está funcionando. Supabase solo deja ver datos técnicos a esa cuenta: no puede leer usuarias, firmas, perfiles ni actividades. Ver [Configurar el panel del desarrollador](#configurar-el-panel-del-desarrollador).
-- **Respaldo**: la Coordinadora descarga y restaura un archivo `.json` con todos los datos, cifrado con una contraseña que ella elige (sin esa contraseña no se puede abrir). Los respaldos sin cifrar de versiones anteriores se pueden seguir restaurando.
+- **Panel del desarrollador** (`panel.html`, aparte de la app): con su propia cuenta de Supabase se consulta desde cualquier lugar el estado técnico de todas las tabletas (versión, última sincronización, cambios sin enviar, reloj, espacio y errores recientes), el espacio usado de la base de datos, conteos de registros y si la tarea «Mantener Supabase activo» está funcionando. Supabase solo deja ver datos técnicos a esa cuenta: no puede leer usuarias, firmas, perfiles ni actividades. Consulte [Configurar el panel del desarrollador](#configurar-el-panel-del-desarrollador).
+- **Respaldo**: la Coordinadora descarga y restaura un archivo `.json` con todos los datos, cifrado con una contraseña que ella elige (sin esa contraseña no es posible abrirlo). Los respaldos sin cifrar de versiones anteriores se pueden seguir restaurando.
 
 ## Configurar la sincronización (una sola vez)
 
-1. En [Supabase](https://supabase.com), abre el proyecto → **SQL Editor** → **New query**, pega el contenido de [`supabase/esquema.sql`](supabase/esquema.sql) y toca **Run**.
-2. **Authentication → Users → Add user → Create new user**: crea la cuenta del Centro (un correo y una contraseña segura) y marca **Auto Confirm User**.
-3. **Authentication → Sign In / Providers**: desactiva **Allow new users to sign up**, para que nadie más pueda crear cuentas.
-4. Ejecuta [`supabase/blindaje.sql`](supabase/blindaje.sql) cambiando antes el correo de ejemplo por el de la cuenta del Centro: solo esa cuenta podrá leer o escribir datos.
-5. En cada tableta o computadora, la primera pantalla pide la cuenta del Centro y un ID de dispositivo distinto (una letra). Si la nube todavía no tiene perfiles, después se crea el de la Coordinadora.
+1. En [Supabase](https://supabase.com), abra el proyecto → **SQL Editor** → **New query**, pegue el contenido de [`supabase/esquema.sql`](supabase/esquema.sql) y seleccione **Run**.
+2. **Authentication → Users → Add user → Create new user**: cree la cuenta del Centro (un correo y una contraseña segura) y marque **Auto Confirm User**.
+3. **Authentication → Sign In / Providers**: desactive **Allow new users to sign up**, para que nadie más pueda crear cuentas.
+4. Ejecute [`supabase/blindaje.sql`](supabase/blindaje.sql) cambiando antes el correo de ejemplo por el de la cuenta del Centro: solo esa cuenta podrá leer o escribir datos.
+5. En cada tableta o computadora, la primera pantalla solicita la cuenta del Centro y un ID de dispositivo distinto (una letra). Si la nube aún no tiene perfiles, a continuación se crea el de la Coordinadora.
 
-**Si la tabla ya existía antes de la versión 0.5:** actualiza la app en todos los dispositivos y luego ejecuta una vez [`supabase/migracion-0.5.sql`](supabase/migracion-0.5.sql), que cambia los nombres de los registros ya guardados.
+**Si la tabla ya existía antes de la versión 0.5:** actualice la aplicación en todos los dispositivos y luego ejecute una vez [`supabase/migracion-0.5.sql`](supabase/migracion-0.5.sql), que cambia los nombres de los registros ya guardados.
 
-**Si la tabla ya existía antes de la versión 0.11:** ejecuta una vez [`supabase/ajuste-0.11.sql`](supabase/ajuste-0.11.sql). Solo ajusta una función del servidor; no toca datos ni permisos.
+**Si la tabla ya existía antes de la versión 0.11:** ejecute una vez [`supabase/ajuste-0.11.sql`](supabase/ajuste-0.11.sql). Solo ajusta una función del servidor; no toca datos ni permisos.
 
-**Para que Supabase no pause el proyecto** (en el plan gratis lo hace tras unos 7 días sin uso), la tarea automática `.github/workflows/mantener-supabase.yml` hace una consulta pequeña cada 3 días. Se ve en GitHub → Actions; si falla, probablemente el proyecto está pausado y hay que reanudarlo en supabase.com.
+**Para que Supabase no pause el proyecto** (en el plan gratis lo hace tras unos 7 días sin uso), la tarea automática `.github/workflows/mantener-supabase.yml` hace una consulta pequeña cada 3 días. Se ve en GitHub → Actions; si falla, probablemente el proyecto está pausado y es necesario reactivarlo en supabase.com.
 
-**Ojo:** volver a ejecutar `esquema.sql` regresa los permisos a «cualquier cuenta». Si lo haces, ejecuta `blindaje.sql` justo después.
+**Ojo:** volver a ejecutar `esquema.sql` regresa los permisos a «cualquier cuenta». Si lo hace, ejecute `blindaje.sql` inmediatamente después.
 
 La dirección del proyecto y la clave pública están en `js/core/config.js`. Esa clave es pública por diseño: sin la cuenta del Centro no da acceso a ningún dato.
 
 ### Configurar el panel del desarrollador
 
-1. En Supabase, **Authentication → Users → Add user → Create new user**: crea tu cuenta de desarrollo con un correo **distinto** al de la cuenta del Centro y marca **Auto Confirm User**.
-2. **SQL Editor → New query**: pega [`supabase/panel-desarrollo.sql`](supabase/panel-desarrollo.sql), cambia el correo de ejemplo por el de tu cuenta de desarrollo y toca **Run**. Si pones el correo de la cuenta del Centro, el script se detiene.
-3. Abre `panel.html` en la misma dirección de la app (por ejemplo `https://…github.io/centro-LIBRE-Marquelia/panel.html`) y entra con esa cuenta. No hay enlace al panel dentro de la app.
+1. En Supabase, **Authentication → Users → Add user → Create new user**: cree su cuenta de desarrollo con un correo **distinto** al de la cuenta del Centro y marque **Auto Confirm User**.
+2. **SQL Editor → New query**: pega [`supabase/panel-desarrollo.sql`](supabase/panel-desarrollo.sql), cambia el correo de ejemplo por el de tu cuenta de desarrollo y seleccione **Run**. Si pones el correo de la cuenta del Centro, el script se detiene.
+3. Abra `panel.html` en la misma dirección de la aplicación (por ejemplo `https://…github.io/centro-LIBRE-Marquelia/panel.html`) e ingrese con esa cuenta. No hay enlace al panel dentro de la aplicación.
 
 Las tabletas empiezan a aparecer cuando tienen la versión 0.14 y sincronizan. Reportan como mucho cada 30 minutos, o antes si cambió la versión o hubo un error nuevo. Los mensajes de error se envían sin CURP. La sesión del panel se cierra al cerrar la pestaña.
 
 ### Seguridad
 
-- **Nadie configura la app sin la cuenta del Centro.** Tener el enlace no basta: la primera pantalla pide el correo y la contraseña de la cuenta, y los verifica el servidor de Supabase.
+- **Nadie configura la aplicación sin la cuenta del Centro.** Tener el enlace no basta: la primera pantalla solicita el correo y la contraseña de la cuenta, y los verifica el servidor de Supabase.
 - **Solo la cuenta del Centro ve los datos.** La tabla tiene seguridad por fila: la clave pública sola no da acceso, y con `blindaje.sql` tampoco otra cuenta, aunque alguien lograra crearla.
-- **Cada persona entra con su PIN.** Tras 30 minutos sin usarla, la app vuelve a pedirlo. Cada 5 PIN incorrectos se bloquea un rato que se duplica cada vez (30 s, 1 min, 2 min… hasta 15 min), aunque se recargue la página.
+- **Cada persona ingresa con su PIN.** Tras 30 minutos sin actividad, la aplicación vuelve a solicitarlo. Cada 5 PIN incorrectos se bloquea un rato que se duplica cada vez (30 s, 1 min, 2 min… hasta 15 min), aunque se recargue la página.
 - **Política de contenido (CSP).** La página solo carga archivos propios y solo se comunica con Supabase, así que un script inyectado no se ejecuta.
 - El código es público (GitHub Pages gratuito lo requiere). Eso no expone datos: no hay datos ni contraseñas en el código, solo la clave pública de Supabase y la huella de la contraseña de desarrollo.
-- Si se pierde un dispositivo: cambia la contraseña de la cuenta del Centro en Supabase y cierra sus sesiones (Authentication → Users). Los datos guardados en el dispositivo solo los protege su PIN y el bloqueo de pantalla del propio equipo.
+- Si se pierde un dispositivo: cambie la contraseña de la cuenta del Centro en Supabase y cierre sus sesiones (Authentication → Users). Los datos guardados en el dispositivo solo los protege su PIN y el bloqueo de pantalla del propio equipo.
 
 ### Cómo resuelve conflictos
 
@@ -61,15 +61,15 @@ Las tabletas empiezan a aparecer cuando tienen la versión 0.14 y sincronizan. R
 - Los folios llevan el ID del dispositivo, así que no se repiten. Si un dispositivo se restablece y vuelve a usar su letra, sigue después del folio más alto que ya existe. Si dos dispositivos usan el mismo ID, Ajustes lo avisa.
 - Si una renovación de la sesión falla por la señal, el dispositivo sigue conectado y lo vuelve a intentar; solo se desconecta si Supabase dice que la sesión ya no sirve.
 - Al restaurar un respaldo, el dispositivo vuelve a recibir todo de la nube para quedarse con lo más nuevo.
-- «Gana el más reciente» depende de la hora de cada equipo. Si la fecha u hora de un dispositivo está desfasada más de 5 minutos respecto al servidor, la app lo avisa en la barra superior y en Ajustes.
+- «Gana el más reciente» depende de la hora de cada equipo. Si la fecha u hora de un dispositivo está desfasada más de 5 minutos respecto al servidor, la aplicación lo avisa en la barra superior y en Ajustes.
 
-## Probar en tu computadora
+## Probar en la computadora
 
-No necesita instalar nada para compilar. Solo sirve la carpeta con cualquier servidor local:
+No necesita instalar nada para compilar. Solo se requiere servir la carpeta con cualquier servidor local:
 
 ```bash
 python3 -m http.server 8080
-# abre http://localhost:8080
+# abrir http://localhost:8080
 ```
 
 El modo sin conexión y la instalación solo funcionan en `localhost` o en un sitio con `https`.
@@ -92,10 +92,10 @@ fonts/                  tipografías incluidas para funcionar sin internet
 
 ### Agregar una función nueva
 
-1. Crea `js/modulos/mi-funcion.js` que exporte `{ menu, rutas }` (copia la forma de `usuarias.js`).
-2. Agrégalo a la lista `MODULOS` en `js/app.js`.
-3. Agrega el archivo a `ARCHIVOS` en `sw.js` y sube el número de `VERSION` para que los dispositivos se actualicen.
-4. Si el módulo guarda datos nuevos, crea su almacén en `js/core/db.js` (subiendo `VERSION`) y agrégalo a `SINCRONIZADOS` en `js/core/sync.js`. La tabla de Supabase no necesita cambios.
+1. Cree `js/modulos/mi-funcion.js` que exporte `{ menu, rutas }` (siga la estructura de `usuarias.js`).
+2. Agréguelo a la lista `MODULOS` en `js/app.js`.
+3. Agregue el archivo a `ARCHIVOS` en `sw.js` y aumente el número de `VERSION` para que los dispositivos se actualicen.
+4. Si el módulo guarda datos nuevos, cree su almacén en `js/core/db.js` (aumentando `VERSION`) y agréguelo a `SINCRONIZADOS` en `js/core/sync.js`. La tabla de Supabase no necesita cambios.
 
 ### Datos
 

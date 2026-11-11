@@ -30,8 +30,8 @@ async function vista(ctx) {
   const c = pintar("Ajustes", `
     ${instalada ? "" : `<section class="panel stack">
       <h2 class="h3">Instalar en este dispositivo</h2>
-      <p class="hint">${ios ? "En iPad o iPhone: abre esta página en Safari, toca el botón Compartir y elige “Agregar a pantalla de inicio”." : "Instálala para abrirla como cualquier app y usarla sin internet."}</p>
-      ${ios ? "" : `<div class="actions"><button class="btn primary" id="instalar">Instalar app</button></div>`}
+      <p class="hint">${ios ? "En iPad o iPhone: abra esta página en Safari, toque el botón Compartir y seleccione “Agregar a pantalla de inicio”." : "Instálela para abrirla como cualquier aplicación y utilizarla sin conexión a internet."}</p>
+      ${ios ? "" : `<div class="actions"><button class="btn primary" id="instalar">Instalar aplicación</button></div>`}
     </section>`}
 
     <section class="panel stack" id="sincronizacion">
@@ -39,25 +39,25 @@ async function vista(ctx) {
       ${e.conectada ? `
         <dl class="facts">
           <div><dt>Cuenta del Centro</dt><dd>${esc(e.cuenta)}</dd></div>
-          <div><dt>Estado</dt><dd>${e.sinInternet ? `<span class="chip">Sin internet</span>` : e.error ? `<span class="chip warn">Con error</span>` : `<span class="chip ok">Activa</span>`}</dd></div>
+          <div><dt>Estado</dt><dd>${e.sinInternet ? `<span class="chip">Sin conexión</span>` : e.error ? `<span class="chip warn">Con error</span>` : `<span class="chip ok">Activa</span>`}</dd></div>
           <div><dt>Cambios por enviar</dt><dd>${e.pendientes}</dd></div>
-          <div><dt>Última sincronización</dt><dd>${e.ultima ? new Date(e.ultima).toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" }) : "Todavía no"}</dd></div>
+          <div><dt>Última sincronización</dt><dd>${e.ultima ? new Date(e.ultima).toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" }) : "Aún no"}</dd></div>
         </dl>
         ${e.error ? `<div class="issues">${esc(e.error)}</div>` : ""}
-        ${nube.avisoReloj() ? `<div class="issues"><b>Revisa la hora del equipo.</b> ${esc(nube.avisoReloj())}</div>` : ""}
-        ${avisoIdRepetido ? `<div class="issues"><b>Otro dispositivo también usa el ID ${esc(idDisp)} en sus folios.</b> ${coord ? "Cambia el ID de este dispositivo abajo, en Folios." : "Pide a la Coordinadora que cambie el ID de este dispositivo."}</div>` : ""}
-        <p class="hint">Se sincroniza sola al abrir la app, al volver el internet, unos segundos después de cada cambio y cada 5 minutos.</p>
+        ${nube.avisoReloj() ? `<div class="issues"><b>Verifique la hora del equipo.</b> ${esc(nube.avisoReloj())}</div>` : ""}
+        ${avisoIdRepetido ? `<div class="issues"><b>Otro dispositivo también usa el ID ${esc(idDisp)} en sus folios.</b> ${coord ? "Cambie el ID de este dispositivo más abajo, en Folios." : "Solicite a la Coordinadora que cambie el ID de este dispositivo."}</div>` : ""}
+        <p class="hint">La sincronización es automática: se realiza al abrir la aplicación, al restablecerse la conexión, unos segundos después de cada cambio y cada 5 minutos.</p>
         <div class="actions"><button class="btn primary" id="sincronizar">Sincronizar ahora</button>
           ${coord ? `<button class="btn ghost danger" id="desconectar">Desconectar este dispositivo</button>` : ""}</div>`
       : coord ? `
-        <p class="hint">Conecta este dispositivo con la cuenta del Centro para compartir perfiles, usuarias y actividades con las demás tabletas y computadoras.</p>
+        <p class="hint">Conecte este dispositivo con la cuenta del Centro para compartir perfiles, usuarias y actividades con las demás tabletas y computadoras.</p>
         <div class="grid">
           <div class="field"><label for="n-correo">Correo de la cuenta del Centro</label><input id="n-correo" type="email" autocomplete="username"></div>
           <div class="field"><label for="n-clave">Contraseña</label><input id="n-clave" type="password" autocomplete="current-password"></div>
         </div>
         <div id="errNube"></div>
         <div class="actions"><button class="btn primary" id="conectar">Conectar y sincronizar</button></div>`
-      : `<p class="hint">Este dispositivo no está conectado. Pide a la Coordinadora que lo conecte desde Ajustes con la cuenta del Centro.</p>`}
+      : `<p class="hint">Este dispositivo no está conectado. Solicite a la Coordinadora que lo conecte desde Ajustes con la cuenta del Centro.</p>`}
     </section>
 
     <section class="panel stack">
@@ -70,16 +70,16 @@ async function vista(ctx) {
         <div><dt>Almacenamiento protegido</dt><dd>${persistente ? `<span class="chip ok">Sí</span>` : `<span class="chip warn">No</span>`}</dd></div>
         <div><dt>Último respaldo</dt><dd>${ultimoRespaldo ? new Date(ultimoRespaldo).toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" }) : `<span class="chip warn">Nunca</span>`}</dd></div>
       </dl>
-      <p class="hint">${e.conectada ? "Los datos también se guardan en la cuenta del Centro." : "Mientras no esté activa la sincronización, los datos viven solo en este dispositivo."}${coord ? " Descarga un respaldo al terminar cada actividad y guárdalo en otro lugar (USB, correo o nube)." : " La Coordinadora es quien descarga los respaldos, porque incluyen datos de todas las actividades."}</p>
+      <p class="hint">${e.conectada ? "Los datos también se guardan en la cuenta del Centro." : "Mientras no esté activa la sincronización, los datos se conservan únicamente en este dispositivo."}${coord ? " Descargue un respaldo al terminar cada actividad y consérvelo en otro lugar (USB, correo o nube)." : " Los respaldos los descarga la Coordinadora, ya que incluyen datos de todas las actividades."}</p>
       ${coord ? `<div class="actions">
         <button class="btn primary" id="respaldo">Descargar respaldo</button>
         <label class="btn" for="restaurar">Restaurar desde respaldo</label><input type="file" id="restaurar" accept="application/json,.json" class="visually-hidden">
       </div>
       <div class="stack" id="respaldoForm" hidden>
-        <p class="hint">El respaldo trae CURP, teléfonos y firmas, así que se descarga cifrado. Elige una contraseña de al menos 8 caracteres y guárdala en un lugar seguro: <b>sin ella no se puede abrir el respaldo</b>.</p>
+        <p class="hint">El respaldo contiene CURP, teléfonos y firmas, por lo que se descarga cifrado. Elija una contraseña de al menos 8 caracteres y consérvela en un lugar seguro: <b>sin ella no es posible abrir el respaldo</b>.</p>
         <div class="grid">
           <div class="field"><label for="r-clave">Contraseña del respaldo</label><input id="r-clave" type="password" autocomplete="new-password"></div>
-          <div class="field"><label for="r-clave2">Repítela</label><input id="r-clave2" type="password" autocomplete="new-password"></div>
+          <div class="field"><label for="r-clave2">Confirme la contraseña</label><input id="r-clave2" type="password" autocomplete="new-password"></div>
         </div>
         <div id="errRespaldo"></div>
         <div class="actions"><button class="btn primary" id="descargarCifrado">Descargar respaldo cifrado</button></div>
@@ -96,7 +96,7 @@ async function vista(ctx) {
       <div class="grid" id="f">
         <div class="field"><label for="idDisp">ID de este dispositivo</label><input id="idDisp" class="upper" maxlength="1" value="${esc(idDisp)}"></div>
       </div>
-      <p class="hint">El folio toma el mes y el año de la actividad y lleva un consecutivo por mes, p. ej. <b class="mono">${prefijoFolio(hoy())}-${esc(idDisp)}001</b>. Usa un ID (una letra) distinto en cada tableta o computadora.</p>
+      <p class="hint">El folio toma el mes y el año de la actividad y lleva un consecutivo por mes, p. ej. <b class="mono">${prefijoFolio(hoy())}-${esc(idDisp)}001</b>. Utilice un ID (una letra) distinto en cada tableta o computadora.</p>
       <div id="errFolio"></div>
       <div class="actions"><button class="btn" id="guardarFolio">Guardar</button></div>
     </section>` : ""}
@@ -137,14 +137,14 @@ async function vista(ctx) {
     }
   });
   const desconectar = $("#desconectar", c);
-  if (desconectar) dobleToque(desconectar, "Toca otra vez para desconectar", async () => {
+  if (desconectar) dobleToque(desconectar, "Toque nuevamente para desconectar", async () => {
     await nube.desconectar();
-    aviso("Dispositivo desconectado. Los datos siguen guardados aquí.");
+    aviso("Dispositivo desconectado. Los datos permanecen guardados en este equipo.");
     vista(ctx);
   });
 
   $("#instalar", c)?.addEventListener("click", async () => {
-    if (!eventoInstalar) return aviso("Usa el menú del navegador y elige “Instalar app” o “Agregar a pantalla de inicio”.");
+    if (!eventoInstalar) return aviso("Utilice el menú del navegador y seleccione “Instalar app” o “Agregar a pantalla de inicio”.");
     eventoInstalar.prompt();
     await eventoInstalar.userChoice;
     eventoInstalar = null;
@@ -158,7 +158,7 @@ async function vista(ctx) {
     const clave = $("#r-clave", c).value;
     const e = [];
     if (clave.length < 8) e.push("La contraseña debe tener al menos 8 caracteres.");
-    else if (clave !== $("#r-clave2", c).value) e.push("Las dos contraseñas no coinciden.");
+    else if (clave !== $("#r-clave2", c).value) e.push("Las contraseñas ingresadas no coinciden.");
     errores($("#errRespaldo", c), e);
     if (e.length) return;
     const sobre = await cifrar(JSON.stringify(await db.exportar()), clave);
@@ -177,7 +177,7 @@ async function vista(ctx) {
       archivo = JSON.parse(await ev.target.files[0].text());
       if (archivo.app !== "centro-libre-marquelia") throw new Error();
     } catch {
-      return errores(caja, ["El archivo no es un respaldo de esta app."]);
+      return errores(caja, ["El archivo no es un respaldo de esta aplicación."]);
     } finally {
       ev.target.value = "";
     }
@@ -198,11 +198,11 @@ async function vista(ctx) {
 
   function confirmarRestauracion(respaldo) {
     const caja = $("#restaurarConfirma", c);
-    if (respaldo?.app !== "centro-libre-marquelia" || !respaldo.datos) return errores(caja, ["El archivo no es un respaldo de esta app."]);
+    if (respaldo?.app !== "centro-libre-marquelia" || !respaldo.datos) return errores(caja, ["El archivo no es un respaldo de esta aplicación."]);
     if ((respaldo.version || 1) < 2) respaldo = { ...respaldo, version: 2, datos: db.convertirV1(respaldo.datos) };
     const n = a => (respaldo.datos[a] || []).filter(x => !x.borrado).length;
-    caja.innerHTML = `<div class="confirm"><span>El respaldo del ${new Date(respaldo.exportado).toLocaleDateString("es-MX")} tiene ${plural(n("actividades"), "actividad", "actividades")} y ${plural(n("usuarias"), "usuaria", "usuarias")}. Reemplazará todo lo que hay en este dispositivo.</span><button class="btn danger" id="siRestaurar">Reemplazar datos</button></div>`;
-    dobleToque($("#siRestaurar", caja), "Toca otra vez para confirmar", async () => {
+    caja.innerHTML = `<div class="confirm"><span>El respaldo del ${new Date(respaldo.exportado).toLocaleDateString("es-MX")} tiene ${plural(n("actividades"), "actividad", "actividades")} y ${plural(n("usuarias"), "usuaria", "usuarias")}. Reemplazará toda la información existente en este dispositivo.</span><button class="btn danger" id="siRestaurar">Reemplazar datos</button></div>`;
+    dobleToque($("#siRestaurar", caja), "Toque nuevamente para confirmar", async () => {
       await db.importar(respaldo);
       aviso("Datos restaurados");
       ctx.recargar();
@@ -225,11 +225,11 @@ async function vista(ctx) {
     const actual = $("#pinActual", c).value, nuevo = $("#pinNuevo", c).value;
     const e = [];
     if (!(await verificarPin(yo, actual))) e.push("El PIN actual no es correcto.");
-    if (!pinValido(nuevo)) e.push("El PIN nuevo debe tener de 4 a 6 números.");
+    if (!pinValido(nuevo)) e.push("El PIN nuevo debe tener de 4 a 6 dígitos.");
     errores($("#errPin", c), e);
     if (e.length) return;
     await cambiarPin(yo, nuevo);
-    aviso("Tu PIN se actualizó");
+    aviso("Su PIN se actualizó");
     vista(ctx);
   };
 }

@@ -109,7 +109,7 @@ async function vista(ctx) {
     const filas = filtros.contar === "usuarias" ? r.usuarias : r.registros;
     const nota = filtros.contar === "usuarias"
       ? "Cada usuaria cuenta una vez en el periodo, con su edad y grupo de la última actividad a la que asistió."
-      : "Cada firma en una lista cuenta una vez: si una usuaria fue a tres actividades, cuenta tres.";
+      : "Cada firma en una lista cuenta una vez: si una usuaria asistió a tres actividades, se cuenta tres veces.";
     const porAct = r.acts.map(a => {
       const de = r.registros.filter(x => x.actividad.id === a.id);
       return { a, n: de.length, sexo: SEXO_COLUMNAS.map(([s]) => de.filter(x => x.sexo === s).length) };
@@ -121,7 +121,7 @@ async function vista(ctx) {
     const totalMin = conHorario.reduce((t, m) => t + m, 0);
 
     $("#resultado", c).innerHTML = `
-      <p class="hint">Del ${fechaLarga(filtros.desde)} al ${fechaLarga(filtros.hasta)}${coord ? "" : " · solo tus actividades"}.</p>
+      <p class="hint">Del ${fechaLarga(filtros.desde)} al ${fechaLarga(filtros.hasta)}${coord ? "" : " · solo sus actividades"}.</p>
       <div class="tiles">
         <div class="tile"><span class="label">Asistencias registradas</span><span class="value">${r.registros.length}</span></div>
         <div class="tile"><span class="label">Usuarias distintas</span><span class="value">${r.usuarias.length}</span></div>
@@ -144,7 +144,7 @@ async function vista(ctx) {
             <td class="nowrap">${fechaCorta(p.a.fecha)}</td><td class="nowrap mono"><a href="#/actividad/${p.a.id}">${esc(p.a.folio)}</a></td><td>${esc(p.a.nombre)}</td><td>${esc(p.a.tipo)}</td>
             ${p.sexo.map(n => `<td class="num ${n ? "" : "zero"}">${n}</td>`).join("")}<td class="num total">${p.n}</td></tr>`).join("")}</tbody>
         </table></div>
-      </section>` : `<div class="empty"><b>No hay asistencias en este periodo.</b><p>Cambia las fechas o los filtros de arriba para ver otro periodo.</p></div>`}
+      </section>` : `<div class="empty"><b>No hay asistencias en este periodo.</b><p>Modifique las fechas o los filtros para consultar otro periodo.</p></div>`}
     `;
 
     $("#csvActividades", c)?.addEventListener("click", () => {

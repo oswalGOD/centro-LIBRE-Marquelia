@@ -1,7 +1,7 @@
 {
   "name": "Centro LIBRE Marquelia",
   "short_name": "Centro LIBRE",
-  "description": "Listas de asistencia con firma, padrón de asistentes e impresión del formato oficial.",
+  "description": "Listas de asistencia con firma, padrón de usuarias e impresión del formato oficial.",
   "lang": "es-MX",
   "start_url": "./",
   "scope": "./",

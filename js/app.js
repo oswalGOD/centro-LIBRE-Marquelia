@@ -58,10 +58,10 @@ function pintarNube() {
   const e = nube.estado;
   el.hidden = !e.conectada;
   const [clase, texto] = e.enCurso ? ["busy", "Sincronizando…"]
-    : e.sinInternet ? ["off", e.pendientes ? `Sin internet · ${e.pendientes} por enviar` : "Sin internet"]
-    : e.error ? ["warn", "No se pudo sincronizar"]
-    : nube.avisoReloj() ? ["warn", "Revisa la hora del equipo"]
-    : e.pendientes ? ["busy", `${e.pendientes} por enviar`]
+    : e.sinInternet ? ["off", e.pendientes ? `Sin conexión · ${e.pendientes} pendientes de envío` : "Sin conexión"]
+    : e.error ? ["warn", "No fue posible sincronizar"]
+    : nube.avisoReloj() ? ["warn", "Verifique la hora del equipo"]
+    : e.pendientes ? ["busy", `${e.pendientes} pendientes de envío`]
     : ["ok", "Sincronizado"];
   el.className = `sync-pill ${clase}`;
   el.innerHTML = `<span class="sync-text">${esc(texto)}</span>`;
@@ -91,7 +91,7 @@ async function router() {
   } catch (e) {
     console.error(e);
     anotar(e.message, location.hash);
-    raiz.innerHTML = `<main class="wrap"><div class="issues" role="alert"><b>Algo falló al abrir esta pantalla.</b><p>${esc(e.message)}</p><a class="btn" href="#/">Ir al inicio</a></div></main>`;
+    raiz.innerHTML = `<main class="wrap"><div class="issues" role="alert"><b>Se produjo un error al abrir esta pantalla.</b><p>${esc(e.message)}</p><a class="btn" href="#/">Ir al Inicio</a></div></main>`;
   }
 }
 
@@ -103,13 +103,13 @@ async function primerUso() {
   // Ya se entró con la cuenta pero no hay perfiles: antes de ofrecer crear a la Coordinadora hay que
   // confirmar con la nube que de verdad no hay ninguno (si la primera descarga falló, se crearían perfiles repetidos).
   if (conectada) {
-    raiz.innerHTML = `<main class="auth"><div class="auth-card stack"><p class="hint">Revisando los datos de la cuenta del Centro…</p><div id="err"></div></div></main>`;
+    raiz.innerHTML = `<main class="auth"><div class="auth-card stack"><p class="hint">Verificando los datos de la cuenta del Centro…</p><div id="err"></div></div></main>`;
     try {
       await nube.sincronizar();
       if ((await db.todos("perfiles")).length) return router();
     } catch (e) {
-      errores($("#err"), [e.message, "Revisa el internet y vuelve a intentar. Sin esta revisión no se puede crear el perfil de la Coordinadora."], "No se pudo revisar la cuenta del Centro.");
-      $("#err").insertAdjacentHTML("beforeend", `<div class="actions"><button class="btn primary" id="reintentar">Volver a intentar</button></div>`);
+      errores($("#err"), [e.message, "Verifique la conexión a internet e intente de nuevo. Sin esta verificación no es posible crear el perfil de la Coordinadora."], "No fue posible verificar la cuenta del Centro.");
+      $("#err").insertAdjacentHTML("beforeend", `<div class="actions"><button class="btn primary" id="reintentar">Reintentar</button></div>`);
       $("#reintentar").onclick = () => router();
       return;
     }
@@ -119,27 +119,27 @@ async function primerUso() {
     <p class="version-app">Versión ${VERSION_APP}</p>
     <div class="auth-card stack">
       <div class="auth-brand"><img class="mark" src="icons/icon-192.png" alt="" aria-hidden="true"><div><h1>Centro LIBRE Marquelia</h1><p class="hint">Listas de asistencia</p></div></div>
-      <h2>Configura este dispositivo</h2>
+      <h2>Configuración de este dispositivo</h2>
 
       <section class="stack" data-paso="cuenta" ${conectada ? "hidden" : ""}>
-        <p class="hint">Entra con la cuenta del Centro. Solo la Coordinadora debe conocer esta contraseña. Se necesita internet solo para este paso.</p>
+        <p class="hint">Ingrese con la cuenta del Centro. Esta contraseña debe ser conocida únicamente por la Coordinadora. Solo este paso requiere conexión a internet.</p>
         <div class="grid">
           <div class="field span-2"><label for="n-correo">Correo de la cuenta del Centro</label><input id="n-correo" type="email" autocomplete="username"></div>
           <div class="field span-2"><label for="n-clave">Contraseña</label><input id="n-clave" type="password" autocomplete="current-password"></div>
           <div class="field"><label for="c-id">ID de este dispositivo</label><input id="c-id" class="upper" value="A" maxlength="1">
-            <span class="note">Una letra distinta en cada tableta o computadora (A, B, C…). Va en el folio para que nunca se repita.</span></div>
+            <span class="note">Asigne una letra distinta a cada tableta o computadora (A, B, C…). Se incluye en el folio para evitar que se repita.</span></div>
         </div>
-        <div class="actions"><button class="btn primary" id="unir">Entrar</button></div>
+        <div class="actions"><button class="btn primary" id="unir">Ingresar</button></div>
       </section>
 
       <section class="stack" data-paso="coordinadora" ${conectada ? "" : "hidden"}>
-        <p class="hint">La cuenta del Centro todavía no tiene perfiles. Crea el de la Coordinadora; después ella podrá dar de alta a la Psicóloga y a la Abogada.</p>
+        <p class="hint">La cuenta del Centro aún no tiene perfiles. Cree el perfil de la Coordinadora; posteriormente, ella podrá dar de alta a la Psicóloga y a la Abogada.</p>
         <div class="grid" id="f">
           <div class="field span-2"><label for="c-nombre">Nombre completo de la Coordinadora</label><input id="c-nombre" data-campo="nombre" autocomplete="name"></div>
-          <div class="field"><label for="c-pin">PIN de 4 a 6 números</label><input id="c-pin" data-campo="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>
-          <div class="field"><label for="c-pin2">Repite el PIN</label><input id="c-pin2" data-campo="pin2" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>
+          <div class="field"><label for="c-pin">PIN de 4 a 6 dígitos</label><input id="c-pin" data-campo="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>
+          <div class="field"><label for="c-pin2">Confirme el PIN</label><input id="c-pin2" data-campo="pin2" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>
         </div>
-        <div class="actions"><button class="btn primary" id="crear">Crear perfil y empezar</button></div>
+        <div class="actions"><button class="btn primary" id="crear">Crear perfil y comenzar</button></div>
       </section>
       <div id="err"></div>
     </div>
@@ -155,7 +155,7 @@ async function primerUso() {
       await nube.conectar($("#n-correo").value, $("#n-clave").value);
       await nube.sincronizar();
       if ((await db.todos("perfiles")).length) {
-        aviso("Datos descargados. Entra con tu PIN.");
+        aviso("Datos descargados. Ingrese con su PIN.");
         return router();
       }
       $("#err").innerHTML = "";
@@ -165,16 +165,16 @@ async function primerUso() {
     } catch (e) {
       errores($("#err"), [e.message]);
       ev.target.disabled = false;
-      ev.target.textContent = "Entrar";
+      ev.target.textContent = "Ingresar";
     }
   };
 
   $("#crear").onclick = async () => {
     const d = leerCampos($("#f"));
     const e = [];
-    if (d.nombre.split(" ").filter(Boolean).length < 2) e.push("Escribe nombre y apellido.");
-    if (!pinValido(d.pin)) e.push("El PIN debe tener de 4 a 6 números.");
-    else if (d.pin !== d.pin2) e.push("Los dos PIN no coinciden.");
+    if (d.nombre.split(" ").filter(Boolean).length < 2) e.push("Ingrese nombre y apellido.");
+    if (!pinValido(d.pin)) e.push("El PIN debe tener de 4 a 6 dígitos.");
+    else if (d.pin !== d.pin2) e.push("Los PIN ingresados no coinciden.");
     errores($("#err"), e);
     if (e.length) return;
     const u = await crearPerfil({ nombre: d.nombre, rol: "Coordinadora", pin: d.pin });
@@ -192,12 +192,12 @@ function entrar(lista) {
   <main class="auth">
     <div class="auth-card stack">
       <div class="auth-brand"><img class="mark" src="icons/icon-192.png" alt="" aria-hidden="true"><div><h1>Centro LIBRE Marquelia</h1><p class="hint">Listas de asistencia</p></div></div>
-      <h2>¿Quién va a capturar?</h2>
+      <h2>Seleccione su perfil</h2>
       <div class="people">${lista.map(u => `<button class="person-btn" data-id="${esc(u.id)}"><span class="avatar">${esc(u.nombre[0])}</span><span><b>${esc(u.nombre)}</b><small>${esc(u.rol)}</small></span></button>`).join("")}</div>
       <form id="pinForm" class="stack" hidden>
         <div class="field"><label for="pin" id="pinLabel">PIN</label><input id="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password"></div>
         <div id="err"></div>
-        <div class="actions"><button class="btn primary" type="submit">Entrar</button></div>
+        <div class="actions"><button class="btn primary" type="submit">Ingresar</button></div>
       </form>
     </div>
   </main>`;
@@ -214,7 +214,7 @@ function entrar(lista) {
   $("#pinForm").onsubmit = async ev => {
     ev.preventDefault();
     const espera = esperaPin();
-    if (espera) return errores($("#err"), [`Demasiados intentos. Espera ${espera > 90000 ? `${Math.ceil(espera / 60000)} minutos` : `${Math.ceil(espera / 1000)} segundos`}.`]);
+    if (espera) return errores($("#err"), [`Demasiados intentos. Espere ${espera > 90000 ? `${Math.ceil(espera / 60000)} minutos` : `${Math.ceil(espera / 1000)} segundos`}.`]);
     if (await verificarPin(elegida, $("#pin").value)) {
       pinCorrecto();
       iniciarSesion(elegida);

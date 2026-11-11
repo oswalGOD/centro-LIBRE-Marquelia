@@ -21,9 +21,9 @@ const ICONOS = {
 export const MODULOS_INICIO = [
   { id: "asistencia", nombre: "Listas de asistencia", ruta: "#/asistencia", color: "#8c1d4f", zona: "principal" },
   { id: "estadisticas", nombre: "Estadísticas", ruta: "#/estadisticas", color: "#8a6620", zona: "principal" },
-  { id: "comites", nombre: "Comités", color: "#2f6f8f", zona: "principal", proximamente: "Aquí se llevará el registro de los comités y sus reuniones." },
-  { id: "asesorias", nombre: "Asesorías personales", color: "#4f7a3a", zona: "principal", proximamente: "Aquí se llevará el registro de asesorías individuales." },
-  { id: "reportes", nombre: "Reportes", color: "#6b4c9a", zona: "principal", proximamente: "Aquí se armarán los reportes que reúnan la información de todos los módulos." },
+  { id: "comites", nombre: "Comités", color: "#2f6f8f", zona: "principal", proximamente: "En este módulo se llevará el registro de los comités y sus reuniones." },
+  { id: "asesorias", nombre: "Asesorías personales", color: "#4f7a3a", zona: "principal", proximamente: "En este módulo se llevará el registro de las asesorías individuales." },
+  { id: "reportes", nombre: "Reportes", color: "#6b4c9a", zona: "principal", proximamente: "En este módulo se elaborarán los reportes que reúnan la información de todos los módulos." },
   { id: "usuarias", nombre: "Usuarias", ruta: "#/usuarias", color: "#a8552a", zona: "dock" },
   { id: "perfiles", nombre: "Perfiles", ruta: "#/perfiles", color: "#4a4a5a", zona: "dock", soloCoordinadora: true },
   { id: "ajustes", nombre: "Ajustes", ruta: "#/ajustes", color: "#5a5a66", zona: "dock" },
@@ -41,11 +41,11 @@ function icono(m) {
 function inicio({ yo, pintar }) {
   const mios = MODULOS_INICIO.filter(m => visible(m, yo));
   const zona = z => mios.filter(m => m.zona === z).map(icono).join("");
-  const c = pintar(`Hola, ${yo.nombre.split(" ")[0]}`, `
-    <p class="hint">¿Qué quieres hacer hoy?</p>
+  const c = pintar(`Le damos la bienvenida, ${yo.nombre.split(" ")[0]}`, `
+    <p class="hint">¿Qué desea realizar hoy?</p>
     <nav class="app-grid" aria-label="Módulos">${zona("principal")}</nav>
     <nav class="app-grid dock" aria-label="Datos y ajustes">${zona("dock")}</nav>`);
-  c.querySelectorAll("[data-soon]").forEach(b => (b.onclick = () => aviso(`${b.dataset.soon} Todavía no está disponible.`)));
+  c.querySelectorAll("[data-soon]").forEach(b => (b.onclick = () => aviso(`${b.dataset.soon} Aún no está disponible.`)));
 }
 
 export default {
