@@ -14,6 +14,11 @@ const TRAZOS = {
   galeria: '<rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M5 18l5-5 4 4 2-2 3 3"/>',
   eliminar: '<path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13M10 11v6M14 11v6"/>',
   cerrar: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  reordenar: '<path d="M8 4v16M8 20l-3-3M8 20l3-3M16 20V4M16 4l-3 3M16 4l3 3"/>',
+  guardar: '<path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/>',
+  anterior: '<path d="M15 5l-7 7 7 7"/>',
+  siguiente: '<path d="M9 5l7 7-7 7"/>',
+  salir: '<path d="M6 6l12 12M18 6L6 18"/>',
   reabrir: '<path d="M4 12a8 8 0 1 0 3-6.2M4 4v4h4"/>',
 };
 
