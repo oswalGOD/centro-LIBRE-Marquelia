@@ -91,16 +91,13 @@ export async function formato({ yo, pintar, ir }, id) {
   const sinFirma = asis.filter(x => !x.firma).length;
   const c = pintar("Formato para imprimir", `
     <div class="toolbar no-print">
-      <button class="btn primary" id="prepararPDF">Generar PDF</button>
+      <button class="btn primary" id="exportarPDF" disabled>Preparando PDF…</button>
+      <a id="bajarPDF" hidden></a>
       <button class="btn" id="imprimir">Imprimir</button>
       <p class="hint">${plural(hojas, "hoja", "hojas")} · ${plural(asis.length, "asistente", "asistentes")} · carta horizontal${act.notas ? " · incluye la hoja de notas" : ""}${sinFirma ? ` · <span class="chip warn">${sinFirma} sin firma</span>` : ""}</p>
     </div>
     <p class="hint no-print">En el cuadro de impresión, seleccione tamaño <b>Carta</b>, orientación <b>Horizontal</b> y márgenes <b>Ninguno</b>. En computadora puede guardar en PDF eligiendo “Guardar como PDF” como impresora.</p>
-    <div class="toolbar no-print" id="pdfListo" hidden>
-      <button class="btn primary" id="exportarPDF">Exportar PDF</button>
-      <a id="bajarPDF" hidden></a>
-    </div>
-    <p class="hint no-print">Toque “Generar PDF” y después “Exportar PDF”. En iPad, iPhone y Android se abre el menú para guardarlo en Archivos, enviarlo por WhatsApp o imprimirlo; en computadora se descarga el archivo.</p>
+    <p class="hint no-print">Toque “Exportar PDF” cuando esté listo. En iPad, iPhone y Android se abre el menú para guardarlo en Archivos, enviarlo por WhatsApp o imprimirlo; en computadora se descarga el archivo.</p>
     <div class="sheets" id="hojas">${hojasHTML(act, asis)}${hojaNotasHTML(act)}</div>
   `, { atras: `#/actividad/${id}`, ancho: true });
   const hojasEl = $("#hojas", c);
@@ -109,31 +106,25 @@ export async function formato({ yo, pintar, ir }, id) {
   addEventListener("resize", alCambiar);
   const nombrePDF = `Lista de asistencia ${act.folio}.pdf`.replace(/[\\/:*?"<>|]+/g, "-");
   let archivo = null, urlPDF = null;
-  $("#prepararPDF", c).onclick = async ev => {
-    const b = ev.currentTarget;
-    b.disabled = true;
-    b.textContent = "Generando…";
-    try {
-      const blob = await hojasAPDF(hojasEl);
-      archivo = new File([blob], nombrePDF, { type: "application/pdf" });
-      if (urlPDF) URL.revokeObjectURL(urlPDF);
-      urlPDF = URL.createObjectURL(blob);
-      const bajar = $("#bajarPDF", c);
-      bajar.href = urlPDF;
-      bajar.download = nombrePDF;
-      $("#pdfListo", c).hidden = false;
-      aviso("PDF listo. Toque “Exportar PDF”.");
-    } catch (e) {
-      console.error(e);
-      aviso("No se pudo generar el PDF.");
-    } finally {
-      b.disabled = false;
-      b.textContent = "Generar PDF";
-    }
-  };
+  // El PDF se prepara solo al abrir la pantalla: iOS exige que compartir ocurra justo tras un toque, sin esperas en medio.
+  const boton = $("#exportarPDF", c);
+  hojasAPDF(hojasEl).then(blob => {
+    if (!document.contains(boton)) return;
+    archivo = new File([blob], nombrePDF, { type: "application/pdf" });
+    urlPDF = URL.createObjectURL(blob);
+    const bajar = $("#bajarPDF", c);
+    bajar.href = urlPDF;
+    bajar.download = nombrePDF;
+    boton.disabled = false;
+    boton.textContent = "Exportar PDF";
+  }).catch(e => {
+    console.error(e);
+    boton.textContent = "No se pudo preparar el PDF";
+    aviso("No se pudo preparar el PDF.");
+  });
   // Se exporta en su propio toque: iOS exige que compartir ocurra directamente tras un toque del usuario.
   // Con menú de compartir (iPad, iPhone, Android) se usa; si no existe (computadora) se descarga el archivo.
-  $("#exportarPDF", c).onclick = async () => {
+  boton.onclick = async () => {
     if (navigator.canShare?.({ files: [archivo] })) {
       try { await navigator.share({ files: [archivo] }); return; }
       catch (e) { if (e?.name === "AbortError") return; }
