@@ -38,6 +38,17 @@ export const ESTADOS = {
 
 const CURP_RE = /^[A-Z][AEIOUX][A-Z]{2}\d{6}[HMX][A-Z]{2}[B-DF-HJ-NP-TV-Z]{3}[A-Z0-9]\d$/;
 
+/** Formato de los datos tomados de la CURP/INE: nombre en MAYÚSCULAS y lugar con inicial mayúscula por palabra. */
+export const aMayusculas = s => String(s ?? "").toLocaleUpperCase("es").replace(/\s{2,}/g, " ").replace(/^\s+/, "");
+const PARTICULAS = new Set(["de", "del", "la", "las", "los", "el", "en", "y", "e"]);
+export const aCapital = s => {
+  const t = String(s ?? "").toLocaleLowerCase("es").replace(/\s{2,}/g, " ").replace(/^\s+/, "");
+  if (t.trim() === ESTADOS.NE.toLowerCase()) return ESTADOS.NE + (t.endsWith(" ") ? " " : "");
+  return t.replace(/\p{L}[\p{L}'’.]*/gu, (w, i) =>
+    (PARTICULAS.has(w) && /\p{L}/u.test(t.slice(0, i))) || t[i - 1] === "(" ? w : w[0].toLocaleUpperCase("es") + w.slice(1));
+};
+export const FORMATOS = { mayus: aMayusculas, capital: aCapital };
+
 export const limpiarCurp = s => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 
 /** Devuelve fecha de nacimiento, sexo y estado contenidos en la CURP, o null si no es válida. */

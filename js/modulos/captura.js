@@ -1,7 +1,7 @@
 // Registro de una persona en una actividad: datos, reconocimiento de usuarias que ya vinieron y firma.
 
 import * as db from "../core/db.js";
-import { GRUPOS, SEXOS, leerCurp, limpiarCurp, edad, rangoDe, etiquetaRango, normalizar, fechaLarga } from "../core/catalogos.js";
+import { aMayusculas, aCapital, FORMATOS, GRUPOS, SEXOS, leerCurp, limpiarCurp, edad, rangoDe, etiquetaRango, normalizar, fechaLarga } from "../core/catalogos.js";
 import { puedeVer, puedeEditar } from "../core/permisos.js";
 import { pedirFirma } from "../core/firma.js";
 import { escanearCurp } from "../core/escaner.js";
@@ -64,9 +64,9 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
             ${existente ? "" : `<button type="button" class="btn" id="escanear">Escanear CURP</button><button type="button" class="btn" id="escanearIne">Escanear INE</button>`}</div>
           <span class="note" id="curpNota">Opcional. Si no la tiene a la mano, puede capturarla después.</span></div>
         <div id="reconocida" class="span-2" hidden></div>
-        <div class="field span-2"><label for="nombre">Nombre completo</label><input id="nombre" data-c="nombre" autocomplete="off" placeholder="Nombre(s) y apellidos, sin abreviaturas"></div>
+        <div class="field span-2"><label for="nombre">Nombre completo</label><input id="nombre" data-c="nombre" data-formato="mayus" autocomplete="off" placeholder="Nombre(s) y apellidos, sin abreviaturas"></div>
         <div class="field"><label for="fnac">Fecha de nacimiento</label><input id="fnac" type="date" data-c="fnac"><span class="note ok" id="edadNota"></span></div>
-        <div class="field"><label for="lugar">Lugar de nacimiento</label><input id="lugar" data-c="lugar" autocomplete="off"></div>
+        <div class="field"><label for="lugar">Lugar de nacimiento</label><input id="lugar" data-c="lugar" data-formato="capital" autocomplete="off"></div>
         <div class="field"><label for="ocupacion">Ocupación</label><input id="ocupacion" data-c="ocupacion" autocomplete="off"></div>
         <div class="field"><label for="telefono">Teléfono</label><input id="telefono" type="tel" inputmode="tel" data-c="telefono" autocomplete="off" placeholder="10 dígitos"></div>
       </div>
@@ -142,6 +142,8 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
   pintarFirma();
 
   function pintarCampos() {
+    d.nombre = aMayusculas(d.nombre);
+    d.lugar = aCapital(d.lugar);
     $("#curp", c).value = d.curp;
     $$("[data-c]", c).forEach(el => (el.value = d[el.dataset.c] || ""));
     $$("[data-elegir]", c).forEach(g => $$(".choice", g).forEach(b => b.setAttribute("aria-pressed", d[g.dataset.elegir] === b.dataset.v)));
@@ -163,7 +165,16 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
     pintarCampos();
   }
 
-  $$("[data-c]", c).forEach(el => el.addEventListener("input", () => {
+  $$("[data-c]", c).forEach(el => el.addEventListener("input", ev => {
+    const f = FORMATOS[el.dataset.formato];
+    if (f && !ev.isComposing) {
+      const pos = el.selectionStart, antes = el.value, nuevo = f(antes);
+      if (nuevo !== antes) {
+        el.value = nuevo;
+        const p = Math.max(0, pos - (antes.length - nuevo.length));
+        try { el.setSelectionRange(p, p); } catch {}
+      }
+    }
     d[el.dataset.c] = el.value;
     if (el.dataset.c === "fnac") pintarCampos(); else pintarFaltantes();
   }));
