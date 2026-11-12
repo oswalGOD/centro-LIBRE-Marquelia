@@ -152,6 +152,12 @@ export function registroValido(almacen, r) {
   }
 }
 
+/** Al capturar la CURP de una usuaria, la completa en sus listas anteriores que quedaron sin CURP. */
+export async function completarCurp(usuariaId, curp) {
+  const pendientes = (await todos("asistencias", "usuariaId", usuariaId)).filter(x => !x.datos?.curp);
+  for (const x of pendientes) await guardar("asistencias", { ...x, datos: { ...x.datos, curp } });
+}
+
 export const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
 
 /** Todos los registros vigentes (sin borrados) de un almacén, opcionalmente filtrados por índice. */

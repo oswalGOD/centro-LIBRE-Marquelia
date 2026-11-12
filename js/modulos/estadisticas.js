@@ -29,7 +29,7 @@ function calcular({ visibles, asis }) {
     .filter(x => porId.has(x.actividadId))
     .map(x => {
       const a = porId.get(x.actividadId);
-      return { ...x.datos, usuariaId: x.usuariaId, orden: x.orden, actividad: a, rango: rangoDe(edad(x.datos.fnac, a.fecha)) };
+      return { ...x.datos, usuariaId: x.usuariaId, orden: x.orden, sinFirma: x.firma ? "" : x.sinFirma || "", actividad: a, rango: rangoDe(edad(x.datos.fnac, a.fecha)) };
     })
     .sort((x, y) => x.actividad.fecha.localeCompare(y.actividad.fecha) || x.actividad.folio.localeCompare(y.actividad.folio) || x.orden - y.orden);
 
@@ -161,10 +161,10 @@ async function vista(ctx) {
     });
     $("#csvDetalle", c)?.addEventListener("click", () => {
       descargar(`asistentes-${filtros.desde}-a-${filtros.hasta}.csv`, csv([
-        ["Fecha", "Folio", "Actividad", "Tipo", "CURP", "Nombre completo", "Fecha de nacimiento", "Edad", "Rango de edad", "Sexo", "Lugar de nacimiento", "Grupo", "Ocupación", "Teléfono"],
+        ["Fecha", "Folio", "Actividad", "Tipo", "CURP", "Nombre completo", "Fecha de nacimiento", "Edad", "Rango de edad", "Sexo", "Lugar de nacimiento", "Grupo", "Ocupación", "Teléfono", "Firma omitida (motivo)"],
         ...r.registros.map(x => [fechaCorta(x.actividad.fecha), x.actividad.folio, x.actividad.nombre, x.actividad.tipo, x.curp || "SIN CURP", x.nombre,
           fechaCorta(x.fnac), edad(x.fnac, x.actividad.fecha), `${x.rango}) ${etiquetaRango(x.rango)}`, SEXOS.find(s => s[0] === x.sexo)?.[1] || x.sexo,
-          x.lugar, `${x.grupo}) ${etiquetaGrupo(x.grupo)}`, x.ocupacion, x.telefono]),
+          x.lugar, `${x.grupo}) ${etiquetaGrupo(x.grupo)}`, x.ocupacion, x.telefono, x.sinFirma]),
       ]), "text/csv");
     });
   }

@@ -284,6 +284,7 @@ table.data tbody tr:hover { background: var(--surface-2); }
 .sheet .main td { height: 32.5px; font-size: 10px; text-align: center; }
 .sheet .main td.l { text-align: left; }
 .sheet .main td.curp { font-size: 9.6px; letter-spacing: .02em; }
+.sheet .main td .sinfirma { font-size: 8px; line-height: 1.1; }
 .sheet .main td img { max-height: 30px; max-width: 100%; display: block; margin: 0 auto; }
 .sheet .summary { display: grid; grid-template-columns: repeat(5, 1fr) .72fr; margin-top: 3px; position: relative; z-index: 1; }
 .sheet .summary td, .sheet .summary th { font-size: 6.6px; padding: 0 2px; height: 8.6px; border-width: .5px; line-height: 1; text-align: center; }

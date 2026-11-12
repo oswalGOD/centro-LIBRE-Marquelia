@@ -45,7 +45,7 @@ export function hojasHTML(act, asistencias) {
       const p = x.datos;
       return `<tr><td>${h * POR_HOJA + i + 1}</td><td class="curp">${p.curp ? esc(p.curp) : "SIN CURP"}</td><td class="l">${mayus(p.nombre)}</td>
         <td>${fechaCorta(p.fnac)}</td><td>${esc(p.sexo)}</td><td>${mayus(p.lugar)}</td><td>${esc(p.grupo)}</td><td>${rangoDe(edad(p.fnac, act.fecha)) || ""}</td>
-        <td>${mayus(p.ocupacion)}</td><td>${esc(p.telefono)}</td><td>${x.firma ? `<img src="${esc(x.firma)}" alt="">` : ""}</td></tr>`;
+        <td>${mayus(p.ocupacion)}</td><td>${esc(p.telefono)}</td><td>${x.firma ? `<img src="${esc(x.firma)}" alt="">` : x.sinFirma ? `<span class="sinfirma">${esc(x.sinFirma)}</span>` : ""}</td></tr>`;
     }).join("");
     html += `<div class="sheet-wrap"><article class="sheet" aria-label="Hoja ${h + 1} de ${hojas}">${encabezado(act)}
       <div class="lead">Su información es muy importante para nosotras/os, favor de escribir todos sus datos completos, sin abreviaturas y con letra legible de molde. No dejar espacios en blanco</div>
@@ -128,7 +128,7 @@ export async function formato({ yo, pintar, ir }, id) {
   if (!act || !puedeVer(yo, act)) return ir("#/asistencia");
   const asis = (await db.todos("asistencias", "actividadId", id)).sort((a, b) => a.orden - b.orden);
   const hojas = Math.max(1, Math.ceil(asis.length / POR_HOJA)) + (act.notas ? 1 : 0);
-  const sinFirma = asis.filter(x => !x.firma).length;
+  const sinFirma = asis.filter(x => !x.firma && !x.sinFirma).length;
   const c = pintar("Formato para imprimir", `
     <div class="toolbar no-print">
       <button class="btn primary" id="exportarPDF" disabled>Preparando PDF…</button>

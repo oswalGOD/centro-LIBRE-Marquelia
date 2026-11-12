@@ -8,6 +8,7 @@ import { escanearCurp } from "../core/escaner.js";
 import { escanearIne } from "../core/ine.js";
 import { $, $$, esc, aviso, errores, dobleToque, unaVez } from "../core/ui.js";
 
+const MOTIVOS_SIN_FIRMA = ["Menor de edad", "Otro motivo"];
 const CAMPOS = ["curp", "nombre", "fnac", "sexo", "lugar", "grupo", "ocupacion", "telefono"];
 
 /** La sesión anterior: la actividad de la que se repitió o, si no, la última con el mismo nombre. */
@@ -39,13 +40,13 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
 
   // Borrador de la persona que se está capturando
   const d = existente
-    ? { ...existente.datos, usuariaId: existente.usuariaId, sinCurp: !existente.datos.curp }
-    : { curp: "", nombre: "", fnac: "", sexo: "", lugar: "", grupo: "", ocupacion: "", telefono: "", usuariaId: null, sinCurp: false };
+    ? { ...existente.datos, usuariaId: existente.usuariaId }
+    : { curp: "", nombre: "", fnac: "", sexo: "", lugar: "", grupo: "", ocupacion: "", telefono: "", usuariaId: null };
 
   const volver = `#/actividad/${actividadId}`;
   const c = pintar(existente ? "Editar asistente" : kiosko ? "Registro de asistencia" : "Registrar asistente", `
     <p class="hint context">${esc(act.nombre)}${kiosko ? "" : ` · <span class="mono">${esc(act.folio)}</span>`}</p>
-    ${kiosko ? `<p class="hint">Complete sus datos, firme y toque «Guardar mi registro». Todos los campos son obligatorios.</p>` : ""}
+    ${kiosko ? `<p class="hint">Complete sus datos, firme y toque «Guardar mi registro». La CURP y la firma son opcionales; los demás campos son obligatorios.</p>` : ""}
     ${deAntes.length ? `
     <section class="panel stack" id="deAntes">
       <div><h2 class="h3">Asistentes de la sesión anterior</h2>
@@ -58,11 +59,10 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
         <input id="buscar" type="search" autocomplete="off" placeholder="Para quien ya asistió antes y no presenta su CURP">
         <div class="results" id="resultados" hidden></div></div>`}
       <div class="grid">
-        <div class="field span-2"><label for="curp">CURP</label>
+        <div class="field span-2"><label for="curp">CURP (opcional)</label>
           <div class="input-row"><input id="curp" class="upper" maxlength="18" autocomplete="off" spellcheck="false" placeholder="18 caracteres" value="${esc(d.curp)}">
             ${existente ? "" : `<button type="button" class="btn" id="escanear">Escanear CURP</button><button type="button" class="btn" id="escanearIne">Escanear INE</button>`}</div>
-          <span class="note" id="curpNota"></span>
-          <label class="check"><input type="checkbox" id="sinCurp" ${d.sinCurp ? "checked" : ""}> La persona no cuenta con CURP</label></div>
+          <span class="note" id="curpNota">Opcional. Si no la tiene a la mano, puede capturarla después.</span></div>
         <div id="reconocida" class="span-2" hidden></div>
         <div class="field span-2"><label for="nombre">Nombre completo</label><input id="nombre" data-c="nombre" autocomplete="off" placeholder="Nombre(s) y apellidos, sin abreviaturas"></div>
         <div class="field"><label for="fnac">Fecha de nacimiento</label><input id="fnac" type="date" data-c="fnac"><span class="note ok" id="edadNota"></span></div>
@@ -72,9 +72,12 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
       </div>
       <div class="field"><span class="legend">Sexo</span><div class="choices" data-elegir="sexo">${SEXOS.map(([v, t]) => `<button type="button" class="choice" data-v="${v}">${t}</button>`).join("")}</div></div>
       <div class="field"><span class="legend">Grupo</span><div class="choices" data-elegir="grupo">${GRUPOS.map(([v, t]) => `<button type="button" class="choice" data-v="${v}"><b>${v})</b> ${t}</button>`).join("")}</div></div>
-      <div class="field"><span class="legend">Firma</span>
+      <div class="field"><span class="legend">Firma (opcional)</span>
         <div class="sig-row"><div class="sig-preview" id="firmaVista"></div>
-          <button type="button" class="btn" id="firmar"></button></div></div>
+          <button type="button" class="btn" id="firmar"></button></div>
+        <label class="check"><input type="checkbox" id="omitirFirma"> Omitir la firma</label>
+        <div class="choices" id="motivoFirma" hidden>${MOTIVOS_SIN_FIRMA.map(m => `<button type="button" class="choice" data-v="${esc(m)}">${esc(m)}</button>`).join("")}</div>
+        <span class="note" id="firmaNota"></span></div>
       <div id="faltan" aria-live="polite"></div>
       <div id="err"></div>
       <div class="actions">
@@ -86,11 +89,23 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
     </section>`, { atras: volver, kiosko });
 
   let firma = existente?.firma || "";
+  let sinFirma = existente?.sinFirma || ""; // motivo por el que no se firma (vacío = sí firma)
+  let omitir = !!sinFirma;
   function pintarFirma() {
-    $("#firmaVista", c).innerHTML = firma ? `<img src="${esc(firma)}" alt="Firma capturada">` : `<span>Sin firma</span>`;
-    $("#firmaVista", c).classList.toggle("vacia", !firma);
+    const vista = $("#firmaVista", c);
+    vista.innerHTML = firma ? `<img src="${esc(firma)}" alt="Firma capturada">` : `<span>${omitir ? esc(sinFirma || "Firma omitida") : "Sin firma"}</span>`;
+    vista.classList.toggle("vacia", !firma);
     $("#firmar", c).textContent = firma ? "Volver a firmar" : "Firmar";
-    pintarFaltantes();
+    $("#omitirFirma", c).checked = omitir;
+    $("#omitirFirma", c).disabled = !!firma;
+    $("#motivoFirma", c).hidden = !omitir || !!firma;
+    $$("#motivoFirma .choice", c).forEach(b => b.setAttribute("aria-pressed", b.dataset.v === sinFirma));
+    pintarFirmaNota();
+  }
+  function pintarFirmaNota() {
+    const e = edad(d.fnac, act.fecha);
+    $("#firmaNota", c).textContent = !firma && !omitir && e != null && e >= 0 && e < 18
+      ? "La persona es menor de edad: puede omitir la firma indicando el motivo." : "";
   }
 
   // Tras escanear la CURP o la INE se resaltan los datos obligatorios que aún faltan;
@@ -98,7 +113,7 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
   let resaltar = false;
   function camposFaltantes() {
     const f = [];
-    if (!d.sinCurp && !leerCurp(d.curp)) f.push(["curp", "#curp", "CURP"]);
+    if (d.curp && !leerCurp(d.curp)) f.push(["curp", "#curp", "CURP válida (o déjela vacía)"]);
     if (d.nombre.trim().replace(/\s+/g, " ").split(" ").length < 2) f.push(["nombre", "#nombre", "Nombre completo"]);
     if (!d.fnac) f.push(["fnac", "#fnac", "Fecha de nacimiento"]);
     if (!d.sexo) f.push(["sexo", "[data-elegir=sexo]", "Sexo"]);
@@ -106,14 +121,13 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
     if (!d.grupo) f.push(["grupo", "[data-elegir=grupo]", "Grupo"]);
     if (!d.ocupacion.trim()) f.push(["ocupacion", "#ocupacion", "Ocupación"]);
     if (d.telefono.replace(/\D/g, "").length !== 10) f.push(["telefono", "#telefono", "Teléfono de 10 dígitos"]);
-    if (!firma) f.push(["firma", "#firmar", "Firma"]);
     return f;
   }
   function pintarFaltantes() {
     const faltan = resaltar ? camposFaltantes() : [];
     const claves = new Set(faltan.map(x => x[0]));
     [["curp", "#curp"], ["nombre", "#nombre"], ["fnac", "#fnac"], ["sexo", "[data-elegir=sexo]"], ["lugar", "#lugar"],
-      ["grupo", "[data-elegir=grupo]"], ["ocupacion", "#ocupacion"], ["telefono", "#telefono"], ["firma", "#firmar"]].forEach(([k, sel]) => {
+      ["grupo", "[data-elegir=grupo]"], ["ocupacion", "#ocupacion"], ["telefono", "#telefono"]].forEach(([k, sel]) => {
       const el = $(sel, c);
       const campo = el?.closest(".field");
       if (!campo) return;
@@ -133,15 +147,13 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
     $$("[data-elegir]", c).forEach(g => $$(".choice", g).forEach(b => b.setAttribute("aria-pressed", d[g.dataset.elegir] === b.dataset.v)));
     const e = edad(d.fnac, act.fecha);
     $("#edadNota", c).textContent = e == null || e < 0 ? "" : `${e} años el día de la actividad · Rango ${rangoDe(e)}) ${etiquetaRango(rangoDe(e))}`;
-    $("#curp", c).disabled = d.sinCurp;
+    pintarFirmaNota();
     pintarFaltantes();
   }
 
   function reconocer(p) {
     CAMPOS.forEach(k => (d[k] = p[k] || ""));
     d.usuariaId = p.id;
-    d.sinCurp = !p.curp;
-    $("#sinCurp", c).checked = d.sinCurp;
     const visitas = p.visitas ?? 0;
     const r = $("#reconocida", c);
     r.hidden = false;
@@ -189,9 +201,6 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
     const r = await escanearCurp();
     if (!r) return;
     resaltar = true;
-    d.sinCurp = false;
-    $("#sinCurp", c).checked = false;
-    $("#curp", c).disabled = false;
     $("#curp", c).value = r.curp;
     $("#curp", c).dispatchEvent(new Event("input"));
     if (!kiosko && registradas.some(p => p.curp === r.curp)) return; // ya vino antes: se llenaron sus datos guardados
@@ -207,9 +216,6 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
     if (!r) return;
     resaltar = true;
     if (r.curp) {
-      d.sinCurp = false;
-      $("#sinCurp", c).checked = false;
-      $("#curp", c).disabled = false;
       $("#curp", c).value = r.curp;
       $("#curp", c).dispatchEvent(new Event("input"));
       if (!kiosko && registradas.some(p => p.curp === r.curp)) return; // ya vino antes: se llenaron sus datos guardados
@@ -227,11 +233,17 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
     $(r.curp ? "#ocupacion" : "#curp", c).focus();
   });
 
-  $("#sinCurp", c).addEventListener("change", ev => {
-    d.sinCurp = ev.target.checked;
-    if (d.sinCurp) d.curp = "";
-    $("#curpNota", c).textContent = d.sinCurp ? "En el formato aparecerá “SIN CURP”. Capture la fecha de nacimiento y el sexo manualmente." : "";
-    pintarCampos();
+  $("#omitirFirma", c).addEventListener("change", ev => {
+    omitir = ev.target.checked;
+    if (!omitir) sinFirma = "";
+    else if (!sinFirma) sinFirma = (edad(d.fnac, act.fecha) ?? 18) < 18 ? MOTIVOS_SIN_FIRMA[0] : "";
+    pintarFirma();
+  });
+  $("#motivoFirma", c).addEventListener("click", ev => {
+    const b = ev.target.closest(".choice");
+    if (!b) return;
+    sinFirma = b.dataset.v;
+    pintarFirma();
   });
 
   // Conteo de visitas para mostrar al reconocer
@@ -265,12 +277,12 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
 
   $("#firmar", c).onclick = async () => {
     const nueva = await pedirFirma({ titulo: d.nombre.trim() ? `Firma de ${d.nombre.trim()}` : "Firma de la persona asistente", existente: firma });
-    if (nueva) { firma = nueva; pintarFirma(); }
+    if (nueva) { firma = nueva; omitir = false; sinFirma = ""; pintarFirma(); }
   };
 
   const guardar = unaVez(async otra => {
     const e = [];
-    if (!d.sinCurp && !leerCurp(d.curp)) e.push("CURP válida de 18 caracteres (o indique que la persona no cuenta con CURP)");
+    if (d.curp && !leerCurp(d.curp)) e.push("CURP válida de 18 caracteres (o déjela vacía para capturarla después)");
     const nombre = d.nombre.trim().replace(/\s+/g, " ");
     if (nombre.split(" ").length < 2) e.push("Nombre completo con apellidos");
     if (!d.fnac) e.push("Fecha de nacimiento");
@@ -282,13 +294,13 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
     const tel = d.telefono.replace(/\D/g, "");
     if (tel.length !== 10) e.push("Teléfono de 10 dígitos");
     const imagenFirma = firma;
-    if (!imagenFirma) e.push("Firma");
+    if (!imagenFirma && omitir && !sinFirma) e.push("Motivo por el que se omite la firma (o capture la firma)");
 
     // CURP repetida con otra usuaria
-    const curp = d.sinCurp ? "" : d.curp;
+    const curp = d.curp;
     const duena = curp && registradas.find(p => p.curp === curp && p.id !== d.usuariaId);
     if (duena && existente) e.push(`Esa CURP ya pertenece a ${duena.nombre} en Usuarias`);
-    errores($("#err", c), e, "El formato no admite espacios en blanco. Falta:");
+    errores($("#err", c), e, "Falta completar:");
     if (e.length) return;
 
     const datos = { curp, nombre, fnac: d.fnac, sexo: d.sexo, lugar: d.lugar.trim(), grupo: d.grupo, ocupacion: d.ocupacion.trim(), telefono: tel };
@@ -301,8 +313,9 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
     const orden = existente?.orden ?? (await db.todos("asistencias", "actividadId", actividadId)).reduce((m, x) => Math.max(m, x.orden), 0) + 1;
     await db.guardar("asistencias", {
       ...(existente || { id: db.uid(), actividadId, registradaPor: yo.id }),
-      usuariaId: usuaria.id, orden, datos, firma: imagenFirma,
+      usuariaId: usuaria.id, orden, datos, firma: imagenFirma, sinFirma: imagenFirma ? "" : sinFirma,
     });
+    if (curp) await db.completarCurp(usuaria.id, curp);
     if (kiosko) return confirmarKiosko({ yo, pintar, ir, kiosko }, actividadId);
     aviso(existente ? "Cambios guardados" : `${nombre.split(" ")[0]} quedó registrada`);
     if (otra) captura({ yo, pintar, ir }, actividadId); // la ruta no cambia: se abre un formulario en blanco
