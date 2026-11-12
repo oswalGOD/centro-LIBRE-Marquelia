@@ -8,6 +8,8 @@ import { ROLES } from "./core/catalogos.js";
 import { crearPerfil, iniciarSesion, cerrarSesion, sesionActual, sesionVigente, tocarSesion, verificarPin, pinValido, esCoordinadora, esperaPin, pinFallido, pinCorrecto } from "./core/auth.js";
 import { $, $$, esc, aviso, errores, leerCampos } from "./core/ui.js";
 import * as nube from "./core/sync.js";
+import * as kiosko from "./core/kiosko.js";
+import { captura } from "./modulos/captura.js";
 import actividades from "./modulos/actividades.js";
 import usuarias from "./modulos/usuarias.js";
 import estadisticas from "./modulos/estadisticas.js";
@@ -26,7 +28,8 @@ let tocada = false;
 ["input", "change"].forEach(t => raiz.addEventListener(t, () => (tocada = true)));
 
 /** Pinta una pantalla dentro del marco de la app (barra superior y menú). */
-function pintar(titulo, contenido, { atras, ancho } = {}) {
+function pintar(titulo, contenido, { atras, ancho, kiosko: enModo } = {}) {
+  if (enModo) return pintarModo(titulo, contenido);
   const ruta = location.hash || "#/";
   // Sin menú superior: el Inicio es el menú. Toda pantalla sin otro destino regresa al Inicio.
   if (atras === undefined && ruta !== "#/") atras = "#/";
@@ -50,6 +53,81 @@ function pintar(titulo, contenido, { atras, ancho } = {}) {
   pintarNube();
   window.scrollTo({ top: 0 });
   return $("#contenido");
+}
+
+/** Marco del modo captura: sin menús, sin enlaces y con un único botón para salir (pide PIN). */
+function pintarModo(titulo, contenido) {
+  tocada = false;
+  raiz.innerHTML = `
+    <header class="topbar">
+      <div class="wrap">
+        <span class="brand"><img class="mark" src="icons/icon-192.png" alt="" aria-hidden="true"><span><b>Centro LIBRE</b><small>Marquelia</small></span></span>
+        <div class="who"><button class="btn small ghost" id="salirModo">Salir del modo captura</button></div>
+      </div>
+    </header>
+    <main class="wrap">
+      <div class="page-head"><h1>${esc(titulo)}</h1></div>
+      <div id="contenido" class="stack">${contenido}</div>
+    </main>`;
+  $("#salirModo").onclick = pedirPinSalida;
+  window.scrollTo({ top: 0 });
+  return $("#contenido");
+}
+
+/** Ventana que solicita el PIN del perfil que activó el modo. Comparte el bloqueo por intentos fallidos con el inicio de sesión. */
+async function pedirPinSalida() {
+  const k = kiosko.estado();
+  const perfil = k && (await db.uno("perfiles", k.perfilId));
+  if (!perfil) return router();
+  if ($("#pinSalida")) return;
+  const m = document.createElement("div");
+  m.id = "pinSalida";
+  m.className = "pin-modal";
+  m.innerHTML = `
+    <form class="pin-card stack" role="dialog" aria-modal="true" aria-labelledby="pinSalidaT">
+      <h2 class="h3" id="pinSalidaT">Salir del modo captura</h2>
+      <p class="hint">Ingrese el PIN de ${esc(perfil.nombre)} para salir.</p>
+      <div class="field"><label for="pinS">PIN</label><input id="pinS" type="password" inputmode="numeric" maxlength="6" autocomplete="off"></div>
+      <div id="errS"></div>
+      <div class="actions"><button class="btn primary" type="submit">Salir</button><button class="btn ghost" type="button" id="cancelarS">Cancelar</button></div>
+    </form>`;
+  document.body.append(m);
+  $("#pinS").focus();
+  $("#cancelarS").onclick = () => m.remove();
+  $("form", m).onsubmit = async ev => {
+    ev.preventDefault();
+    const espera = esperaPin();
+    if (espera) return errores($("#errS"), [`Demasiados intentos. Espere ${espera > 90000 ? `${Math.ceil(espera / 60000)} minutos` : `${Math.ceil(espera / 1000)} segundos`}.`]);
+    if (await verificarPin(perfil, $("#pinS").value)) {
+      pinCorrecto();
+      kiosko.desactivar();
+      iniciarSesion(perfil);
+      m.remove();
+      history.replaceState(null, "", `#/actividad/${k.actividadId}`);
+      router();
+    } else {
+      pinFallido();
+      anotar(`PIN incorrecto al salir del modo captura (${perfil.nombre.split(" ")[0]})`, "kiosko");
+      errores($("#errS"), ["PIN incorrecto."]);
+      $("#pinS").select();
+    }
+  };
+}
+
+/** Modo captura activo: ignora la ruta y siempre muestra el formulario de registro de la actividad. */
+async function modoCaptura(k) {
+  const perfil = await db.uno("perfiles", k.perfilId);
+  const act = await db.uno("actividades", k.actividadId);
+  if (!perfil?.activa || !act || act.estado === "cerrada") {
+    // La actividad se cerró o el perfil ya no existe (por ejemplo, desde otro dispositivo): se vuelve al inicio de sesión
+    kiosko.desactivar();
+    cerrarSesion();
+    history.replaceState(null, "", "#/");
+    return router();
+  }
+  yo = perfil;
+  if (location.hash !== "#/captura") history.replaceState(null, "", "#/captura");
+  return captura({ ...contexto(), kiosko: true }, act.id);
 }
 
 /** Indicador de sincronización en la barra superior. */
@@ -77,6 +155,8 @@ async function router() {
   try {
     const lista = await db.todos("perfiles");
     if (!lista.length) return primerUso();
+    const modo = kiosko.estado();
+    if (modo) return await modoCaptura(modo);
     yo = await sesionActual();
     if (!yo) return entrar(lista.filter(u => u.activa));
     const ruta = location.hash || "#/";
@@ -233,13 +313,13 @@ window.addEventListener("hashchange", router);
 
 // Tras 30 minutos sin usarla, la app vuelve a pedir el PIN
 ["pointerdown", "keydown"].forEach(t => addEventListener(t, tocarSesion, { passive: true }));
-setInterval(() => { if (yo && !sesionVigente()) { yo = null; router(); } }, 30000);
-document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && yo && !sesionVigente()) { yo = null; router(); } });
+setInterval(() => { if (yo && !kiosko.estado() && !sesionVigente()) { yo = null; router(); } }, 30000);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && yo && !kiosko.estado() && !sesionVigente()) { yo = null; router(); } });
 navigator.storage?.persist?.();
 router();
 
 // Si llegan datos de otro dispositivo, se refresca la pantalla salvo que se esté llenando un formulario
 nube.iniciarAutomatica(() => {
-  if (tocada || /(registrar|editar|nueva|repetir|ajustes|perfiles|desarrollo|formato)/.test(location.hash) || document.querySelector("#pinForm:not([hidden]), .sig-modal, .scan-modal")) return;
+  if (kiosko.estado() || tocada || /(registrar|editar|nueva|repetir|ajustes|perfiles|desarrollo|formato)/.test(location.hash) || document.querySelector("#pinForm:not([hidden]), .sig-modal, .scan-modal")) return;
   router();
 });
