@@ -25,26 +25,6 @@ export function recortar43(fuente, w, h) {
   return new Promise((ok, mal) => lienzo.toBlob(blob => (blob ? ok({ blob, ancho, alto }) : mal(new Error("No fue posible procesar la fotografía."))), "image/jpeg", CALIDAD));
 }
 
-/** Procesa una fotografía de un archivo (cámara del sistema), respetando su orientación. */
-export async function desdeArchivo(archivo) {
-  let imagen;
-  try {
-    imagen = await createImageBitmap(archivo, { imageOrientation: "from-image" });
-  } catch {
-    imagen = await new Promise((ok, mal) => {
-      const url = URL.createObjectURL(archivo);
-      const i = new Image();
-      i.onload = () => { URL.revokeObjectURL(url); ok(i); };
-      i.onerror = () => { URL.revokeObjectURL(url); mal(new Error("No fue posible abrir la fotografía.")); };
-      i.src = url;
-    });
-  }
-  const w = imagen.width || imagen.naturalWidth, h = imagen.height || imagen.naturalHeight;
-  const r = await recortar43(imagen, w, h);
-  imagen.close?.();
-  return r;
-}
-
 const svg = (d, t = 28) => `<svg viewBox="0 0 24 24" width="${t}" height="${t}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 // Iconos de Lucide (licencia ISC)
 const ICONO_GIRAR = svg('<path d="M11 19H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/><path d="M13 5h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5"/><circle cx="12" cy="12" r="3"/><path d="m18 22-3-3 3-3"/><path d="m6 2 3 3-3 3"/>', 30);
@@ -72,7 +52,6 @@ export function abrirCamara(alTomar, titulo = "Tomar fotografías") {
         <div class="camara-info">
           <p class="camara-cuenta" aria-live="polite"></p>
           <p class="camara-aviso" role="status">Encuadre 4:3. Se guarda lo que se ve en el recuadro.</p>
-          <label class="btn small camara-sistema" data-sistema hidden>Usar la cámara del sistema<input type="file" accept="image/*" capture="environment" hidden></label>
         </div>
       </div>
       <div class="camara-barra">
@@ -98,7 +77,17 @@ export function abrirCamara(alTomar, titulo = "Tomar fotografías") {
       visor.style.height = `${Math.round((ancho * 3) / 4)}px`;
       visor.style.visibility = "visible";
     };
-    const observador = new ResizeObserver(ajustar);
+    // Al girar, iPadOS anima la pantalla y las medidas cambian en varios pasos: el recuadro se oculta un instante
+    // y reaparece ya con su tamaño final, en vez de verse pequeño y saltar.
+    let revelar = null, primera = true;
+    const alCambiarTamano = () => {
+      ajustar();
+      if (primera) { primera = false; return; }
+      visor.style.opacity = "0";
+      clearTimeout(revelar);
+      revelar = setTimeout(() => { ajustar(); visor.style.opacity = "1"; }, 300);
+    };
+    const observador = new ResizeObserver(alCambiarTamano);
     observador.observe(zona);
     ajustar();
     // Con el giro automático activo, el orden de los botones sigue a la mano: al girar a la izquierda, el de la izquierda queda abajo
@@ -108,18 +97,17 @@ export function abrirCamara(alTomar, titulo = "Tomar fotografías") {
     addEventListener("resize", ordenar);
 
     const detener = () => { flujo?.getTracks().forEach(t => t.stop()); flujo = null; video.srcObject = null; };
-    const mostrarSistema = mensaje => {
+    const mostrarError = mensaje => {
       detener();
       q(".camara-visor").hidden = true;
       tomar.hidden = true;
       girar.hidden = true;
-      q("[data-sistema]").hidden = false;
       aviso.textContent = mensaje;
     };
     async function iniciar() {
       const mio = ++intento;
       detener();
-      if (!navigator.mediaDevices?.getUserMedia) return mostrarSistema("Este navegador no permite usar la cámara dentro de la aplicación. Utilice la cámara del sistema.");
+      if (!navigator.mediaDevices?.getUserMedia) return mostrarError("Este navegador no permite usar la cámara dentro de la aplicación.");
       try {
         const f = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: modo }, width: { ideal: ANCHO }, height: { ideal: ALTO } } });
         if (mio !== intento) { f.getTracks().forEach(t => t.stop()); return; } // llegó otro reinicio (p. ej. al girar el equipo)
@@ -130,9 +118,9 @@ export function abrirCamara(alTomar, titulo = "Tomar fotografías") {
         girar.style.visibility = camaras.length < 2 ? "hidden" : "visible";
       } catch (e) {
         if (mio !== intento) return;
-        mostrarSistema(e?.name === "NotAllowedError"
-          ? "No se concedió el permiso de la cámara. Puede permitirlo en la configuración del navegador o utilizar la cámara del sistema."
-          : "No fue posible iniciar la cámara. Utilice la cámara del sistema.");
+        mostrarError(e?.name === "NotAllowedError"
+          ? "No se concedió el permiso de la cámara. Puede permitirlo en la configuración del navegador."
+          : "No fue posible iniciar la cámara.");
       }
     }
 
@@ -159,17 +147,13 @@ export function abrirCamara(alTomar, titulo = "Tomar fotografías") {
       if (!video.videoWidth) throw new Error("La cámara aún no está lista. Espere un momento e intente de nuevo.");
       return recortar43(video, video.videoWidth, video.videoHeight);
     });
-    q("input[type=file]").onchange = e => {
-      const archivo = e.target.files[0];
-      e.target.value = "";
-      if (archivo) guardar(() => desdeArchivo(archivo));
-    };
     girar.onclick = () => { modo = modo === "environment" ? "user" : "environment"; iniciar(); };
 
     const cerrar = () => {
       intento++;
       document.removeEventListener("keydown", tecla);
       observador.disconnect();
+      clearTimeout(revelar);
       screen.orientation?.removeEventListener("change", ordenar);
       removeEventListener("resize", ordenar);
       detener();
