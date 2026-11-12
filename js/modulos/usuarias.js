@@ -44,7 +44,7 @@ async function ficha({ yo, pintar, ir }, id) {
     <section class="panel stack">
       <div class="section-head"><h2 class="h3">Datos personales</h2><p class="hint">Los cambios se aplicarán a partir de su siguiente asistencia. Las listas ya firmadas conservan los datos vigentes en su fecha.</p></div>
       <div class="grid" id="f">
-        <div class="field span-2"><label for="p-curp">CURP</label><input id="p-curp" class="upper" maxlength="18" value="${esc(p.curp || "")}" placeholder="Dejar vacío si no cuenta con CURP"></div>
+        <div class="field span-2"><label for="p-curp">CURP</label><input id="p-curp" class="upper" maxlength="18" value="${esc(p.curp || "")}" placeholder="Opcional: puede capturarse después"></div>
         <div class="field span-2"><label for="p-nombre">Nombre completo</label><input id="p-nombre" value="${esc(p.nombre)}"></div>
         <div class="field"><label for="p-fnac">Fecha de nacimiento</label><input id="p-fnac" type="date" value="${esc(p.fnac)}"></div>
         <div class="field"><label for="p-lugar">Lugar de nacimiento</label><input id="p-lugar" value="${esc(p.lugar)}"></div>
@@ -80,6 +80,7 @@ async function ficha({ yo, pintar, ir }, id) {
     const nuevo = { ...p, nombre: v("nombre").replace(/\s+/g, " "), fnac: v("fnac"), lugar: v("lugar"), ocupacion: v("ocupacion"), telefono: v("telefono").replace(/\D/g, ""), sexo: v("sexo"), grupo: v("grupo") };
     if (curp) nuevo.curp = curp; else delete nuevo.curp;
     await db.guardar("usuarias", nuevo);
+    if (curp) await db.completarCurp(p.id, curp);
     aviso("Datos actualizados");
     ficha({ yo, pintar, ir }, id);
   });

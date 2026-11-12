@@ -153,7 +153,7 @@ async function detalle({ yo, pintar, ir }, id) {
   const editable = puedeEditar(yo, a);
   const asis = (await db.todos("asistencias", "actividadId", id)).sort((x, y) => x.orden - y.orden);
   const n = s => asis.filter(x => x.datos.sexo === s).length;
-  const sinFirma = asis.filter(x => !x.firma).length;
+  const sinFirma = asis.filter(x => !x.firma && !x.sinFirma).length;
 
   const c = pintar(a.nombre, `
     <section class="panel">
@@ -182,7 +182,7 @@ async function detalle({ yo, pintar, ir }, id) {
         const inner = `<span class="num">${i + 1}</span>
           <span class="body"><span class="name">${esc(p.nombre)}</span>
             <span class="meta"><span class="mono">${esc(p.curp || "Sin CURP")}</span><span>${e ?? "?"} años · ${rangoDe(e) || ""}</span><span>${esc(etiquetaGrupo(p.grupo))}</span><span>${esc(p.ocupacion)}</span></span></span>
-          ${x.firma ? `<img class="sig" src="${esc(x.firma)}" alt="Firma">` : `<span class="chip warn">Falta firma</span>`}`;
+          ${x.firma ? `<img class="sig" src="${esc(x.firma)}" alt="Firma">` : x.sinFirma ? `<span class="chip">Firma omitida: ${esc(x.sinFirma)}</span>` : `<span class="chip warn">Falta firma</span>`}`;
         return editable ? `<a class="row person" href="#/actividad/${esc(a.id)}/registrar/${esc(x.id)}">${inner}</a>` : `<div class="row person">${inner}</div>`;
       }).join("")}</div>` : `<div class="empty"><b>Aún no hay asistentes.</b><p>${editable ? "Seleccione “Registrar asistente” para capturar a la primera persona. Si ya asistió antes, al ingresar su CURP se completarán sus datos." : "Esta actividad está cerrada."}</p></div>`}
     </section>
