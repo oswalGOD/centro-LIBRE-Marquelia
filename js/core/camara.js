@@ -91,18 +91,39 @@ export function abrirCamara(alTomar, titulo = "Tomar fotografías") {
     // Con el giro automático desactivado, el sistema entrega la imagen como si el equipo estuviera en vertical
     // aunque se sostenga en horizontal. Los sensores permiten avisarlo (en iPhone/iPad piden permiso al abrir).
     const giro = q(".camara-giro");
-    const alMover = e => {
-      if (e.gamma == null || e.beta == null) return;
-      const fisicoHorizontal = Math.abs(e.gamma) > 55 && Math.abs(e.beta) < 50;
-      const pantallaVertical = innerHeight > innerWidth;
-      const mal = fisicoHorizontal && pantallaVertical;
+    let porMovimiento = null, porOrientacion = false;
+    const evaluar = () => {
+      const fisicoHorizontal = porMovimiento ?? porOrientacion;
+      const mal = fisicoHorizontal && innerHeight > innerWidth;
       if (giro.hidden === mal) {
         giro.hidden = !mal;
         if (mal) q("[data-sistema]").hidden = false;
       }
     };
-    try { if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") DeviceOrientationEvent.requestPermission().catch(() => {}); } catch {}
-    addEventListener("deviceorientation", alMover);
+    // Acelerómetro (gravedad): en horizontal la gravedad cae sobre el eje x del equipo. Android lo entrega sin permiso.
+    const alMover = e => {
+      const a = e.accelerationIncludingGravity;
+      if (a?.x == null || a?.y == null) return;
+      porMovimiento = Math.abs(a.x) > 6.5 && Math.abs(a.y) < 5;
+      evaluar();
+    };
+    // Respaldo: inclinación de lado (gamma) cuando no hay datos del acelerómetro
+    const alOrientar = e => {
+      if (e.gamma == null) return;
+      porOrientacion = Math.abs(e.gamma) > 60;
+      if (porMovimiento === null) evaluar();
+    };
+    try {
+      const pedir = typeof DeviceMotionEvent !== "undefined" && typeof DeviceMotionEvent.requestPermission === "function" ? DeviceMotionEvent : null;
+      pedir?.requestPermission().catch(() => {}); // iPhone/iPad piden permiso para los sensores
+    } catch {}
+    addEventListener("devicemotion", alMover);
+    addEventListener("deviceorientation", alOrientar);
+    // Con el giro automático activo, el orden de los botones sigue a la mano: al girar a la izquierda, el de la izquierda queda abajo
+    const ordenar = () => capa.classList.toggle("gira-izquierda", screen.orientation?.angle === 90 || window.orientation === 90);
+    ordenar();
+    screen.orientation?.addEventListener("change", ordenar);
+    addEventListener("resize", ordenar);
 
     const detener = () => { flujo?.getTracks().forEach(t => t.stop()); flujo = null; video.srcObject = null; };
     const mostrarSistema = mensaje => {
@@ -166,7 +187,10 @@ export function abrirCamara(alTomar, titulo = "Tomar fotografías") {
     const cerrar = () => {
       intento++;
       document.removeEventListener("keydown", tecla);
-      removeEventListener("deviceorientation", alMover);
+      removeEventListener("devicemotion", alMover);
+      removeEventListener("deviceorientation", alOrientar);
+      screen.orientation?.removeEventListener("change", ordenar);
+      removeEventListener("resize", ordenar);
       detener();
       capa.remove();
       document.body.classList.remove("con-camara");
