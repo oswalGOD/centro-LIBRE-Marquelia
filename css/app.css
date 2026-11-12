@@ -447,3 +447,11 @@ body.con-camara { overflow: hidden; }
 .enlace-act { font-weight: 700; color: var(--accent); text-decoration: none; padding: 10px 0; }
 .ib-badge { position: relative; display: inline-flex; }
 .ib-badge b { position: absolute; top: -7px; right: -7px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: .78rem; display: grid; place-items: center; pointer-events: none; }
+.plegable > summary, .ayuda > summary { cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; font-weight: 700; }
+.plegable > summary::-webkit-details-marker, .ayuda > summary::-webkit-details-marker { display: none; }
+.plegable > summary::after, .ayuda > summary::after { content: "▾"; color: var(--accent); font-size: 1.1rem; transition: transform .15s; }
+.plegable[open] > summary::after, .ayuda[open] > summary::after { transform: rotate(180deg); }
+.plegable[open] > summary { margin-bottom: 14px; }
+.ayuda { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 4px 14px; }
+.ayuda[open] { padding-bottom: 12px; }
+@media (prefers-reduced-motion: reduce) { .plegable > summary::after, .ayuda > summary::after { transition: none; } }
