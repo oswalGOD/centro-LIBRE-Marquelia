@@ -1,6 +1,7 @@
 // Registro de una persona en una actividad: datos, reconocimiento de usuarias que ya vinieron y firma.
 
 import * as db from "../core/db.js";
+import { botonIcono } from "../core/iconos.js";
 import { aMayusculas, aCapital, FORMATOS, GRUPOS, SEXOS, leerCurp, limpiarCurp, edad, rangoDe, etiquetaRango, normalizar, fechaLarga } from "../core/catalogos.js";
 import { puedeVer, puedeEditar } from "../core/permisos.js";
 import { pedirFirma } from "../core/firma.js";
@@ -45,7 +46,8 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
 
   const volver = `#/actividad/${actividadId}`;
   const c = pintar(existente ? "Editar asistente" : kiosko ? "Registro de asistencia" : "Registrar asistente", `
-    <p class="hint context">${esc(act.nombre)}${kiosko ? "" : ` · <span class="mono">${esc(act.folio)}</span>`}</p>
+    ${kiosko ? `<p class="hint context">${esc(act.nombre)}</p>` : `<div class="card-head"><p class="hint context">${esc(act.nombre)} · <span class="mono">${esc(act.folio)}</span></p>
+      <span class="icon-row">${botonIcono("salir", "Cancelar", { href: volver, clase: "quieto" })}${existente ? botonIcono("eliminar", "Quitar", { id: "quitar", clase: "quieto danger", titulo: "Quitar de esta lista" }) : ""}</span></div>`}
     ${kiosko ? `<p class="hint">Complete sus datos, firme y toque «Guardar mi registro». La CURP y la firma son opcionales; los demás campos son obligatorios.</p>` : ""}
     ${deAntes.length ? `
     <section class="panel stack" id="deAntes">
@@ -61,7 +63,7 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
       <div class="grid">
         <div class="field span-2"><label for="curp">CURP (opcional)</label>
           <div class="input-row"><input id="curp" class="upper" maxlength="18" autocomplete="off" spellcheck="false" placeholder="18 caracteres" value="${esc(d.curp)}">
-            ${existente ? "" : `<button type="button" class="btn" id="escanear">Escanear CURP</button><button type="button" class="btn" id="escanearIne">Escanear INE</button>`}</div>
+            ${existente ? "" : `${botonIcono("escaner", "CURP", { id: "escanear", titulo: "Escanear CURP" })}${botonIcono("identificacion", "INE", { id: "escanearIne", titulo: "Escanear INE" })}`}</div>
           <span class="note" id="curpNota">Opcional. Si no la tiene a la mano, puede capturarla después.</span></div>
         <div id="reconocida" class="span-2" hidden></div>
         <div class="field span-2"><label for="nombre">Nombre completo</label><input id="nombre" data-c="nombre" data-formato="mayus" autocomplete="off" placeholder="Nombre(s) y apellidos, sin abreviaturas"></div>
@@ -80,13 +82,9 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
         <span class="note" id="firmaNota"></span></div>
       <div id="faltan" aria-live="polite"></div>
       <div id="err"></div>
-      <div class="actions">
-        <button class="btn primary" id="guardar">${existente ? "Guardar cambios" : kiosko ? "Guardar mi registro" : "Guardar asistente"}</button>
-        ${existente || kiosko ? "" : `<button class="btn" id="guardarOtra">Guardar y registrar otra</button>`}
-        ${kiosko ? "" : `<a class="btn ghost" href="${volver}">Cancelar</a>`}
-        ${existente ? `<button class="btn danger push" id="quitar">Quitar de esta lista</button>` : ""}
-      </div>
-    </section>`, { atras: volver, kiosko });
+      ${kiosko ? `<div class="actions"><button class="btn primary" id="guardar">Guardar mi registro</button></div>` : ""}
+    </section>
+    ${kiosko ? "" : `<div class="barra-fija"><button class="btn primary" id="guardar">${existente ? "Guardar cambios" : "Guardar asistente"}</button>${existente ? "" : `<button class="btn" id="guardarOtra">Guardar y registrar otra</button>`}</div>`}`, { atras: volver, kiosko });
 
   let firma = existente?.firma || "";
   let sinFirma = existente?.sinFirma || ""; // motivo por el que no se firma (vacío = sí firma)
