@@ -1,6 +1,7 @@
 // Usuarias: todas las personas que han asistido alguna vez, con su historial.
 
 import * as db from "../core/db.js";
+import { botonIcono } from "../core/iconos.js";
 import { aMayusculas, aCapital, GRUPOS, SEXOS, leerCurp, limpiarCurp, edad, etiquetaGrupo, etiquetaSexo, fechaLarga, normalizar } from "../core/catalogos.js";
 import { esCoordinadora } from "../core/auth.js";
 import { puedeVer } from "../core/permisos.js";
@@ -55,7 +56,7 @@ async function ficha({ yo, pintar, ir }, id) {
       </div>
       <div id="err"></div>
       <div class="actions"><button class="btn primary" id="guardar">Guardar cambios</button>
-        ${esCoordinadora(yo) && !asis.length ? `<button class="btn danger push" id="eliminar">Eliminar usuaria</button>` : ""}</div>
+        ${esCoordinadora(yo) && !asis.length ? `<span class="push">${botonIcono("eliminar", "Eliminar", { id: "eliminar", clase: "danger", titulo: "Eliminar usuaria" })}</span>` : ""}</div>
     </section>
     <section class="stack">
       <h2>Historial de asistencia</h2>

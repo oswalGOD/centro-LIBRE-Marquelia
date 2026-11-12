@@ -1,6 +1,7 @@
 // Perfiles de las integrantes del Centro que usan la app. Solo la Coordinadora puede dar de alta, cambiar PIN o desactivar.
 
 import * as db from "../core/db.js";
+import { botonIcono } from "../core/iconos.js";
 import { ROLES } from "../core/catalogos.js";
 import { crearPerfil, cambiarPin, pinValido } from "../core/auth.js";
 import { $, $$, esc, aviso, errores, leerCampos, unaVez } from "../core/ui.js";
@@ -16,9 +17,9 @@ async function vista(ctx) {
         <span class="avatar" aria-hidden="true">${esc(u.nombre[0])}</span>
         <span class="body"><span class="name">${esc(u.nombre)}${u.id === yo.id ? " (usted)" : ""}</span><span class="meta"><span>${esc(u.rol)}</span>${u.activa ? "" : `<span class="chip">Desactivado</span>`}</span></span>
         <span class="end actions">
-          <button class="btn small ghost" data-accion="pin">Cambiar PIN</button>
-          ${u.activa && !(u.rol === "Coordinadora" && coordinadorasActivas === 1) ? `<button class="btn small ghost danger" data-accion="desactivar">Desactivar</button>` : ""}
-          ${u.activa ? "" : `<button class="btn small ghost" data-accion="activar">Activar</button>`}
+          ${botonIcono("llave", "PIN", { extra: 'data-accion="pin"', titulo: "Cambiar PIN" })}
+          ${u.activa && !(u.rol === "Coordinadora" && coordinadorasActivas === 1) ? `${botonIcono("apagar", "Desactivar", { clase: "danger", extra: 'data-accion="desactivar"' })}` : ""}
+          ${u.activa ? "" : `${botonIcono("activar", "Activar", { extra: 'data-accion="activar"' })}`}
         </span>
         <div class="pin-form span-all" hidden>
           <div class="field"><label for="pin-${esc(u.id)}">PIN nuevo de 4 a 6 dígitos</label><input id="pin-${esc(u.id)}" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>

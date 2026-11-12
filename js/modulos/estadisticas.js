@@ -1,6 +1,7 @@
 // Estadísticas por actividad, rango de edad, grupo y sexo, con exportación a Excel (CSV).
 
 import * as db from "../core/db.js";
+import { botonIcono } from "../core/iconos.js";
 import { GRUPOS, RANGOS, SEXOS, edad, rangoDe, hoy, fechaCorta, fechaLarga, etiquetaGrupo, etiquetaRango, minutosEntre, duracion } from "../core/catalogos.js";
 import { esCoordinadora } from "../core/auth.js";
 import { puedeVer } from "../core/permisos.js";
@@ -137,7 +138,7 @@ async function vista(ctx) {
       </div>
       <section class="panel stack">
         <div class="section-head"><h2 class="h3">Por actividad</h2>
-          <div class="actions"><button class="btn small" id="csvActividades">Descargar resumen (Excel)</button><button class="btn small" id="csvDetalle">Descargar lista detallada (Excel)</button></div></div>
+          <div class="actions">${botonIcono("descargar", "Resumen", { id: "csvActividades", titulo: "Descargar resumen (Excel)" })}${botonIcono("descargar", "Detalle", { id: "csvDetalle", titulo: "Descargar lista detallada (Excel)" })}</div></div>
         <div class="table-scroll"><table class="data">
           <thead><tr><th scope="col">Fecha</th><th scope="col">Folio</th><th scope="col">Actividad</th><th scope="col">Tipo</th>${SEXO_COLUMNAS.map(([, t]) => `<th scope="col" class="num">${t}</th>`).join("")}<th scope="col" class="num">Total</th></tr></thead>
           <tbody>${porAct.map(p => `<tr>
