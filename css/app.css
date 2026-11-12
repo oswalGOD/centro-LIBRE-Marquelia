@@ -406,3 +406,14 @@ body.con-camara { overflow: hidden; }
 .evid.ordenando { cursor: default; border-color: var(--accent); }
 .evid-mover { display: flex; gap: 8px; padding: 8px; }
 .evid-mover .btn { flex: 1; min-height: 44px; }
+
+/* ---------- iPad y iPhone (aplicación instalada) ----------
+   iOS 26 aplica un desenfoque automático a los elementos fijos o pegajosos (sticky)
+   que quedan junto al borde superior, y ese desenfoque cubría la barra superior.
+   En iOS la barra superior se desplaza con la página y su propio fondo cubre
+   el área de la barra de estado, de modo que no queda ningún elemento fijo arriba. */
+@supports (-webkit-touch-callout: none) {
+  body { padding-top: 0; }
+  body::before { content: none; }
+  .topbar { position: relative; top: auto; padding-top: env(safe-area-inset-top, 0px); }
+}
