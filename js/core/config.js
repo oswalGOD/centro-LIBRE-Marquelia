@@ -1,5 +1,5 @@
 // Versión de la app. Súbela junto con VERSION de sw.js al publicar cambios.
-export const VERSION_APP = "0.20.4";
+export const VERSION_APP = "0.20.5";
 
 // Proyecto de Supabase para sincronizar dispositivos.
 // La clave "anon" es pública por diseño: sin la cuenta del Centro no da acceso a ningún dato

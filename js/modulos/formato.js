@@ -136,8 +136,9 @@ export async function formato({ yo, pintar, ir }, id) {
       <button class="btn" id="imprimir">Imprimir</button>
       <p class="hint">${plural(hojas, "hoja", "hojas")} · ${plural(asis.length, "asistente", "asistentes")} · carta horizontal${act.notas ? " · incluye la hoja de notas" : ""}${sinFirma ? ` · <span class="chip warn">${sinFirma} sin firma</span>` : ""}</p>
     </div>
-    <p class="hint no-print">En el cuadro de impresión, seleccione tamaño <b>Carta</b>, orientación <b>Horizontal</b> y márgenes <b>Ninguno</b>. En computadora puede guardar en PDF eligiendo “Guardar como PDF” como impresora.</p>
-    <p class="hint no-print">Toque “Exportar PDF” cuando esté listo. En iPad, iPhone y Android se abre el menú para guardarlo en Archivos, enviarlo por WhatsApp o imprimirlo; en computadora se descarga el archivo.</p>
+    <details class="ayuda no-print"><summary>Cómo exportar o imprimir</summary>
+      <p class="hint">En el cuadro de impresión, seleccione tamaño <b>Carta</b>, orientación <b>Horizontal</b> y márgenes <b>Ninguno</b>. En computadora puede guardar en PDF eligiendo “Guardar como PDF” como impresora.</p>
+      <p class="hint">Toque “Exportar PDF” cuando esté listo. En iPad, iPhone y Android se abre el menú para guardarlo en Archivos, enviarlo por WhatsApp o imprimirlo; en computadora se descarga el archivo.</p></details>
     <div class="sheets" id="hojas">${hojasHTML(act, asis)}${hojaNotasHTML(act)}</div>
   `, { atras: `#/actividad/${id}`, ancho: true });
   const hojasEl = $("#hojas", c);

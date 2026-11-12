@@ -28,14 +28,16 @@ async function vista(ctx) {
   const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
   const c = pintar("Ajustes", `
-    ${instalada ? "" : `<section class="panel stack">
-      <h2 class="h3">Instalar en este dispositivo</h2>
+    ${instalada ? "" : `<details class="panel plegable" open>
+      <summary><h2 class="h3">Instalar en este dispositivo</h2></summary>
+      <div class="stack">
       <p class="hint">${ios ? "En iPad o iPhone: abra esta página en Safari, toque el botón Compartir y seleccione “Agregar a pantalla de inicio”." : "Instálela para abrirla como cualquier aplicación y utilizarla sin conexión a internet."}</p>
       ${ios ? "" : `<div class="actions"><button class="btn primary" id="instalar">Instalar aplicación</button></div>`}
-    </section>`}
+    </div></details>`}
 
-    <section class="panel stack" id="sincronizacion">
-      <h2 class="h3">Sincronización entre dispositivos</h2>
+    <details class="panel plegable" id="sincronizacion" open>
+      <summary><h2 class="h3">Sincronización entre dispositivos</h2></summary>
+      <div class="stack">
       ${e.conectada ? `
         <dl class="facts">
           <div><dt>Cuenta del Centro</dt><dd>${esc(e.cuenta)}</dd></div>
@@ -58,10 +60,11 @@ async function vista(ctx) {
         <div id="errNube"></div>
         <div class="actions"><button class="btn primary" id="conectar">Conectar y sincronizar</button></div>`
       : `<p class="hint">Este dispositivo no está conectado. Solicite a la Coordinadora que lo conecte desde Ajustes con la cuenta del Centro.</p>`}
-    </section>
+    </div></details>
 
-    <section class="panel stack">
-      <h2 class="h3">Datos en este dispositivo</h2>
+    <details class="panel plegable" >
+      <summary><h2 class="h3">Datos en este dispositivo</h2></summary>
+      <div class="stack">
       <dl class="facts">
         <div><dt>Actividades</dt><dd>${acts.length}</dd></div>
         <div><dt>Usuarias</dt><dd>${usuarias.length}</dd></div>
@@ -89,27 +92,29 @@ async function vista(ctx) {
         <div class="actions"><button class="btn" id="abrirRespaldo">Abrir respaldo</button></div>
       </div>` : ""}
       <div id="restaurarConfirma"></div>
-    </section>
+    </div></details>
 
-    ${coord ? `<section class="panel stack">
-      <h2 class="h3">Folios</h2>
+    ${coord ? `<details class="panel plegable" >
+      <summary><h2 class="h3">Folios</h2></summary>
+      <div class="stack">
       <div class="grid" id="f">
         <div class="field"><label for="idDisp">ID de este dispositivo</label><input id="idDisp" class="upper" maxlength="1" value="${esc(idDisp)}"></div>
       </div>
       <p class="hint">El folio toma el mes y el año de la actividad y lleva un consecutivo por mes, p. ej. <b class="mono">${prefijoFolio(hoy())}-${esc(idDisp)}001</b>. Utilice un ID (una letra) distinto en cada tableta o computadora.</p>
       <div id="errFolio"></div>
       <div class="actions"><button class="btn" id="guardarFolio">Guardar</button></div>
-    </section>` : ""}
+    </div></details>` : ""}
 
-    <section class="panel stack">
-      <h2 class="h3">Mi PIN</h2>
+    <details class="panel plegable" >
+      <summary><h2 class="h3">Mi PIN</h2></summary>
+      <div class="stack">
       <div class="grid">
         <div class="field"><label for="pinActual">PIN actual</label><input id="pinActual" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password"></div>
         <div class="field"><label for="pinNuevo">PIN nuevo</label><input id="pinNuevo" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>
       </div>
       <div id="errPin"></div>
       <div class="actions"><button class="btn" id="cambiarPin">Cambiar mi PIN</button></div>
-    </section>
+    </div></details>
     <p class="hint">Versión ${VERSION_APP}${coord ? ` · <a href="#/desarrollo">Opciones para desarrolladores</a>` : ""}</p>
   `);
 
