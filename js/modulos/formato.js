@@ -97,10 +97,10 @@ export async function formato({ yo, pintar, ir }, id) {
     </div>
     <p class="hint no-print">En el cuadro de impresión, seleccione tamaño <b>Carta</b>, orientación <b>Horizontal</b> y márgenes <b>Ninguno</b>. En computadora puede guardar en PDF eligiendo “Guardar como PDF” como impresora.</p>
     <div class="toolbar no-print" id="pdfListo" hidden>
-      <button class="btn primary" id="compartirPDF">Compartir o guardar PDF</button>
-      <a class="btn" id="bajarPDF">Descargar PDF</a>
+      <button class="btn primary" id="exportarPDF">Exportar PDF</button>
+      <a id="bajarPDF" hidden></a>
     </div>
-    <p class="hint no-print">En iPad o iPhone, toque “Generar PDF” y después “Compartir o guardar PDF” para guardarlo en Archivos, enviarlo por WhatsApp o imprimirlo con AirPrint.</p>
+    <p class="hint no-print">Toque “Generar PDF” y después “Exportar PDF”. En iPad, iPhone y Android se abre el menú para guardarlo en Archivos, enviarlo por WhatsApp o imprimirlo; en computadora se descarga el archivo.</p>
     <div class="sheets" id="hojas">${hojasHTML(act, asis)}${hojaNotasHTML(act)}</div>
   `, { atras: `#/actividad/${id}`, ancho: true });
   const hojasEl = $("#hojas", c);
@@ -121,10 +121,8 @@ export async function formato({ yo, pintar, ir }, id) {
       const bajar = $("#bajarPDF", c);
       bajar.href = urlPDF;
       bajar.download = nombrePDF;
-      const puedeCompartir = !!(navigator.canShare && navigator.canShare({ files: [archivo] }));
-      $("#compartirPDF", c).hidden = !puedeCompartir;
       $("#pdfListo", c).hidden = false;
-      aviso("PDF listo. Elija cómo guardarlo o abrirlo.");
+      aviso("PDF listo. Toque “Exportar PDF”.");
     } catch (e) {
       console.error(e);
       aviso("No se pudo generar el PDF.");
@@ -133,10 +131,14 @@ export async function formato({ yo, pintar, ir }, id) {
       b.textContent = "Generar PDF";
     }
   };
-  // Cada acción va en su propio toque: iOS exige que compartir ocurra directamente tras un toque del usuario.
-  $("#compartirPDF", c).onclick = async () => {
-    try { await navigator.share({ files: [archivo] }); }
-    catch (e) { if (e?.name !== "AbortError") aviso("No se pudo compartir. Use “Descargar PDF”."); }
+  // Se exporta en su propio toque: iOS exige que compartir ocurra directamente tras un toque del usuario.
+  // Con menú de compartir (iPad, iPhone, Android) se usa; si no existe (computadora) se descarga el archivo.
+  $("#exportarPDF", c).onclick = async () => {
+    if (navigator.canShare?.({ files: [archivo] })) {
+      try { await navigator.share({ files: [archivo] }); return; }
+      catch (e) { if (e?.name === "AbortError") return; }
+    }
+    $("#bajarPDF", c).click();
   };
   // En la app instalada de iPad/iPhone window.print() no hace nada: allí se imprime desde "Compartir" (opción Imprimir).
   if (navigator.standalone === true) $("#imprimir", c).hidden = true;
