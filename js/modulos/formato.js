@@ -98,7 +98,6 @@ export async function formato({ yo, pintar, ir }, id) {
     <p class="hint no-print">En el cuadro de impresión, seleccione tamaño <b>Carta</b>, orientación <b>Horizontal</b> y márgenes <b>Ninguno</b>. En computadora puede guardar en PDF eligiendo “Guardar como PDF” como impresora.</p>
     <div class="toolbar no-print" id="pdfListo" hidden>
       <button class="btn primary" id="compartirPDF">Compartir o guardar PDF</button>
-      <button class="btn" id="abrirPDF">Abrir PDF</button>
       <a class="btn" id="bajarPDF">Descargar PDF</a>
     </div>
     <p class="hint no-print">En iPad o iPhone, toque “Generar PDF” y después “Compartir o guardar PDF” para guardarlo en Archivos, enviarlo por WhatsApp o imprimirlo con AirPrint.</p>
@@ -128,7 +127,7 @@ export async function formato({ yo, pintar, ir }, id) {
       aviso("PDF listo. Elija cómo guardarlo o abrirlo.");
     } catch (e) {
       console.error(e);
-      aviso("No se pudo generar el PDF. Use “Imprimir”.");
+      aviso("No se pudo generar el PDF.");
     } finally {
       b.disabled = false;
       b.textContent = "Generar PDF";
@@ -136,12 +135,11 @@ export async function formato({ yo, pintar, ir }, id) {
   };
   // Cada acción va en su propio toque: iOS exige que compartir ocurra directamente tras un toque del usuario.
   $("#compartirPDF", c).onclick = async () => {
-    try { await navigator.share({ files: [archivo], title: nombrePDF }); }
-    catch (e) { if (e?.name !== "AbortError") aviso("No se pudo compartir. Use “Abrir PDF”."); }
+    try { await navigator.share({ files: [archivo] }); }
+    catch (e) { if (e?.name !== "AbortError") aviso("No se pudo compartir. Use “Descargar PDF”."); }
   };
-  $("#abrirPDF", c).onclick = () => {
-    if (!window.open(urlPDF, "_blank")) location.href = urlPDF;
-  };
+  // En la app instalada de iPad/iPhone window.print() no hace nada: allí se imprime desde "Compartir" (opción Imprimir).
+  if (navigator.standalone === true) $("#imprimir", c).hidden = true;
   $("#imprimir", c).onclick = () => {
     const titulo = document.title;
     document.title = `Lista de asistencia ${act.folio}`; // nombre sugerido del PDF
