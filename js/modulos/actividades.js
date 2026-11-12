@@ -9,6 +9,7 @@ import { captura } from "./captura.js";
 import { formato } from "./formato.js";
 import * as evidencias from "../core/evidencias.js";
 import * as kiosko from "../core/kiosko.js";
+import { icono, botonIcono, menuMas, conectarMenus } from "../core/iconos.js";
 import { seccionActividad, tomarFotos, agregarDeGaleria } from "./evidencias.js";
 
 const ID = "([\\w-]+)";
@@ -155,8 +156,21 @@ async function detalle({ yo, pintar, ir }, id) {
   const n = s => asis.filter(x => x.datos.sexo === s).length;
   const sinFirma = asis.filter(x => !x.firma && !x.sinFirma).length;
 
+  const coord = esCoordinadora(yo);
+  const opcionesMas = [
+    ...(a.estado === "cerrada" && coord ? [{ id: "reabrir", icono: "reabrir", texto: "Reabrir actividad" }] : []),
+    ...(coord ? [{ id: "eliminar", icono: "eliminar", texto: "Eliminar actividad", clase: "danger" }] : []),
+  ];
   const c = pintar(a.nombre, `
-    <section class="panel">
+    <section class="panel stack">
+      <div class="card-head">
+        ${a.estado === "cerrada" ? `<span class="chip">Cerrada</span>` : `<span class="chip ok">Abierta</span>`}
+        <span class="icon-row">
+          ${editable ? botonIcono("editar", "Editar", { href: `#/actividad/${a.id}/editar`, clase: "quieto" }) : ""}
+          ${botonIcono("repetir", "Repetir", { href: `#/actividad/${a.id}/repetir`, clase: "quieto" })}
+          ${menuMas(opcionesMas)}
+        </span>
+      </div>
       <dl class="facts">
         <div><dt>Folio</dt><dd class="mono">${esc(a.folio)}</dd></div>
         <div><dt>Fecha</dt><dd>${fechaLarga(a.fecha)}</dd></div>
@@ -164,15 +178,12 @@ async function detalle({ yo, pintar, ir }, id) {
         ${a.horaInicio ? `<div><dt>Horario</dt><dd>${esc(a.horaInicio)} a ${esc(a.horaFin)} · ${duracion(minutosEntre(a.horaInicio, a.horaFin))}</dd></div>` : ""}
         <div><dt>Facilitadora</dt><dd>${esc(a.facilitadora)} · ${esc(a.puesto)}</dd></div>
         <div><dt>Tipo</dt><dd>${esc(a.tipo)}</dd></div>
-        <div><dt>Estado</dt><dd>${a.estado === "cerrada" ? `<span class="chip">Cerrada</span>` : `<span class="chip ok">Abierta</span>`}</dd></div>
       </dl>
     </section>
-    <div class="toolbar">
-      ${editable ? `<a class="btn primary" href="#/actividad/${esc(a.id)}/registrar">Registrar asistente</a>` : ""}
-      ${editable ? `<button class="btn" id="modoCaptura">Modo captura de datos</button>` : ""}
-      <a class="btn" href="#/actividad/${esc(a.id)}/formato">Ver e imprimir formato</a>
-      ${editable ? `<a class="btn ghost" href="#/actividad/${esc(a.id)}/editar">Editar datos</a>` : ""}
-      <a class="btn ghost" href="#/actividad/${esc(a.id)}/repetir">Repetir actividad</a>
+    <div class="actions-bar">
+      ${editable ? `<a class="btn primary" href="#/actividad/${esc(a.id)}/registrar">${icono("mas2")}Registrar asistente</a>` : ""}
+      ${botonIcono("formato", "Formato", { href: `#/actividad/${a.id}/formato` })}
+      ${editable ? botonIcono("captura", "Modo captura", { id: "modoCaptura" }) : ""}
     </div>
     <section class="stack">
       <div class="section-head"><h2>Asistentes</h2>
@@ -189,19 +200,11 @@ async function detalle({ yo, pintar, ir }, id) {
     ${await seccionActividad(yo, a)}
     <section class="panel stack">
       <div><h2 class="h3">Notas de la actividad</h2>
-        <p class="hint">Temas tratados, acuerdos y observaciones. Pueden registrarse aunque la actividad esté cerrada y se imprimen en una hoja aparte, a continuación de la lista.</p></div>
+        <p class="hint">Temas tratados, acuerdos y observaciones. Se guardan solas al salir del cuadro y se imprimen en una hoja aparte, a continuación de la lista.</p></div>
       <div class="field"><label for="notas" class="visually-hidden">Notas de la actividad</label><textarea id="notas" class="notas" rows="5" maxlength="4000">${esc(a.notas || "")}</textarea></div>
-      <div class="actions"><button class="btn" id="guardarNotas">Guardar notas</button></div>
+      <p class="autoguardado" id="estadoNotas" role="status"></p>
     </section>
-    <section class="panel stack quiet">
-      <h2 class="h3">Cierre</h2>
-      <p class="hint">${a.estado === "cerrada" ? "La lista está cerrada y ya no admite cambios." + (esCoordinadora(yo) ? " Como Coordinadora, usted puede reabrirla." : "") : "Cierre la actividad al terminar el registro. Después ya no se podrán agregar ni modificar asistentes."}</p>
-      <div class="actions">
-        ${a.estado !== "cerrada" && puedeVer(yo, a) ? `<button class="btn" id="cerrar">Cerrar actividad</button>` : ""}
-        ${a.estado === "cerrada" && esCoordinadora(yo) ? `<button class="btn" id="reabrir">Reabrir actividad</button>` : ""}
-        ${esCoordinadora(yo) ? `<button class="btn danger" id="eliminar">Eliminar actividad</button>` : ""}
-      </div>
-    </section>
+    ${a.estado !== "cerrada" && puedeVer(yo, a) ? `<div class="barra-fija"><button class="btn" id="cerrar">${icono("cerrar", 20)}Cerrar actividad</button></div>` : ""}
   `, { atras: "#/asistencia" });
 
   $("#tomarFotos", c)?.addEventListener("click", async () => { if (await tomarFotos(yo, a)) detalle({ yo, pintar, ir }, id); });
@@ -213,11 +216,18 @@ async function detalle({ yo, pintar, ir }, id) {
     ir("#/captura");
   });
 
-  $("#guardarNotas", c).addEventListener("click", async () => {
-    const notas = $("#notas", c).value.trim();
+  // Las notas se guardan al salir del cuadro, solo si cambiaron
+  const campoNotas = $("#notas", c);
+  let notasGuardadas = (a.notas || "").trim();
+  campoNotas.addEventListener("blur", async () => {
+    const notas = campoNotas.value.trim();
+    if (notas === notasGuardadas) return;
     await db.guardar("actividades", { ...(await db.uno("actividades", id)), notas });
-    aviso("Notas guardadas");
+    notasGuardadas = notas;
+    $("#estadoNotas", c).textContent = "Notas guardadas.";
   });
+  campoNotas.addEventListener("input", () => { $("#estadoNotas", c).textContent = ""; });
+  conectarMenus(c);
 
   const cerrar = $("#cerrar", c);
   if (cerrar) dobleToque(cerrar, sinFirma ? `Hay ${sinFirma} sin firma. Toque nuevamente para cerrar` : "Toque nuevamente para cerrar", async () => {

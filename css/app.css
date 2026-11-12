@@ -418,3 +418,26 @@ body.con-camara { overflow: hidden; }
   body::before { content: none; }
   .topbar { position: relative; top: auto; padding-top: env(safe-area-inset-top, 0px); }
 }
+
+/* ---------- Botones de icono con etiqueta y menú «Más» (v0.20) ---------- */
+.ib { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-width: 52px; min-height: 52px; padding: 5px 8px; border: 2px solid var(--control-line); background: var(--surface); color: var(--ink); border-radius: 10px; font-weight: 700; font-size: .72rem; line-height: 1.1; cursor: pointer; text-decoration: none; }
+.ib:hover { border-color: var(--accent); }
+.ib.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.ib.danger { color: var(--warn); }
+.ib.quieto { border-color: transparent; background: transparent; }
+.ib.armado { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); }
+.ib:disabled { opacity: .6; cursor: default; }
+.ib-et { white-space: nowrap; }
+.icon-row { display: flex; gap: 4px; align-items: center; flex-wrap: nowrap; }
+.card-head { display: flex; gap: 10px; align-items: center; justify-content: space-between; min-width: 0; }
+.card-head > :first-child { min-width: 0; }
+.ib-menu { position: relative; display: inline-block; }
+.ib-lista { position: absolute; right: 0; top: calc(100% + 4px); z-index: 6; display: grid; min-width: 220px; padding: 4px; background: var(--surface); border: 1px solid var(--control-line); border-radius: 12px; box-shadow: 0 8px 22px rgb(0 0 0 / .22); }
+.ib-lista button { display: flex; gap: 10px; align-items: center; min-height: 48px; padding: 8px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font-weight: 700; font-size: .95rem; text-align: left; cursor: pointer; }
+.ib-lista button:hover, .ib-lista button:focus-visible { background: var(--accent-soft); }
+.ib-lista button.danger { color: var(--warn); }
+.actions-bar { display: flex; gap: 8px; align-items: stretch; }
+.actions-bar .btn { flex: 1 1 auto; min-height: 52px; }
+.barra-fija { position: sticky; bottom: 0; z-index: 4; display: flex; gap: 10px; padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px))); background: var(--surface); border-top: 1px solid var(--line); }
+.barra-fija .btn { flex: 1; min-height: 52px; }
+.autoguardado { color: var(--muted); font-size: .9rem; min-height: 1.3em; }
