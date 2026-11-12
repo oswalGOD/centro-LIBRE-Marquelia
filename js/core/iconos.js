@@ -20,6 +20,8 @@ const TRAZOS = {
   siguiente: '<path d="M9 5l7 7-7 7"/>',
   salir: '<path d="M6 6l12 12M18 6L6 18"/>',
   filtros: '<path d="M4 6h16M7 12h10M10 18h4"/>',
+  escaner: '<rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h2v2h-2zM18 18h2M18 14v2"/>',
+  identificacion: '<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="9" cy="12" r="2"/><path d="M14 10h4M14 14h4"/>',
   reabrir: '<path d="M4 12a8 8 0 1 0 3-6.2M4 4v4h4"/>',
 };
 
@@ -30,9 +32,9 @@ export const icono = (nombre, tam = 22) =>
  * Botón de icono con su etiqueta debajo. Con `href` es un enlace; sin él, un botón.
  * opciones: id, clase ("primary", "danger", "quieto" sin borde), href, extra (atributos adicionales).
  */
-export function botonIcono(nombre, etiqueta, { id = "", clase = "", href = "", extra = "" } = {}) {
+export function botonIcono(nombre, etiqueta, { id = "", clase = "", href = "", extra = "", titulo = etiqueta } = {}) {
   const cuerpo = `${icono(nombre)}<span class="ib-et">${esc(etiqueta)}</span>`;
-  const comun = `class="ib ${clase}" aria-label="${esc(etiqueta)}" title="${esc(etiqueta)}" ${id ? `id="${id}"` : ""} ${extra}`;
+  const comun = `class="ib ${clase}" aria-label="${esc(titulo)}" title="${esc(titulo)}" ${id ? `id="${id}"` : ""} ${extra}`;
   return href ? `<a ${comun} href="${esc(href)}">${cuerpo}</a>` : `<button type="button" ${comun}>${cuerpo}</button>`;
 }
 
