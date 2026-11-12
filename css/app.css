@@ -287,6 +287,14 @@ table.data tbody tr:hover { background: var(--surface-2); }
 .sheet .total .big { font-size: 20px; border-bottom: 1px solid var(--paper-ink); min-width: 70%; }
 .sheet .pie { margin-top: auto; width: 100%; height: auto; }
 
+/* Hoja de evidencias fotográficas: 3 × 2 fotografías 4:3 */
+.sheet.evid-hoja .evid-rejilla { display: grid; grid-template-columns: repeat(3, 320px); justify-content: space-between; gap: 10px 0; margin-top: 8px; position: relative; z-index: 1; }
+.sheet.evid-hoja .evid-foto { margin: 0; width: 320px; }
+.sheet.evid-hoja .evid-foto img, .sheet.evid-hoja .evid-foto .sin-foto { width: 320px; height: 240px; display: block; border: 1px solid var(--paper-ink); object-fit: cover; box-sizing: border-box; }
+.sheet.evid-hoja .evid-foto .sin-foto { display: grid; place-items: center; text-align: center; padding: 20px; font-size: 12px; background: #f1f1f1; }
+.sheet.evid-hoja figcaption { font-size: 11px; line-height: 1.2; height: 26px; overflow: hidden; padding-top: 2px; overflow-wrap: anywhere; }
+.sheet.evid-hoja .evid-pagina { text-align: right; font-size: 10px; position: relative; z-index: 1; margin-top: 2px; }
+
 /* ---------- Impresión: solo las hojas, a tamaño real ---------- */
 @page { size: letter landscape; margin: 0; }
 @media print {

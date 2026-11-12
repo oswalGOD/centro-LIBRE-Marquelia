@@ -24,11 +24,11 @@ function resumen(filas, fecha) {
   }).join("");
 }
 
-const encabezado = act => `
+export const encabezado = (act, titulo = "LISTA DE ASISTENCIA") => `
       <img class="logos" src="assets/logos.png" alt="Gobierno de México, Mujeres, PAIBIM, Centro LIBRE para las Mujeres, Gobierno de Guerrero, Secretaría de la Mujer">
       <img class="watermark" src="assets/marca-agua.jpg" alt="">
       <table class="hdr"><colgroup><col style="width:48%"><col style="width:12.5%"><col style="width:26%"><col style="width:13.5%"></colgroup>
-        <tr class="h-title"><td>CENTRO LIBRE MARQUELIA</td><td colspan="3">LISTA DE ASISTENCIA</td></tr>
+        <tr class="h-title"><td>CENTRO LIBRE MARQUELIA</td><td colspan="3">${esc(titulo)}</td></tr>
         <tr class="h-row"><td>Nombre de la actividad: <b>${esc(act.nombre)}</b></td><td>Fecha: <b>${fechaCorta(act.fecha)}</b></td><td colspan="2">Lugar de desarrollo: <b>${esc(act.lugar)}</b></td></tr>
         <tr class="h-row"><td>Facilitadora: <b>${esc(act.facilitadora)}</b></td><td colspan="3">Puesto: <b>${esc(act.puesto)}</b></td></tr>
         <tr class="h-row"><td colspan="3">Tipo de actividad: <b>${esc(act.tipo)}</b></td><td>Folio: <b>${esc(act.folio)}</b></td></tr>
@@ -83,30 +83,12 @@ export function ajustarHojas(contenedor) {
   });
 }
 
-export async function formato({ yo, pintar, ir }, id) {
-  const act = await db.uno("actividades", id);
-  if (!act || !puedeVer(yo, act)) return ir("#/asistencia");
-  const asis = (await db.todos("asistencias", "actividadId", id)).sort((a, b) => a.orden - b.orden);
-  const hojas = Math.max(1, Math.ceil(asis.length / POR_HOJA)) + (act.notas ? 1 : 0);
-  const sinFirma = asis.filter(x => !x.firma).length;
-  const c = pintar("Formato para imprimir", `
-    <div class="toolbar no-print">
-      <button class="btn primary" id="exportarPDF" disabled>Preparando PDF…</button>
-      <a id="bajarPDF" hidden></a>
-      <button class="btn" id="imprimir">Imprimir</button>
-      <p class="hint">${plural(hojas, "hoja", "hojas")} · ${plural(asis.length, "asistente", "asistentes")} · carta horizontal${act.notas ? " · incluye la hoja de notas" : ""}${sinFirma ? ` · <span class="chip warn">${sinFirma} sin firma</span>` : ""}</p>
-    </div>
-    <p class="hint no-print">En el cuadro de impresión, seleccione tamaño <b>Carta</b>, orientación <b>Horizontal</b> y márgenes <b>Ninguno</b>. En computadora puede guardar en PDF eligiendo “Guardar como PDF” como impresora.</p>
-    <p class="hint no-print">Toque “Exportar PDF” cuando esté listo. En iPad, iPhone y Android se abre el menú para guardarlo en Archivos, enviarlo por WhatsApp o imprimirlo; en computadora se descarga el archivo.</p>
-    <div class="sheets" id="hojas">${hojasHTML(act, asis)}${hojaNotasHTML(act)}</div>
-  `, { atras: `#/actividad/${id}`, ancho: true });
-  const hojasEl = $("#hojas", c);
-  ajustarHojas(hojasEl);
-  const alCambiar = () => (document.contains(hojasEl) ? ajustarHojas(hojasEl) : removeEventListener("resize", alCambiar));
-  addEventListener("resize", alCambiar);
-  const nombrePDF = `Lista de asistencia ${act.folio}.pdf`.replace(/[\\/:*?"<>|]+/g, "-");
+/**
+ * Conecta los botones «Exportar PDF» e «Imprimir» de una pantalla con hojas (#exportarPDF, #bajarPDF, #imprimir).
+ * El PDF se prepara solo al abrir la pantalla: iOS exige que compartir ocurra justo tras un toque, sin esperas en medio.
+ */
+export function conectarExportacion(c, hojasEl, nombrePDF, tituloImpresion) {
   let archivo = null, urlPDF = null;
-  // El PDF se prepara solo al abrir la pantalla: iOS exige que compartir ocurra justo tras un toque, sin esperas en medio.
   const boton = $("#exportarPDF", c);
   hojasAPDF(hojasEl).then(blob => {
     if (!document.contains(boton)) return;
@@ -135,8 +117,33 @@ export async function formato({ yo, pintar, ir }, id) {
   if (navigator.standalone === true) $("#imprimir", c).hidden = true;
   $("#imprimir", c).onclick = () => {
     const titulo = document.title;
-    document.title = `Lista de asistencia ${act.folio}`; // nombre sugerido del PDF
+    document.title = tituloImpresion; // nombre sugerido del PDF
     window.print();
     setTimeout(() => (document.title = titulo), 1000);
   };
+}
+
+export async function formato({ yo, pintar, ir }, id) {
+  const act = await db.uno("actividades", id);
+  if (!act || !puedeVer(yo, act)) return ir("#/asistencia");
+  const asis = (await db.todos("asistencias", "actividadId", id)).sort((a, b) => a.orden - b.orden);
+  const hojas = Math.max(1, Math.ceil(asis.length / POR_HOJA)) + (act.notas ? 1 : 0);
+  const sinFirma = asis.filter(x => !x.firma).length;
+  const c = pintar("Formato para imprimir", `
+    <div class="toolbar no-print">
+      <button class="btn primary" id="exportarPDF" disabled>Preparando PDF…</button>
+      <a id="bajarPDF" hidden></a>
+      <button class="btn" id="imprimir">Imprimir</button>
+      <p class="hint">${plural(hojas, "hoja", "hojas")} · ${plural(asis.length, "asistente", "asistentes")} · carta horizontal${act.notas ? " · incluye la hoja de notas" : ""}${sinFirma ? ` · <span class="chip warn">${sinFirma} sin firma</span>` : ""}</p>
+    </div>
+    <p class="hint no-print">En el cuadro de impresión, seleccione tamaño <b>Carta</b>, orientación <b>Horizontal</b> y márgenes <b>Ninguno</b>. En computadora puede guardar en PDF eligiendo “Guardar como PDF” como impresora.</p>
+    <p class="hint no-print">Toque “Exportar PDF” cuando esté listo. En iPad, iPhone y Android se abre el menú para guardarlo en Archivos, enviarlo por WhatsApp o imprimirlo; en computadora se descarga el archivo.</p>
+    <div class="sheets" id="hojas">${hojasHTML(act, asis)}${hojaNotasHTML(act)}</div>
+  `, { atras: `#/actividad/${id}`, ancho: true });
+  const hojasEl = $("#hojas", c);
+  ajustarHojas(hojasEl);
+  const alCambiar = () => (document.contains(hojasEl) ? ajustarHojas(hojasEl) : removeEventListener("resize", alCambiar));
+  addEventListener("resize", alCambiar);
+  const nombrePDF = `Lista de asistencia ${act.folio}.pdf`.replace(/[\\/:*?"<>|]+/g, "-");
+  conectarExportacion(c, hojasEl, nombrePDF, `Lista de asistencia ${act.folio}`);
 }

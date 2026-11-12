@@ -4,6 +4,7 @@
 import * as db from "../core/db.js";
 import * as ev from "../core/evidencias.js";
 import { descargarFoto } from "../core/sync.js";
+import { formatoEvidencias } from "./evidencias-formato.js";
 import { abrirCamara } from "../core/camara.js";
 import { fechaLarga, mesCorto, normalizar } from "../core/catalogos.js";
 import { puedeVer, puedeEditar } from "../core/permisos.js";
@@ -71,6 +72,7 @@ async function carpeta({ yo, pintar, ir }, id) {
       <div><dt>Fotografías</dt><dd>${fotos.length}</dd></div></dl></section>
     <div class="toolbar">
       ${editable ? `<button class="btn primary" id="tomar">Tomar fotografías</button>` : ""}
+      ${fotos.length ? `<a class="btn" href="#/actividad/${esc(a.id)}/evidencias/formato">Imprimir o exportar PDF</a>` : ""}
       <a class="btn ghost" href="#/actividad/${esc(a.id)}">Ver actividad</a>
     </div>
     ${fotos.length ? `<div class="evid-grid">${items.map(({ f, url }, i) => `
@@ -154,5 +156,6 @@ export default {
   rutas: [
     [/^#\/evidencias$/, lista],
     [new RegExp(`^#/actividad/${ID}/evidencias$`), carpeta],
+    [new RegExp(`^#/actividad/${ID}/evidencias/formato$`), formatoEvidencias],
   ],
 };
