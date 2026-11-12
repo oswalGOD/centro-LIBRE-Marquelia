@@ -397,3 +397,7 @@ body.con-camara { overflow: hidden; }
   .camara-info p { font-size: .75rem; }
   .camara.visor .camara-caja { max-height: 100%; }
 }
+
+.evid.ordenando { cursor: default; border-color: var(--accent); }
+.evid-mover { display: flex; gap: 8px; padding: 8px; }
+.evid-mover .btn { flex: 1; min-height: 44px; }

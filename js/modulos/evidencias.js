@@ -86,14 +86,15 @@ async function lista({ yo, pintar }) {
   });
 }
 
-async function carpeta({ yo, pintar, ir }, id) {
+async function carpeta({ yo, pintar, ir }, id, ordenando = false) {
   ev.liberarUrls();
   const a = await db.uno("actividades", id);
   if (!a || !puedeVer(yo, a)) return ir("#/evidencias");
   const editable = puedeEditar(yo, a);
   const fotos = await ev.de(id);
+  ordenando = ordenando && editable && fotos.length > 1;
   const items = await Promise.all(fotos.map(async f => ({ f, url: await ev.urlDe(f.id) })));
-  const c = pintar(`Evidencias · ${a.nombre}`, `
+  const c = pintar(`Evidencias ·${a.nombre}`, `
     <section class="panel"><dl class="facts">
       <div><dt>Folio</dt><dd class="mono">${esc(a.folio)}</dd></div>
       <div><dt>Fecha</dt><dd>${fechaLarga(a.fecha)}</dd></div>
@@ -101,14 +102,22 @@ async function carpeta({ yo, pintar, ir }, id) {
       <div><dt>Fotografías</dt><dd>${fotos.length}</dd></div></dl></section>
     <div class="toolbar">
       ${editable ? `<button class="btn primary" id="tomar">Tomar fotografías</button><button class="btn" id="desdeGaleria">Agregar de la galería</button>` : ""}
+      ${editable && fotos.length > 1 ? `<button class="btn" id="reordenar">${ordenando ? "Terminar de reordenar" : "Reordenar"}</button>` : ""}
       ${fotos.length ? `<a class="btn" href="#/actividad/${esc(a.id)}/evidencias/formato">Imprimir o exportar PDF</a>` : ""}
       <a class="btn ghost" href="#/actividad/${esc(a.id)}">Ver actividad</a>
     </div>
-    ${fotos.length ? `<div class="evid-grid">${items.map(({ f, url }, i) => `
-      <button type="button" class="evid" data-i="${i}" aria-label="Fotografía ${i + 1}${f.leyenda ? `: ${esc(f.leyenda)}` : ""}">
-        ${url ? `<img src="${url}" alt="">` : `<span class="evid-falta">${navigator.onLine ? "Descargando…" : "Sin descargar<br><small>Se descargará al abrir con internet</small>"}</span>`}
-        <span class="evid-pie"><b>${i + 1}.</b> ${esc(f.leyenda) || "<i>Sin leyenda</i>"}</span>
-      </button>`).join("")}</div>`
+    ${ordenando ? `<p class="hint">Use las flechas para mover cada fotografía. Este es el orden en que saldrán en el PDF.</p>` : ""}
+    ${fotos.length ? `<div class="evid-grid">${items.map(({ f, url }, i) => {
+      const cuerpo = `${url ? `<img src="${url}" alt="">` : `<span class="evid-falta">${navigator.onLine ? "Descargando…" : "Sin descargar<br><small>Se descargará al abrir con internet</small>"}</span>`}
+        <span class="evid-pie"><b>${i + 1}.</b> ${esc(f.leyenda) || "<i>Sin leyenda</i>"}</span>`;
+      return ordenando
+        ? `<div class="evid ordenando" data-i="${i}">${cuerpo}
+          <span class="evid-mover">
+            <button type="button" class="btn" data-mover="-1" data-id="${esc(f.id)}" aria-label="Mover la fotografía ${i + 1} antes" ${i === 0 ? "disabled" : ""}>◀</button>
+            <button type="button" class="btn" data-mover="1" data-id="${esc(f.id)}" aria-label="Mover la fotografía ${i + 1} después" ${i === fotos.length - 1 ? "disabled" : ""}>▶</button>
+          </span></div>`
+        : `<button type="button" class="evid" data-i="${i}" aria-label="Fotografía ${i + 1}${f.leyenda ? `: ${esc(f.leyenda)}` : ""}">${cuerpo}</button>`;
+    }).join("")}</div>`
     : `<div class="empty"><b>Esta carpeta aún no tiene fotografías.</b><p>${editable ? "Seleccione “Tomar fotografías” (puede tomar varias seguidas) o “Agregar de la galería”." : "La actividad está cerrada."}</p></div>`}`, { atras: "#/evidencias" });
 
   $("#tomar", c)?.addEventListener("click", async () => { if (await tomarFotos(yo, a)) carpeta({ yo, pintar, ir }, id); });
@@ -122,7 +131,14 @@ async function carpeta({ yo, pintar, ir }, id) {
       if (it.url && hueco) hueco.outerHTML = `<img src="${it.url}" alt="">`;
     }
   })();
-  $$(".evid", c).forEach(b => (b.onclick = () => visor(items, Number(b.dataset.i), { editable, recargar: () => carpeta({ yo, pintar, ir }, id) })));
+  $("#reordenar", c)?.addEventListener("click", () => carpeta({ yo, pintar, ir }, id, !ordenando));
+  $$("[data-mover]", c).forEach(b => b.addEventListener("click", async () => {
+    const y = window.scrollY;
+    await ev.mover(id, b.dataset.id, Number(b.dataset.mover));
+    await carpeta({ yo, pintar, ir }, id, true);
+    window.scrollTo(0, y);
+  }));
+  $$("button.evid", c).forEach(b => (b.onclick = () => visor(items, Number(b.dataset.i), { editable, recargar: () => carpeta({ yo, pintar, ir }, id) })));
 }
 
 /** Foto en grande, con su leyenda, quién la tomó y cuándo. Permite recorrer la carpeta. */

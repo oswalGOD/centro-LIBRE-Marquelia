@@ -3,9 +3,22 @@
 
 import * as db from "./db.js";
 
-/** Evidencias vigentes de una actividad, en el orden en que se tomaron. */
+const clave = e => e.orden ?? e.tomadaEn;
+
+/** Evidencias vigentes de una actividad, en el orden definido (por omisión, el orden en que se tomaron). */
 export async function de(actividadId) {
-  return (await db.todos("evidencias", "actividadId", actividadId)).sort((a, b) => a.tomadaEn - b.tomadaEn || a.id.localeCompare(b.id));
+  return (await db.todos("evidencias", "actividadId", actividadId)).sort((a, b) => clave(a) - clave(b) || a.tomadaEn - b.tomadaEn || a.id.localeCompare(b.id));
+}
+
+/** Mueve una foto una posición (delta -1 o 1) intercambiando su lugar con la vecina. Devuelve false en los extremos. */
+export async function mover(actividadId, id, delta) {
+  const lista = await de(actividadId);
+  const i = lista.findIndex(e => e.id === id), j = i + delta;
+  if (i < 0 || j < 0 || j >= lista.length) return false;
+  [lista[i], lista[j]] = [lista[j], lista[i]];
+  // Se numera toda la carpeta (solo se guardan las fotos cuyo número cambia): así no hay empates ni saltos
+  for (const [n, e] of lista.entries()) if (e.orden !== n) await db.guardar("evidencias", { ...e, orden: n });
+  return true;
 }
 
 /** Cuántas fotos tiene cada actividad: { actividadId: n }. */
