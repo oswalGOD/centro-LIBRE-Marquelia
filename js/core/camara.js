@@ -45,58 +45,69 @@ export async function desdeArchivo(archivo) {
   return r;
 }
 
+const ICONO_GIRAR = `<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.6-2.5h6.8L17 8h3v11H4z"/><path d="M9.5 13.5a2.7 2.7 0 0 1 4.6-1.5M14.5 13.5a2.7 2.7 0 0 1-4.6 1.5M14.2 10.8V12.2h-1.4M9.8 16.2v-1.4h1.4"/></svg>`;
+const ICONO_LISTO = `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
+
 /**
  * Abre la cámara a pantalla completa. `alTomar({ blob, ancho, alto })` guarda cada foto;
  * la cámara sigue abierta para tomar varias seguidas. Devuelve cuántas fotos se tomaron al tocar «Listo».
+ * Abajo: cambiar cámara (izquierda), obturador (centro) y listo (derecha), todos como símbolos.
+ * Al girar el dispositivo se reinicia la cámara, para que la imagen y el recorte coincidan con la nueva orientación.
  */
 export function abrirCamara(alTomar, titulo = "Tomar fotografías") {
   return new Promise(terminar => {
     const capa = document.createElement("div");
-    capa.className = "camara";
+    capa.className = "camara en-vivo";
     capa.setAttribute("role", "dialog");
     capa.setAttribute("aria-modal", "true");
     capa.setAttribute("aria-label", titulo);
     capa.innerHTML = `
-      <div class="camara-caja">
-        <h2 class="h3">${esc(titulo)}</h2>
+      <div class="camara-zona">
         <div class="camara-visor">
           <video playsinline muted autoplay></video>
           <div class="camara-destello" hidden></div>
         </div>
-        <p class="hint camara-aviso" role="status">Sostenga el dispositivo en horizontal. Se guardará el encuadre mostrado, en proporción 4:3.</p>
-        <p class="camara-cuenta" aria-live="polite"></p>
-        <div class="camara-botones">
-          <button type="button" class="btn primary" data-tomar>Tomar foto</button>
-          <button type="button" class="btn" data-girar hidden>Cambiar cámara</button>
-          <label class="btn" data-sistema hidden>Usar la cámara del sistema<input type="file" accept="image/*" capture="environment" hidden></label>
-          <button type="button" class="btn ghost" data-listo>Listo</button>
+        <div class="camara-info">
+          <p class="camara-cuenta" aria-live="polite"></p>
+          <p class="camara-aviso" role="status">Encuadre 4:3. Se guarda lo que se ve en el recuadro.</p>
         </div>
-      </div>`;
+      </div>
+      <div class="camara-barra">
+        <button type="button" class="camara-icono" data-girar aria-label="Cambiar cámara" title="Cambiar cámara">${ICONO_GIRAR}</button>
+        <button type="button" class="camara-obturador" data-tomar aria-label="Tomar foto" title="Tomar foto"><span></span></button>
+        <button type="button" class="camara-icono" data-listo aria-label="Listo" title="Listo">${ICONO_LISTO}</button>
+      </div>
+      <label class="btn camara-sistema" data-sistema hidden>Usar la cámara del sistema<input type="file" accept="image/*" capture="environment" hidden></label>`;
     document.body.append(capa);
     document.body.classList.add("con-camara");
     const q = s => capa.querySelector(s);
-    const video = q("video"), tomar = q("[data-tomar]"), aviso = q(".camara-aviso"), cuenta = q(".camara-cuenta");
-    let flujo = null, modo = "environment", n = 0, ocupada = false;
+    const video = q("video"), tomar = q("[data-tomar]"), girar = q("[data-girar]"), aviso = q(".camara-aviso"), cuenta = q(".camara-cuenta");
+    girar.style.visibility = "hidden";
+    let flujo = null, modo = "environment", n = 0, ocupada = false, intento = 0;
 
     const detener = () => { flujo?.getTracks().forEach(t => t.stop()); flujo = null; video.srcObject = null; };
     const mostrarSistema = mensaje => {
       detener();
       q(".camara-visor").hidden = true;
       tomar.hidden = true;
-      q("[data-girar]").hidden = true;
+      girar.hidden = true;
       q("[data-sistema]").hidden = false;
       aviso.textContent = mensaje;
     };
     async function iniciar() {
+      const mio = ++intento;
       detener();
       if (!navigator.mediaDevices?.getUserMedia) return mostrarSistema("Este navegador no permite usar la cámara dentro de la aplicación. Utilice la cámara del sistema.");
       try {
-        flujo = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: modo }, width: { ideal: ANCHO }, height: { ideal: ALTO } } });
+        const f = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: modo }, width: { ideal: ANCHO }, height: { ideal: ALTO } } });
+        if (mio !== intento) { f.getTracks().forEach(t => t.stop()); return; } // llegó otro reinicio (p. ej. al girar el equipo)
+        flujo = f;
         video.srcObject = flujo;
         await video.play().catch(() => {});
         const camaras = (await navigator.mediaDevices.enumerateDevices().catch(() => [])).filter(d => d.kind === "videoinput");
-        q("[data-girar]").hidden = camaras.length < 2;
+        girar.style.visibility = camaras.length < 2 ? "hidden" : "visible";
       } catch (e) {
+        if (mio !== intento) return;
         mostrarSistema(e?.name === "NotAllowedError"
           ? "No se concedió el permiso de la cámara. Puede permitirlo en la configuración del navegador o utilizar la cámara del sistema."
           : "No fue posible iniciar la cámara. Utilice la cámara del sistema.");
@@ -110,7 +121,7 @@ export function abrirCamara(alTomar, titulo = "Tomar fotografías") {
       try {
         await alTomar(await promesaFoto());
         n++;
-        cuenta.textContent = `${n} ${n === 1 ? "foto guardada" : "fotos guardadas"} en esta carpeta.`;
+        cuenta.textContent = `${n} ${n === 1 ? "foto guardada" : "fotos guardadas"}`;
         const d = q(".camara-destello");
         d.hidden = false;
         setTimeout(() => (d.hidden = true), 150);
@@ -131,10 +142,24 @@ export function abrirCamara(alTomar, titulo = "Tomar fotografías") {
       e.target.value = "";
       if (archivo) guardar(() => desdeArchivo(archivo));
     };
-    q("[data-girar]").onclick = () => { modo = modo === "environment" ? "user" : "environment"; iniciar(); };
+    girar.onclick = () => { modo = modo === "environment" ? "user" : "environment"; iniciar(); };
+
+    // Al girar el equipo, algunos navegadores (sobre todo Safari) siguen entregando la imagen con la orientación anterior
+    let espera;
+    const alGirar = () => {
+      clearTimeout(espera);
+      if (!flujo) return;
+      espera = setTimeout(iniciar, 350);
+    };
+    screen.orientation?.addEventListener("change", alGirar);
+    addEventListener("orientationchange", alGirar);
 
     const cerrar = () => {
+      clearTimeout(espera);
+      intento++;
       document.removeEventListener("keydown", tecla);
+      screen.orientation?.removeEventListener("change", alGirar);
+      removeEventListener("orientationchange", alGirar);
       detener();
       capa.remove();
       document.body.classList.remove("con-camara");
