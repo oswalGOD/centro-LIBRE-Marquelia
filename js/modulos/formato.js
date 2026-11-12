@@ -4,7 +4,8 @@
 import * as db from "../core/db.js";
 import { GRUPOS, RANGOS, edad, rangoDe, fechaCorta } from "../core/catalogos.js";
 import { puedeVer } from "../core/permisos.js";
-import { $, $$, esc, plural } from "../core/ui.js";
+import { $, $$, esc, plural, aviso } from "../core/ui.js";
+import { hojasAPDF } from "../core/pdf.js";
 
 export const POR_HOJA = 10;
 const ANCHO = 1056, ALTO = 816; // 11 × 8.5 pulgadas a 96 dpi
@@ -90,16 +91,57 @@ export async function formato({ yo, pintar, ir }, id) {
   const sinFirma = asis.filter(x => !x.firma).length;
   const c = pintar("Formato para imprimir", `
     <div class="toolbar no-print">
-      <button class="btn primary" id="imprimir">Imprimir o guardar PDF</button>
+      <button class="btn primary" id="prepararPDF">Generar PDF</button>
+      <button class="btn" id="imprimir">Imprimir</button>
       <p class="hint">${plural(hojas, "hoja", "hojas")} · ${plural(asis.length, "asistente", "asistentes")} · carta horizontal${act.notas ? " · incluye la hoja de notas" : ""}${sinFirma ? ` · <span class="chip warn">${sinFirma} sin firma</span>` : ""}</p>
     </div>
-    <p class="hint no-print">En el cuadro de impresión, seleccione tamaño <b>Carta</b>, orientación <b>Horizontal</b> y márgenes <b>Ninguno</b>. Para guardar en PDF, seleccione “Guardar como PDF” como impresora.</p>
+    <p class="hint no-print">En el cuadro de impresión, seleccione tamaño <b>Carta</b>, orientación <b>Horizontal</b> y márgenes <b>Ninguno</b>. En computadora puede guardar en PDF eligiendo “Guardar como PDF” como impresora.</p>
+    <div class="toolbar no-print" id="pdfListo" hidden>
+      <button class="btn primary" id="compartirPDF">Compartir o guardar PDF</button>
+      <button class="btn" id="abrirPDF">Abrir PDF</button>
+      <a class="btn" id="bajarPDF">Descargar PDF</a>
+    </div>
+    <p class="hint no-print">En iPad o iPhone, toque “Generar PDF” y después “Compartir o guardar PDF” para guardarlo en Archivos, enviarlo por WhatsApp o imprimirlo con AirPrint.</p>
     <div class="sheets" id="hojas">${hojasHTML(act, asis)}${hojaNotasHTML(act)}</div>
   `, { atras: `#/actividad/${id}`, ancho: true });
   const hojasEl = $("#hojas", c);
   ajustarHojas(hojasEl);
   const alCambiar = () => (document.contains(hojasEl) ? ajustarHojas(hojasEl) : removeEventListener("resize", alCambiar));
   addEventListener("resize", alCambiar);
+  const nombrePDF = `Lista de asistencia ${act.folio}.pdf`.replace(/[\\/:*?"<>|]+/g, "-");
+  let archivo = null, urlPDF = null;
+  $("#prepararPDF", c).onclick = async ev => {
+    const b = ev.currentTarget;
+    b.disabled = true;
+    b.textContent = "Generando…";
+    try {
+      const blob = await hojasAPDF(hojasEl);
+      archivo = new File([blob], nombrePDF, { type: "application/pdf" });
+      if (urlPDF) URL.revokeObjectURL(urlPDF);
+      urlPDF = URL.createObjectURL(blob);
+      const bajar = $("#bajarPDF", c);
+      bajar.href = urlPDF;
+      bajar.download = nombrePDF;
+      const puedeCompartir = !!(navigator.canShare && navigator.canShare({ files: [archivo] }));
+      $("#compartirPDF", c).hidden = !puedeCompartir;
+      $("#pdfListo", c).hidden = false;
+      aviso("PDF listo. Elija cómo guardarlo o abrirlo.");
+    } catch (e) {
+      console.error(e);
+      aviso("No se pudo generar el PDF. Use “Imprimir”.");
+    } finally {
+      b.disabled = false;
+      b.textContent = "Generar PDF";
+    }
+  };
+  // Cada acción va en su propio toque: iOS exige que compartir ocurra directamente tras un toque del usuario.
+  $("#compartirPDF", c).onclick = async () => {
+    try { await navigator.share({ files: [archivo], title: nombrePDF }); }
+    catch (e) { if (e?.name !== "AbortError") aviso("No se pudo compartir. Use “Abrir PDF”."); }
+  };
+  $("#abrirPDF", c).onclick = () => {
+    if (!window.open(urlPDF, "_blank")) location.href = urlPDF;
+  };
   $("#imprimir", c).onclick = () => {
     const titulo = document.title;
     document.title = `Lista de asistencia ${act.folio}`; // nombre sugerido del PDF
