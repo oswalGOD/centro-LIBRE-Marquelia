@@ -9,6 +9,7 @@ import { abrirCamara, desdeArchivo } from "../core/camara.js";
 import { fechaLarga, mesCorto, normalizar } from "../core/catalogos.js";
 import { puedeVer, puedeEditar } from "../core/permisos.js";
 import { $, $$, esc, aviso, dobleToque, plural } from "../core/ui.js";
+import { botonIcono } from "../core/iconos.js";
 
 const ID = "([\\w-]+)";
 const hora = t => new Date(t).toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" });
@@ -56,13 +57,10 @@ export async function seccionActividad(yo, a) {
   const mini = await Promise.all(fotos.slice(-4).map(async f => ({ f, url: await ev.urlDe(f.id) })));
   return `
     <section class="panel stack">
-      <div class="section-head"><h2 class="h3">Evidencias fotográficas</h2>
+      <div class="card-head"><div><h2 class="h3">Evidencias fotográficas</h2>
         <div class="stats"><span><b>${fotos.length}</b> ${fotos.length === 1 ? "fotografía" : "fotografías"}</span></div></div>
+        ${editable ? `<span class="icon-row">${botonIcono("camara", "Cámara", { id: "tomarFotos" })}${botonIcono("galeria", "Galería", { id: "desdeGaleria" })}</span>` : ""}</div>
       ${mini.length ? `<a class="evid-mini" href="#/actividad/${esc(a.id)}/evidencias" aria-label="Abrir la carpeta de evidencias">${mini.map(m => m.url ? `<img src="${m.url}" alt="">` : `<span class="evid-falta" aria-hidden="true"></span>`).join("")}</a>` : `<p class="hint">Aún no hay fotografías en esta actividad.${editable ? "" : " La actividad está cerrada."}</p>`}
-      <div class="actions">
-        ${editable ? `<button class="btn primary" id="tomarFotos">Tomar fotografías</button><button class="btn" id="desdeGaleria">Agregar de la galería</button>` : ""}
-        <a class="btn" href="#/actividad/${esc(a.id)}/evidencias">Abrir carpeta de evidencias</a>
-      </div>
     </section>`;
 }
 

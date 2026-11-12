@@ -22,7 +22,8 @@ export function aviso(mensaje) {
 
 /** Botón de confirmación en dos toques, para acciones que borran o cierran algo. */
 export function dobleToque(boton, textoConfirmar, accion) {
-  const original = boton.textContent;
+  const original = boton.innerHTML;
+  const conIcono = boton.classList.contains("ib");
   boton.addEventListener("click", async () => {
     if (boton.dataset.armado) {
       boton.disabled = true;
@@ -30,12 +31,16 @@ export function dobleToque(boton, textoConfirmar, accion) {
       return;
     }
     boton.dataset.armado = "1";
-    boton.textContent = textoConfirmar;
+    if (conIcono) { // botón estrecho: el aviso completo va en la notificación
+      const et = boton.querySelector(".ib-et");
+      if (et) et.textContent = "¿Seguro?";
+      aviso(textoConfirmar);
+    } else boton.textContent = textoConfirmar;
     boton.classList.add("armado");
     setTimeout(() => {
       if (!boton.isConnected) return;
       delete boton.dataset.armado;
-      boton.textContent = original;
+      boton.innerHTML = original;
       boton.classList.remove("armado");
     }, 4000);
   });
