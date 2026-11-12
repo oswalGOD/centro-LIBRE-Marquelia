@@ -239,6 +239,6 @@ router();
 
 // Si llegan datos de otro dispositivo, se refresca la pantalla salvo que se esté llenando un formulario
 nube.iniciarAutomatica(() => {
-  if (tocada || /(registrar|editar|nueva|repetir|ajustes|perfiles|desarrollo)/.test(location.hash) || document.querySelector("#pinForm:not([hidden]), .sig-modal, .scan-modal")) return;
+  if (tocada || /(registrar|editar|nueva|repetir|ajustes|perfiles|desarrollo|formato)/.test(location.hash) || document.querySelector("#pinForm:not([hidden]), .sig-modal, .scan-modal")) return;
   router();
 });
