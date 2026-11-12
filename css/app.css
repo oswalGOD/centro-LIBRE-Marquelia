@@ -378,11 +378,11 @@ body.con-camara { overflow: hidden; }
 .camara.visor .camara-visor { width: min(100%, 60dvh); justify-self: center; }
 .camara-caja { min-height: 0; }
 /* Celular en horizontal: los botones pasan a la orilla derecha, al alcance del pulgar */
-@media (orientation: landscape) and (max-height: 600px) {
+@media (orientation: landscape) {
   .camara.en-vivo { flex-direction: row; }
   .camara-barra { flex-direction: column; justify-content: space-between; padding: max(14px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) 12px; }
   .camara.en-vivo.gira-izquierda .camara-barra { flex-direction: column-reverse; }
   .camara-info p { font-size: .75rem; }
   .camara.visor .camara-caja { max-height: 100%; }
 }
-.camara-info .camara-sistema { pointer-events: auto; margin: 2px 0 0; }
+.camara.en-vivo .camara-visor { transition: opacity .15s; }
