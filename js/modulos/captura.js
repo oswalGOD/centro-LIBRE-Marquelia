@@ -20,14 +20,18 @@ async function sesionAnterior(yo, act) {
     .sort((a, b) => b.fecha.localeCompare(a.fecha) || b.creado - a.creado)[0] || null;
 }
 
-export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
+/**
+ * Con kiosko = true es el «modo captura de datos»: la propia usuaria llena su registro. No se muestran
+ * sugerencias, búsquedas ni datos de otras usuarias, y no hay forma de salir de la pantalla.
+ */
+export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, asistenciaId) {
   const act = await db.uno("actividades", actividadId);
   if (!act || !puedeEditar(yo, act)) return ir(`#/actividad/${actividadId}`);
   const existente = asistenciaId ? await db.uno("asistencias", asistenciaId) : null;
   if (asistenciaId && !existente) return ir(`#/actividad/${actividadId}`);
   const registradas = await db.todos("usuarias");
   const yaEnLista = new Set((await db.todos("asistencias", "actividadId", actividadId)).filter(x => x.id !== asistenciaId).map(x => x.usuariaId));
-  const anterior = existente ? null : await sesionAnterior(yo, act);
+  const anterior = existente || kiosko ? null : await sesionAnterior(yo, act);
   const deAntes = anterior
     ? (await db.todos("asistencias", "actividadId", anterior.id)).sort((x, y) => x.orden - y.orden)
         .map(x => registradas.find(p => p.id === x.usuariaId)).filter(p => p && !yaEnLista.has(p.id))
@@ -39,8 +43,9 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
     : { curp: "", nombre: "", fnac: "", sexo: "", lugar: "", grupo: "", ocupacion: "", telefono: "", usuariaId: null, sinCurp: false };
 
   const volver = `#/actividad/${actividadId}`;
-  const c = pintar(existente ? "Editar asistente" : "Registrar asistente", `
-    <p class="hint context">${esc(act.nombre)} · <span class="mono">${esc(act.folio)}</span></p>
+  const c = pintar(existente ? "Editar asistente" : kiosko ? "Registro de asistencia" : "Registrar asistente", `
+    <p class="hint context">${esc(act.nombre)}${kiosko ? "" : ` · <span class="mono">${esc(act.folio)}</span>`}</p>
+    ${kiosko ? `<p class="hint">Complete sus datos, firme y toque «Guardar mi registro». Todos los campos son obligatorios.</p>` : ""}
     ${deAntes.length ? `
     <section class="panel stack" id="deAntes">
       <div><h2 class="h3">Asistentes de la sesión anterior</h2>
@@ -48,7 +53,7 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
       <div class="results">${deAntes.map(p => `<button type="button" data-id="${esc(p.id)}"><b>${esc(p.nombre)}</b><small>${esc(p.curp || "Sin CURP")} · ${edad(p.fnac, act.fecha) ?? "?"} años</small></button>`).join("")}</div>
     </section>` : ""}
     <section class="panel stack">
-      ${existente ? "" : `
+      ${existente || kiosko ? "" : `
       <div class="field search-field"><label for="buscar">Buscar usuaria por nombre</label>
         <input id="buscar" type="search" autocomplete="off" placeholder="Para quien ya asistió antes y no presenta su CURP">
         <div class="results" id="resultados" hidden></div></div>`}
@@ -72,12 +77,12 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
           <button type="button" class="btn" id="firmar"></button></div></div>
       <div id="err"></div>
       <div class="actions">
-        <button class="btn primary" id="guardar">${existente ? "Guardar cambios" : "Guardar asistente"}</button>
-        ${existente ? "" : `<button class="btn" id="guardarOtra">Guardar y registrar otra</button>`}
-        <a class="btn ghost" href="${volver}">Cancelar</a>
+        <button class="btn primary" id="guardar">${existente ? "Guardar cambios" : kiosko ? "Guardar mi registro" : "Guardar asistente"}</button>
+        ${existente || kiosko ? "" : `<button class="btn" id="guardarOtra">Guardar y registrar otra</button>`}
+        ${kiosko ? "" : `<a class="btn ghost" href="${volver}">Cancelar</a>`}
         ${existente ? `<button class="btn danger push" id="quitar">Quitar de esta lista</button>` : ""}
       </div>
-    </section>`, { atras: volver });
+    </section>`, { atras: volver, kiosko });
 
   let firma = existente?.firma || "";
   function pintarFirma() {
@@ -130,7 +135,7 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
     const info = leerCurp(d.curp);
     if (!info) { nota.className = "note warn"; nota.textContent = "La CURP no tiene un formato válido. Verifique letras y números."; return; }
     const conocida = registradas.find(p => p.curp === d.curp && p.id !== d.usuariaId);
-    if (conocida && !existente) {
+    if (conocida && !existente && !kiosko) {
       nota.textContent = "";
       return reconocer({ ...conocida, visitas: conocida.visitas });
     }
@@ -151,7 +156,7 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
     $("#curp", c).disabled = false;
     $("#curp", c).value = r.curp;
     $("#curp", c).dispatchEvent(new Event("input"));
-    if (registradas.some(p => p.curp === r.curp)) return; // ya vino antes: se llenaron sus datos guardados
+    if (!kiosko && registradas.some(p => p.curp === r.curp)) return; // ya vino antes: se llenaron sus datos guardados
     d.nombre = r.nombre;
     if (leerCurp(r.curp)) $("#curpNota", c).textContent = "Nombre, fecha de nacimiento, sexo y estado tomados de la constancia de CURP.";
     pintarCampos();
@@ -168,7 +173,7 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
       $("#curp", c).disabled = false;
       $("#curp", c).value = r.curp;
       $("#curp", c).dispatchEvent(new Event("input"));
-      if (registradas.some(p => p.curp === r.curp)) return; // ya vino antes: se llenaron sus datos guardados
+      if (!kiosko && registradas.some(p => p.curp === r.curp)) return; // ya vino antes: se llenaron sus datos guardados
     } else {
       if (r.fnac) d.fnac = r.fnac;
       if (r.sexo) d.sexo = r.sexo;
@@ -249,7 +254,7 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
 
     const datos = { curp, nombre, fnac: d.fnac, sexo: d.sexo, lugar: d.lugar.trim(), grupo: d.grupo, ocupacion: d.ocupacion.trim(), telefono: tel };
     let usuaria = (d.usuariaId && (await db.uno("usuarias", d.usuariaId))) || (duena && !existente ? duena : null);
-    if (usuaria && yaEnLista.has(usuaria.id)) return errores($("#err", c), [`${usuaria.nombre} ya está registrada en esta actividad.`]);
+    if (usuaria && yaEnLista.has(usuaria.id)) return errores($("#err", c), [kiosko ? "Esta persona ya quedó registrada en esta actividad. Si considera que es un error, avise a la facilitadora." : `${usuaria.nombre} ya está registrada en esta actividad.`]);
     usuaria = { ...(usuaria || { id: db.uid(), creadaPor: yo.id }), ...datos };
     if (!curp) delete usuaria.curp;
     await db.guardar("usuarias", usuaria);
@@ -259,6 +264,7 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
       ...(existente || { id: db.uid(), actividadId, registradaPor: yo.id }),
       usuariaId: usuaria.id, orden, datos, firma: imagenFirma,
     });
+    if (kiosko) return confirmarKiosko({ yo, pintar, ir, kiosko }, actividadId);
     aviso(existente ? "Cambios guardados" : `${nombre.split(" ")[0]} quedó registrada`);
     if (otra) captura({ yo, pintar, ir }, actividadId); // la ruta no cambia: se abre un formulario en blanco
     else ir(volver);
@@ -275,4 +281,16 @@ export async function captura({ yo, pintar, ir }, actividadId, asistenciaId) {
 
   pintarCampos();
   if (!existente) (buscar || $("#curp", c)).focus({ preventScroll: true });
+}
+
+/** Pantalla que sigue a un registro del modo captura: no muestra datos y deja el equipo listo para la siguiente persona. */
+function confirmarKiosko(ctx, actividadId) {
+  const c = ctx.pintar("Registro guardado", `
+    <section class="panel stack kiosko-fin">
+      <h2 class="h3">Su registro quedó guardado. Gracias.</h2>
+      <p class="hint">Entregue el equipo a la siguiente asistente y toque el botón para abrir un formulario en blanco.</p>
+      <div class="actions"><button class="btn primary" id="siguiente">Siguiente asistente</button></div>
+    </section>`, { kiosko: true });
+  $("#siguiente", c).onclick = () => captura(ctx, actividadId);
+  $("#siguiente", c).focus({ preventScroll: true });
 }

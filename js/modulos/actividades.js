@@ -8,6 +8,7 @@ import { $, $$, esc, aviso, errores, leerCampos, dobleToque, plural, unaVez } fr
 import { captura } from "./captura.js";
 import { formato } from "./formato.js";
 import * as evidencias from "../core/evidencias.js";
+import * as kiosko from "../core/kiosko.js";
 import { seccionActividad, tomarFotos, agregarDeGaleria } from "./evidencias.js";
 
 const ID = "([\\w-]+)";
@@ -168,6 +169,7 @@ async function detalle({ yo, pintar, ir }, id) {
     </section>
     <div class="toolbar">
       ${editable ? `<a class="btn primary" href="#/actividad/${esc(a.id)}/registrar">Registrar asistente</a>` : ""}
+      ${editable ? `<button class="btn" id="modoCaptura">Modo captura de datos</button>` : ""}
       <a class="btn" href="#/actividad/${esc(a.id)}/formato">Ver e imprimir formato</a>
       ${editable ? `<a class="btn ghost" href="#/actividad/${esc(a.id)}/editar">Editar datos</a>` : ""}
       <a class="btn ghost" href="#/actividad/${esc(a.id)}/repetir">Repetir actividad</a>
@@ -204,6 +206,12 @@ async function detalle({ yo, pintar, ir }, id) {
 
   $("#tomarFotos", c)?.addEventListener("click", async () => { if (await tomarFotos(yo, a)) detalle({ yo, pintar, ir }, id); });
   $("#desdeGaleria", c)?.addEventListener("click", async () => { if (await agregarDeGaleria(yo, a)) detalle({ yo, pintar, ir }, id); });
+
+  const modo = $("#modoCaptura", c);
+  if (modo) dobleToque(modo, "Las usuarias se registrarán solas y solo podrá salir con su PIN. Toque nuevamente para activar", async () => {
+    kiosko.activar(yo, a.id);
+    ir("#/captura");
+  });
 
   $("#guardarNotas", c).addEventListener("click", async () => {
     const notas = $("#notas", c).value.trim();
