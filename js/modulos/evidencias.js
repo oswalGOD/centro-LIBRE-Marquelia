@@ -5,7 +5,7 @@ import * as db from "../core/db.js";
 import * as ev from "../core/evidencias.js";
 import { descargarFoto } from "../core/sync.js";
 import { formatoEvidencias } from "./evidencias-formato.js";
-import { abrirCamara } from "../core/camara.js";
+import { abrirCamara, desdeArchivo } from "../core/camara.js";
 import { fechaLarga, mesCorto, normalizar } from "../core/catalogos.js";
 import { puedeVer, puedeEditar } from "../core/permisos.js";
 import { $, $$, esc, aviso, dobleToque, plural } from "../core/ui.js";
@@ -20,6 +20,35 @@ export async function tomarFotos(yo, actividad) {
   return n;
 }
 
+/**
+ * Agrega fotografías de la galería. Se procesan igual que las de la cámara (4:3, 1600 × 1200, JPEG).
+ * Debe llamarse directamente desde un toque. Devuelve una promesa con cuántas se agregaron.
+ */
+export function agregarDeGaleria(yo, actividad) {
+  return new Promise(terminar => {
+    const entrada = Object.assign(document.createElement("input"), { type: "file", accept: "image/*", multiple: true });
+    entrada.style.display = "none";
+    document.body.append(entrada);
+    const fin = n => { entrada.remove(); terminar(n); };
+    entrada.addEventListener("cancel", () => fin(0));
+    entrada.addEventListener("change", async () => {
+      const archivos = [...entrada.files].filter(f => f.type.startsWith("image/") || !f.type);
+      let n = 0, fallidas = 0;
+      for (const [i, archivo] of archivos.entries()) {
+        aviso(`Procesando fotografía ${i + 1} de ${archivos.length}…`);
+        try {
+          const modificada = archivo.lastModified > 0 && archivo.lastModified <= Date.now() ? archivo.lastModified + i : Date.now() + i; // conserva el orden de la selección
+          await ev.agregar(actividad, yo, await desdeArchivo(archivo), modificada);
+          n++;
+        } catch { fallidas++; }
+      }
+      if (n || fallidas) aviso(`${plural(n, "fotografía agregada", "fotografías agregadas")}${fallidas ? ` · ${plural(fallidas, "no se pudo procesar", "no se pudieron procesar")}` : ""}`);
+      fin(n);
+    });
+    entrada.click();
+  });
+}
+
 /** Sección que se muestra dentro de una actividad abierta: botón para tomar fotos y vista previa de la carpeta. */
 export async function seccionActividad(yo, a) {
   const fotos = await ev.de(a.id);
@@ -31,7 +60,7 @@ export async function seccionActividad(yo, a) {
         <div class="stats"><span><b>${fotos.length}</b> ${fotos.length === 1 ? "fotografía" : "fotografías"}</span></div></div>
       ${mini.length ? `<a class="evid-mini" href="#/actividad/${esc(a.id)}/evidencias" aria-label="Abrir la carpeta de evidencias">${mini.map(m => m.url ? `<img src="${m.url}" alt="">` : `<span class="evid-falta" aria-hidden="true"></span>`).join("")}</a>` : `<p class="hint">Aún no hay fotografías en esta actividad.${editable ? "" : " La actividad está cerrada."}</p>`}
       <div class="actions">
-        ${editable ? `<button class="btn primary" id="tomarFotos">Tomar fotografías</button>` : ""}
+        ${editable ? `<button class="btn primary" id="tomarFotos">Tomar fotografías</button><button class="btn" id="desdeGaleria">Agregar de la galería</button>` : ""}
         <a class="btn" href="#/actividad/${esc(a.id)}/evidencias">Abrir carpeta de evidencias</a>
       </div>
     </section>`;
@@ -71,7 +100,7 @@ async function carpeta({ yo, pintar, ir }, id) {
       <div><dt>Lugar</dt><dd>${esc(a.lugar)}</dd></div>
       <div><dt>Fotografías</dt><dd>${fotos.length}</dd></div></dl></section>
     <div class="toolbar">
-      ${editable ? `<button class="btn primary" id="tomar">Tomar fotografías</button>` : ""}
+      ${editable ? `<button class="btn primary" id="tomar">Tomar fotografías</button><button class="btn" id="desdeGaleria">Agregar de la galería</button>` : ""}
       ${fotos.length ? `<a class="btn" href="#/actividad/${esc(a.id)}/evidencias/formato">Imprimir o exportar PDF</a>` : ""}
       <a class="btn ghost" href="#/actividad/${esc(a.id)}">Ver actividad</a>
     </div>
@@ -80,9 +109,10 @@ async function carpeta({ yo, pintar, ir }, id) {
         ${url ? `<img src="${url}" alt="">` : `<span class="evid-falta">${navigator.onLine ? "Descargando…" : "Sin descargar<br><small>Se descargará al abrir con internet</small>"}</span>`}
         <span class="evid-pie"><b>${i + 1}.</b> ${esc(f.leyenda) || "<i>Sin leyenda</i>"}</span>
       </button>`).join("")}</div>`
-    : `<div class="empty"><b>Esta carpeta aún no tiene fotografías.</b><p>${editable ? "Seleccione “Tomar fotografías”. Puede tomar varias seguidas." : "La actividad está cerrada."}</p></div>`}`, { atras: "#/evidencias" });
+    : `<div class="empty"><b>Esta carpeta aún no tiene fotografías.</b><p>${editable ? "Seleccione “Tomar fotografías” (puede tomar varias seguidas) o “Agregar de la galería”." : "La actividad está cerrada."}</p></div>`}`, { atras: "#/evidencias" });
 
   $("#tomar", c)?.addEventListener("click", async () => { if (await tomarFotos(yo, a)) carpeta({ yo, pintar, ir }, id); });
+  $("#desdeGaleria", c)?.addEventListener("click", async () => { if (await agregarDeGaleria(yo, a)) carpeta({ yo, pintar, ir }, id); });
   // Las fotos tomadas en otros dispositivos se descargan al abrir la carpeta, una por una
   (async () => {
     for (const [i, it] of items.entries()) {

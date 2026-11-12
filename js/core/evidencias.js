@@ -16,12 +16,12 @@ export async function conteos() {
 }
 
 /** Guarda una foto ya recortada y comprimida (ver camara.js) en la carpeta de la actividad. */
-export async function agregar(actividad, yo, { blob, ancho, alto }) {
+export async function agregar(actividad, yo, { blob, ancho, alto }, tomadaEn = Date.now()) {
   const id = db.uid();
   await db.guardarFoto(id, blob, "subir"); // primero la imagen: así nunca hay un registro sin imagen en este dispositivo
   return db.guardar("evidencias", {
     id, actividadId: actividad.id, ruta: `${id}.jpg`, leyenda: "",
-    tomadaEn: Date.now(), tomadaPor: yo.id, tomadaPorNombre: yo.nombre,
+    tomadaEn, tomadaPor: yo.id, tomadaPorNombre: yo.nombre,
     ancho, alto, bytes: blob.size,
   });
 }

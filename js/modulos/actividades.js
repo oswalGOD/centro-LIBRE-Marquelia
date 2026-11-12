@@ -9,7 +9,7 @@ import { captura } from "./captura.js";
 import { formato } from "./formato.js";
 import * as evidencias from "../core/evidencias.js";
 import * as kiosko from "../core/kiosko.js";
-import { seccionActividad, tomarFotos } from "./evidencias.js";
+import { seccionActividad, tomarFotos, agregarDeGaleria } from "./evidencias.js";
 
 const ID = "([\\w-]+)";
 const OTRO = "__otro";
@@ -205,6 +205,7 @@ async function detalle({ yo, pintar, ir }, id) {
   `, { atras: "#/asistencia" });
 
   $("#tomarFotos", c)?.addEventListener("click", async () => { if (await tomarFotos(yo, a)) detalle({ yo, pintar, ir }, id); });
+  $("#desdeGaleria", c)?.addEventListener("click", async () => { if (await agregarDeGaleria(yo, a)) detalle({ yo, pintar, ir }, id); });
 
   const modo = $("#modoCaptura", c);
   if (modo) dobleToque(modo, "Las usuarias se registrarán solas y solo podrá salir con su PIN. Toque nuevamente para activar", async () => {
