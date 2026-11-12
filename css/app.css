@@ -445,3 +445,5 @@ body.con-camara { overflow: hidden; }
 .camara-botones.iconos .ib { flex: 1; }
 .barra-iconos .ib { flex: 1 1 0; max-width: 120px; }
 .enlace-act { font-weight: 700; color: var(--accent); text-decoration: none; padding: 10px 0; }
+.ib-badge { position: relative; display: inline-flex; }
+.ib-badge b { position: absolute; top: -7px; right: -7px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: .78rem; display: grid; place-items: center; pointer-events: none; }
