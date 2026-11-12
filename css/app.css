@@ -364,7 +364,7 @@ body.con-camara { overflow: hidden; }
 /* Cámara a pantalla completa: cambiar cámara (izquierda), obturador (centro), listo (derecha) */
 .camara.en-vivo { background: #000; padding: 0; display: flex; align-items: stretch; flex-direction: column; overflow: hidden; }
 .camara-zona { flex: 1; min-height: 0; position: relative; container-type: size; display: grid; place-items: center; }
-.camara.en-vivo .camara-visor { border-radius: 18px; aspect-ratio: auto; visibility: hidden; }
+.camara.en-vivo .camara-visor { width: min(calc(100cqw - 16px), calc(133.333cqh - 21px)); border-radius: 18px; }
 .camara-info { position: absolute; top: 8px; left: 8px; right: 8px; display: grid; gap: 4px; justify-items: start; pointer-events: none; }
 .camara-info p { margin: 0; padding: 3px 10px; border-radius: 999px; background: rgba(0, 0, 0, .6); color: #fff; font-size: .85rem; font-weight: 700; }
 .camara-info p:empty { display: none; }
@@ -385,4 +385,3 @@ body.con-camara { overflow: hidden; }
   .camara-info p { font-size: .75rem; }
   .camara.visor .camara-caja { max-height: 100%; }
 }
-.camara.en-vivo .camara-visor { transition: opacity .15s; }
