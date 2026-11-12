@@ -66,32 +66,14 @@ export function abrirCamara(alTomar, titulo = "Tomar fotografías") {
     girar.style.visibility = "hidden";
     let flujo = null, modo = "environment", n = 0, ocupada = false, intento = 0;
 
-    // Tamaño del recuadro 4:3: se calcula con el espacio real de la zona y solo se muestra cuando ya está calculado.
-    // Así no aparece pequeño y salta a su tamaño al girar la pantalla (Safari en iPad tarda en actualizar las medidas de la ventana).
-    const zona = q(".camara-zona"), visor = q(".camara-visor");
-    const ajustar = () => {
-      const w = zona.clientWidth - 16, h = zona.clientHeight - 16;
-      if (w <= 0 || h <= 0) return;
-      const ancho = Math.floor(Math.min(w, (h * 4) / 3));
-      visor.style.width = `${ancho}px`;
-      visor.style.height = `${Math.round((ancho * 3) / 4)}px`;
-      visor.style.visibility = "visible";
-    };
-    // Al girar, iPadOS anima la pantalla y las medidas cambian en varios pasos: el recuadro se oculta un instante
-    // y reaparece ya con su tamaño final, en vez de verse pequeño y saltar.
-    let revelar = null, primera = true;
-    const alCambiarTamano = () => {
-      ajustar();
-      if (primera) { primera = false; return; }
-      visor.style.opacity = "0";
-      clearTimeout(revelar);
-      revelar = setTimeout(() => { ajustar(); visor.style.opacity = "1"; }, 300);
-    };
-    const observador = new ResizeObserver(alCambiarTamano);
-    observador.observe(zona);
-    ajustar();
     // Con el giro automático activo, el orden de los botones sigue a la mano: al girar a la izquierda, el de la izquierda queda abajo
-    const ordenar = () => capa.classList.toggle("gira-izquierda", screen.orientation?.angle === 90 || window.orientation === 90);
+    // En iPhone/iPad (Safari) el signo del ángulo es el contrario al de Android
+    const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const ordenar = () => {
+      const angulo = esIOS && typeof window.orientation === "number" ? window.orientation : screen.orientation?.angle ?? window.orientation;
+      const izquierda = esIOS ? angulo === -90 || angulo === 270 : angulo === 90;
+      capa.classList.toggle("gira-izquierda", izquierda);
+    };
     ordenar();
     screen.orientation?.addEventListener("change", ordenar);
     addEventListener("resize", ordenar);
@@ -152,8 +134,6 @@ export function abrirCamara(alTomar, titulo = "Tomar fotografías") {
     const cerrar = () => {
       intento++;
       document.removeEventListener("keydown", tecla);
-      observador.disconnect();
-      clearTimeout(revelar);
       screen.orientation?.removeEventListener("change", ordenar);
       removeEventListener("resize", ordenar);
       detener();
