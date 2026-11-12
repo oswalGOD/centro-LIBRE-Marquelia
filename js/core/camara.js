@@ -45,15 +45,17 @@ export async function desdeArchivo(archivo) {
   return r;
 }
 
-const ICONO_GIRAR = `<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.6-2.5h6.8L17 8h3v11H4z"/><path d="M9.5 13.5a2.7 2.7 0 0 1 4.6-1.5M14.5 13.5a2.7 2.7 0 0 1-4.6 1.5M14.2 10.8V12.2h-1.4M9.8 16.2v-1.4h1.4"/></svg>`;
-const ICONO_LISTO = `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
+const svg = (d, t = 28) => `<svg viewBox="0 0 24 24" width="${t}" height="${t}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+// Iconos de Lucide (licencia ISC)
+const ICONO_GIRAR = svg('<path d="M11 19H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/><path d="M13 5h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5"/><circle cx="12" cy="12" r="3"/><path d="m18 22-3-3 3-3"/><path d="m6 2 3 3-3 3"/>', 30);
+const ICONO_LISTO = svg('<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>', 32);
+const ICONO_FOTO = svg('<path d="M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z"/><circle cx="12" cy="13" r="3"/>', 30);
 
 /**
  * Abre la cámara a pantalla completa. `alTomar({ blob, ancho, alto })` guarda cada foto;
  * la cámara sigue abierta para tomar varias seguidas. Devuelve cuántas fotos se tomaron al tocar «Listo».
- * Abajo: cambiar cámara (izquierda), obturador (centro) y listo (derecha), todos como símbolos.
- * Al girar el dispositivo se reinicia la cámara, para que la imagen y el recorte coincidan con la nueva orientación.
- */
+ * Abajo: cambiar cámara (izquierda), obturador (centro) y listo (derecha), todos como iconos.
+ *  */
 export function abrirCamara(alTomar, titulo = "Tomar fotografías") {
   return new Promise(terminar => {
     const capa = document.createElement("div");
@@ -74,7 +76,7 @@ export function abrirCamara(alTomar, titulo = "Tomar fotografías") {
       </div>
       <div class="camara-barra">
         <button type="button" class="camara-icono" data-girar aria-label="Cambiar cámara" title="Cambiar cámara">${ICONO_GIRAR}</button>
-        <button type="button" class="camara-obturador" data-tomar aria-label="Tomar foto" title="Tomar foto"><span></span></button>
+        <button type="button" class="camara-obturador" data-tomar aria-label="Tomar foto" title="Tomar foto"><span>${ICONO_FOTO}</span></button>
         <button type="button" class="camara-icono" data-listo aria-label="Listo" title="Listo">${ICONO_LISTO}</button>
       </div>
       <label class="btn camara-sistema" data-sistema hidden>Usar la cámara del sistema<input type="file" accept="image/*" capture="environment" hidden></label>`;
@@ -144,22 +146,9 @@ export function abrirCamara(alTomar, titulo = "Tomar fotografías") {
     };
     girar.onclick = () => { modo = modo === "environment" ? "user" : "environment"; iniciar(); };
 
-    // Al girar el equipo, algunos navegadores (sobre todo Safari) siguen entregando la imagen con la orientación anterior
-    let espera;
-    const alGirar = () => {
-      clearTimeout(espera);
-      if (!flujo) return;
-      espera = setTimeout(iniciar, 350);
-    };
-    screen.orientation?.addEventListener("change", alGirar);
-    addEventListener("orientationchange", alGirar);
-
     const cerrar = () => {
-      clearTimeout(espera);
       intento++;
       document.removeEventListener("keydown", tecla);
-      screen.orientation?.removeEventListener("change", alGirar);
-      removeEventListener("orientationchange", alGirar);
       detener();
       capa.remove();
       document.body.classList.remove("con-camara");
