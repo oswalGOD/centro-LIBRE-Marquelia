@@ -33,11 +33,12 @@ async function lista({ yo, pintar }) {
 
   const c = pintar("Actividades", `
     <div class="toolbar">
-      <a class="btn primary" href="#/actividad/nueva">Nueva actividad</a>
-      ${muchas ? `<input type="search" id="buscar" class="search" placeholder="Buscar por nombre, folio o lugar" aria-label="Buscar actividad">` : ""}
+      ${muchas ? `<input type="search" id="buscar" class="search" placeholder="Buscar por nombre, folio o lugar" aria-label="Buscar actividad">
+      <span class="ib-badge"><button type="button" class="ib" id="verFiltros" aria-expanded="false" aria-controls="filtros" aria-label="Filtros" title="Filtros">${icono("filtros")}<span class="ib-et">Filtros</span></button><b id="nFiltros" hidden></b></span>` : ""}
+      ${botonIcono("mas2", "Nueva", { href: "#/actividad/nueva", clase: "primary", extra: 'aria-label="Nueva actividad" title="Nueva actividad"' })}
       <p class="hint" id="cuenta">${plural(acts.length, "actividad", "actividades")} · ${plural(abiertas, "abierta", "abiertas")}</p>
     </div>
-    ${muchas ? `<div class="filters" id="filtros">
+    ${muchas ? `<div class="filters" id="filtros" hidden>
       <div class="field"><label for="f-mes">Mes</label><select id="f-mes" data-filtro="mes"><option value="">Todos</option>${opciones(meses, filtros.mes)}</select></div>
       <div class="field"><label for="f-tipo">Tipo</label><select id="f-tipo" data-filtro="tipo"><option value="">Todos</option>${opciones(tipos, filtros.tipo)}</select></div>
       ${esCoordinadora(yo) ? `<div class="field"><label for="f-fac">Facilitadora</label><select id="f-fac" data-filtro="facilitadoraId"><option value="">Todas</option>${opciones(facilitadoras, filtros.facilitadoraId)}</select></div>` : ""}
@@ -68,13 +69,23 @@ async function lista({ yo, pintar }) {
       ? `${n} de ${plural(acts.length, "actividad", "actividades")}`
       : `${plural(acts.length, "actividad", "actividades")} · ${plural(abiertas, "abierta", "abiertas")}`;
     $("#sinResultados", c).hidden = n > 0;
+    const nf = Object.values(filtros).filter(Boolean).length;
+    $("#nFiltros", c).textContent = nf;
+    $("#nFiltros", c).hidden = !nf;
+    $("#verFiltros", c).setAttribute("aria-label", nf ? `Filtros: ${plural(nf, "activo", "activos")}` : "Filtros");
   }
+  $("#verFiltros", c)?.addEventListener("click", e => {
+    const caja = $("#filtros", c);
+    caja.hidden = !caja.hidden;
+    e.currentTarget.setAttribute("aria-expanded", String(!caja.hidden));
+  });
   if (muchas) $("#lista", c).insertAdjacentHTML("afterend", `<div class="empty" id="sinResultados" hidden><b>Ninguna actividad coincide.</b><p>Modifique la búsqueda o los filtros.</p></div>`);
   buscar?.addEventListener("input", filtrar);
   for (const k in filtros) filtros[k] = $(`[data-filtro=${k}]`, c)?.value || ""; // descarta filtros que ya no tienen opción
   $$("[data-filtro]", c).forEach(el => {
     el.addEventListener("change", () => { filtros[el.dataset.filtro] = el.value; filtrar(); });
   });
+  if (muchas && Object.values(filtros).some(Boolean)) { $("#filtros", c).hidden = false; $("#verFiltros", c).setAttribute("aria-expanded", "true"); }
   filtrar();
 }
 

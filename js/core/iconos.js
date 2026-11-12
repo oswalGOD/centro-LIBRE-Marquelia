@@ -19,6 +19,7 @@ const TRAZOS = {
   anterior: '<path d="M15 5l-7 7 7 7"/>',
   siguiente: '<path d="M9 5l7 7-7 7"/>',
   salir: '<path d="M6 6l12 12M18 6L6 18"/>',
+  filtros: '<path d="M4 6h16M7 12h10M10 18h4"/>',
   reabrir: '<path d="M4 12a8 8 0 1 0 3-6.2M4 4v4h4"/>',
 };
 
