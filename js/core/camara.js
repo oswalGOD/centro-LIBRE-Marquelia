@@ -72,20 +72,37 @@ export function abrirCamara(alTomar, titulo = "Tomar fotografías") {
         <div class="camara-info">
           <p class="camara-cuenta" aria-live="polite"></p>
           <p class="camara-aviso" role="status">Encuadre 4:3. Se guarda lo que se ve en el recuadro.</p>
+          <p class="camara-giro" role="alert" hidden>Sostiene el dispositivo en horizontal con el giro automático desactivado: la foto podría salir girada. Active el giro automático o utilice la cámara del sistema.</p>
+          <label class="btn small camara-sistema" data-sistema hidden>Usar la cámara del sistema<input type="file" accept="image/*" capture="environment" hidden></label>
         </div>
       </div>
       <div class="camara-barra">
         <button type="button" class="camara-icono" data-girar aria-label="Cambiar cámara" title="Cambiar cámara">${ICONO_GIRAR}</button>
         <button type="button" class="camara-obturador" data-tomar aria-label="Tomar foto" title="Tomar foto"><span>${ICONO_FOTO}</span></button>
         <button type="button" class="camara-icono" data-listo aria-label="Listo" title="Listo">${ICONO_LISTO}</button>
-      </div>
-      <label class="btn camara-sistema" data-sistema hidden>Usar la cámara del sistema<input type="file" accept="image/*" capture="environment" hidden></label>`;
+      </div>`;
     document.body.append(capa);
     document.body.classList.add("con-camara");
     const q = s => capa.querySelector(s);
     const video = q("video"), tomar = q("[data-tomar]"), girar = q("[data-girar]"), aviso = q(".camara-aviso"), cuenta = q(".camara-cuenta");
     girar.style.visibility = "hidden";
     let flujo = null, modo = "environment", n = 0, ocupada = false, intento = 0;
+
+    // Con el giro automático desactivado, el sistema entrega la imagen como si el equipo estuviera en vertical
+    // aunque se sostenga en horizontal. Los sensores permiten avisarlo (en iPhone/iPad piden permiso al abrir).
+    const giro = q(".camara-giro");
+    const alMover = e => {
+      if (e.gamma == null || e.beta == null) return;
+      const fisicoHorizontal = Math.abs(e.gamma) > 55 && Math.abs(e.beta) < 50;
+      const pantallaVertical = innerHeight > innerWidth;
+      const mal = fisicoHorizontal && pantallaVertical;
+      if (giro.hidden === mal) {
+        giro.hidden = !mal;
+        if (mal) q("[data-sistema]").hidden = false;
+      }
+    };
+    try { if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") DeviceOrientationEvent.requestPermission().catch(() => {}); } catch {}
+    addEventListener("deviceorientation", alMover);
 
     const detener = () => { flujo?.getTracks().forEach(t => t.stop()); flujo = null; video.srcObject = null; };
     const mostrarSistema = mensaje => {
@@ -149,6 +166,7 @@ export function abrirCamara(alTomar, titulo = "Tomar fotografías") {
     const cerrar = () => {
       intento++;
       document.removeEventListener("keydown", tecla);
+      removeEventListener("deviceorientation", alMover);
       detener();
       capa.remove();
       document.body.classList.remove("con-camara");
