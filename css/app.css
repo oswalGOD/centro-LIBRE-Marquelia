@@ -164,6 +164,11 @@ a.row:hover { border-color: var(--accent); }
 .empty b { color: var(--ink); }
 .empty p { margin: 6px auto 0; max-width: 52ch; }
 .recognized { background: var(--ok-soft); color: var(--ok); border-radius: 10px; padding: 10px 14px; font-weight: 700; }
+/* Datos obligatorios que faltan tras escanear: borde grueso, fondo y texto «Falta» (no depende solo del color) */
+.field.falta { background: var(--warn-soft); border-left: 6px solid var(--warn); border-radius: 10px; padding: 8px 10px 10px; }
+.field.falta > label::after, .field.falta > .legend::after { content: " · Falta"; color: var(--warn); font-weight: 700; }
+.field.falta input, .field.falta .sig-preview { border-color: var(--warn); }
+.field.falta .choice:not([aria-pressed="true"]) { border-color: var(--warn); }
 .issues { background: var(--warn-soft); color: var(--warn); border-radius: 10px; padding: 10px 14px; }
 .issues ul { margin: 4px 0 0; padding-left: 20px; }
 .issues p { margin: 4px 0 10px; }
