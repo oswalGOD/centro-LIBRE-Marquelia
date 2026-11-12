@@ -75,6 +75,7 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
       <div class="field"><span class="legend">Firma</span>
         <div class="sig-row"><div class="sig-preview" id="firmaVista"></div>
           <button type="button" class="btn" id="firmar"></button></div></div>
+      <div id="faltan" aria-live="polite"></div>
       <div id="err"></div>
       <div class="actions">
         <button class="btn primary" id="guardar">${existente ? "Guardar cambios" : kiosko ? "Guardar mi registro" : "Guardar asistente"}</button>
@@ -89,6 +90,40 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
     $("#firmaVista", c).innerHTML = firma ? `<img src="${esc(firma)}" alt="Firma capturada">` : `<span>Sin firma</span>`;
     $("#firmaVista", c).classList.toggle("vacia", !firma);
     $("#firmar", c).textContent = firma ? "Volver a firmar" : "Firmar";
+    pintarFaltantes();
+  }
+
+  // Tras escanear la CURP o la INE se resaltan los datos obligatorios que aún faltan;
+  // el resaltado de cada campo desaparece en cuanto se llena.
+  let resaltar = false;
+  function camposFaltantes() {
+    const f = [];
+    if (!d.sinCurp && !leerCurp(d.curp)) f.push(["curp", "#curp", "CURP"]);
+    if (d.nombre.trim().replace(/\s+/g, " ").split(" ").length < 2) f.push(["nombre", "#nombre", "Nombre completo"]);
+    if (!d.fnac) f.push(["fnac", "#fnac", "Fecha de nacimiento"]);
+    if (!d.sexo) f.push(["sexo", "[data-elegir=sexo]", "Sexo"]);
+    if (!d.lugar.trim()) f.push(["lugar", "#lugar", "Lugar de nacimiento"]);
+    if (!d.grupo) f.push(["grupo", "[data-elegir=grupo]", "Grupo"]);
+    if (!d.ocupacion.trim()) f.push(["ocupacion", "#ocupacion", "Ocupación"]);
+    if (d.telefono.replace(/\D/g, "").length !== 10) f.push(["telefono", "#telefono", "Teléfono de 10 dígitos"]);
+    if (!firma) f.push(["firma", "#firmar", "Firma"]);
+    return f;
+  }
+  function pintarFaltantes() {
+    const faltan = resaltar ? camposFaltantes() : [];
+    const claves = new Set(faltan.map(x => x[0]));
+    [["curp", "#curp"], ["nombre", "#nombre"], ["fnac", "#fnac"], ["sexo", "[data-elegir=sexo]"], ["lugar", "#lugar"],
+      ["grupo", "[data-elegir=grupo]"], ["ocupacion", "#ocupacion"], ["telefono", "#telefono"], ["firma", "#firmar"]].forEach(([k, sel]) => {
+      const el = $(sel, c);
+      const campo = el?.closest(".field");
+      if (!campo) return;
+      campo.classList.toggle("falta", claves.has(k));
+      if (el.matches("input")) el.toggleAttribute("aria-invalid", claves.has(k));
+    });
+    const aviso = $("#faltan", c);
+    aviso.innerHTML = faltan.length
+      ? `<div class="issues falta-aviso"><b>Faltan ${faltan.length === 1 ? "un dato" : faltan.length + " datos"} para completar el registro:</b> ${faltan.map(x => esc(x[2])).join(", ")}.</div>`
+      : resaltar ? `<div class="recognized">Datos completos. Solo resta guardar el registro.</div>` : "";
   }
   pintarFirma();
 
@@ -99,6 +134,7 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
     const e = edad(d.fnac, act.fecha);
     $("#edadNota", c).textContent = e == null || e < 0 ? "" : `${e} años el día de la actividad · Rango ${rangoDe(e)}) ${etiquetaRango(rangoDe(e))}`;
     $("#curp", c).disabled = d.sinCurp;
+    pintarFaltantes();
   }
 
   function reconocer(p) {
@@ -117,7 +153,7 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
 
   $$("[data-c]", c).forEach(el => el.addEventListener("input", () => {
     d[el.dataset.c] = el.value;
-    if (el.dataset.c === "fnac") pintarCampos();
+    if (el.dataset.c === "fnac") pintarCampos(); else pintarFaltantes();
   }));
   $$("[data-elegir]", c).forEach(g => g.addEventListener("click", ev => {
     const b = ev.target.closest(".choice");
@@ -129,6 +165,7 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
   $("#curp", c).addEventListener("input", ev => {
     d.curp = limpiarCurp(ev.target.value);
     ev.target.value = d.curp;
+    pintarFaltantes();
     const nota = $("#curpNota", c);
     nota.className = "note";
     if (d.curp.length < 18) { nota.textContent = d.curp ? `${d.curp.length} de 18 caracteres` : ""; return; }
@@ -151,6 +188,7 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
   $("#escanear", c)?.addEventListener("click", async () => {
     const r = await escanearCurp();
     if (!r) return;
+    resaltar = true;
     d.sinCurp = false;
     $("#sinCurp", c).checked = false;
     $("#curp", c).disabled = false;
@@ -167,6 +205,7 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
   $("#escanearIne", c)?.addEventListener("click", async () => {
     const r = await escanearIne();
     if (!r) return;
+    resaltar = true;
     if (r.curp) {
       d.sinCurp = false;
       $("#sinCurp", c).checked = false;
