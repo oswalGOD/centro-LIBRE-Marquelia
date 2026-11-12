@@ -72,7 +72,6 @@ export function abrirCamara(alTomar, titulo = "Tomar fotografías") {
         <div class="camara-info">
           <p class="camara-cuenta" aria-live="polite"></p>
           <p class="camara-aviso" role="status">Encuadre 4:3. Se guarda lo que se ve en el recuadro.</p>
-          <p class="camara-giro" role="alert" hidden>Sostiene el dispositivo en horizontal con el giro automático desactivado: la foto podría salir girada. Active el giro automático o utilice la cámara del sistema.</p>
           <label class="btn small camara-sistema" data-sistema hidden>Usar la cámara del sistema<input type="file" accept="image/*" capture="environment" hidden></label>
         </div>
       </div>
@@ -88,21 +87,25 @@ export function abrirCamara(alTomar, titulo = "Tomar fotografías") {
     girar.style.visibility = "hidden";
     let flujo = null, modo = "environment", n = 0, ocupada = false, intento = 0;
 
-    // Con el giro automático desactivado, el sistema entrega la imagen como si el equipo estuviera en vertical
-    // aunque se sostenga en horizontal. Los sensores permiten avisarlo (en iPhone/iPad piden permiso al abrir).
-    const giro = q(".camara-giro");
-    const alMover = e => {
-      if (e.gamma == null || e.beta == null) return;
-      const fisicoHorizontal = Math.abs(e.gamma) > 55 && Math.abs(e.beta) < 50;
-      const pantallaVertical = innerHeight > innerWidth;
-      const mal = fisicoHorizontal && pantallaVertical;
-      if (giro.hidden === mal) {
-        giro.hidden = !mal;
-        if (mal) q("[data-sistema]").hidden = false;
-      }
+    // Tamaño del recuadro 4:3: se calcula con el espacio real de la zona y solo se muestra cuando ya está calculado.
+    // Así no aparece pequeño y salta a su tamaño al girar la pantalla (Safari en iPad tarda en actualizar las medidas de la ventana).
+    const zona = q(".camara-zona"), visor = q(".camara-visor");
+    const ajustar = () => {
+      const w = zona.clientWidth - 16, h = zona.clientHeight - 16;
+      if (w <= 0 || h <= 0) return;
+      const ancho = Math.floor(Math.min(w, (h * 4) / 3));
+      visor.style.width = `${ancho}px`;
+      visor.style.height = `${Math.round((ancho * 3) / 4)}px`;
+      visor.style.visibility = "visible";
     };
-    try { if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") DeviceOrientationEvent.requestPermission().catch(() => {}); } catch {}
-    addEventListener("deviceorientation", alMover);
+    const observador = new ResizeObserver(ajustar);
+    observador.observe(zona);
+    ajustar();
+    // Con el giro automático activo, el orden de los botones sigue a la mano: al girar a la izquierda, el de la izquierda queda abajo
+    const ordenar = () => capa.classList.toggle("gira-izquierda", screen.orientation?.angle === 90 || window.orientation === 90);
+    ordenar();
+    screen.orientation?.addEventListener("change", ordenar);
+    addEventListener("resize", ordenar);
 
     const detener = () => { flujo?.getTracks().forEach(t => t.stop()); flujo = null; video.srcObject = null; };
     const mostrarSistema = mensaje => {
@@ -166,7 +169,9 @@ export function abrirCamara(alTomar, titulo = "Tomar fotografías") {
     const cerrar = () => {
       intento++;
       document.removeEventListener("keydown", tecla);
-      removeEventListener("deviceorientation", alMover);
+      observador.disconnect();
+      screen.orientation?.removeEventListener("change", ordenar);
+      removeEventListener("resize", ordenar);
       detener();
       capa.remove();
       document.body.classList.remove("con-camara");
