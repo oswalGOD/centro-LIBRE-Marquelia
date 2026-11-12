@@ -1,7 +1,7 @@
 // Usuarias: todas las personas que han asistido alguna vez, con su historial.
 
 import * as db from "../core/db.js";
-import { GRUPOS, SEXOS, leerCurp, limpiarCurp, edad, etiquetaGrupo, etiquetaSexo, fechaLarga, normalizar } from "../core/catalogos.js";
+import { aMayusculas, aCapital, GRUPOS, SEXOS, leerCurp, limpiarCurp, edad, etiquetaGrupo, etiquetaSexo, fechaLarga, normalizar } from "../core/catalogos.js";
 import { esCoordinadora } from "../core/auth.js";
 import { puedeVer } from "../core/permisos.js";
 import { $, $$, esc, aviso, errores, dobleToque, plural, unaVez } from "../core/ui.js";
@@ -45,9 +45,9 @@ async function ficha({ yo, pintar, ir }, id) {
       <div class="section-head"><h2 class="h3">Datos personales</h2><p class="hint">Los cambios se aplicarán a partir de su siguiente asistencia. Las listas ya firmadas conservan los datos vigentes en su fecha.</p></div>
       <div class="grid" id="f">
         <div class="field span-2"><label for="p-curp">CURP</label><input id="p-curp" class="upper" maxlength="18" value="${esc(p.curp || "")}" placeholder="Opcional: puede capturarse después"></div>
-        <div class="field span-2"><label for="p-nombre">Nombre completo</label><input id="p-nombre" value="${esc(p.nombre)}"></div>
+        <div class="field span-2"><label for="p-nombre">Nombre completo</label><input id="p-nombre" data-formato="mayus" value="${esc(p.nombre)}"></div>
         <div class="field"><label for="p-fnac">Fecha de nacimiento</label><input id="p-fnac" type="date" value="${esc(p.fnac)}"></div>
-        <div class="field"><label for="p-lugar">Lugar de nacimiento</label><input id="p-lugar" value="${esc(p.lugar)}"></div>
+        <div class="field"><label for="p-lugar">Lugar de nacimiento</label><input id="p-lugar" data-formato="capital" value="${esc(p.lugar)}"></div>
         <div class="field"><label for="p-ocupacion">Ocupación</label><input id="p-ocupacion" value="${esc(p.ocupacion)}"></div>
         <div class="field"><label for="p-telefono">Teléfono</label><input id="p-telefono" type="tel" inputmode="tel" value="${esc(p.telefono)}"></div>
         <div class="field"><label for="p-sexo">Sexo</label><select id="p-sexo">${SEXOS.map(([v, t]) => `<option value="${v}" ${p.sexo === v ? "selected" : ""}>${t}</option>`).join("")}</select></div>
@@ -77,7 +77,7 @@ async function ficha({ yo, pintar, ir }, id) {
     if (v("telefono").replace(/\D/g, "").length !== 10) e.push("El teléfono debe tener 10 dígitos.");
     errores($("#err", c), e);
     if (e.length) return;
-    const nuevo = { ...p, nombre: v("nombre").replace(/\s+/g, " "), fnac: v("fnac"), lugar: v("lugar"), ocupacion: v("ocupacion"), telefono: v("telefono").replace(/\D/g, ""), sexo: v("sexo"), grupo: v("grupo") };
+    const nuevo = { ...p, nombre: aMayusculas(v("nombre")).trim(), fnac: v("fnac"), lugar: aCapital(v("lugar")).trim(), ocupacion: v("ocupacion"), telefono: v("telefono").replace(/\D/g, ""), sexo: v("sexo"), grupo: v("grupo") };
     if (curp) nuevo.curp = curp; else delete nuevo.curp;
     await db.guardar("usuarias", nuevo);
     if (curp) await db.completarCurp(p.id, curp);
