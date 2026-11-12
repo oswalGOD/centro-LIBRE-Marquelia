@@ -8,6 +8,7 @@ import { esc, aviso } from "../core/ui.js";
 const svg = d => `<svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const ICONOS = {
   asistencia: svg('<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 13l2 2 4-4"/>'),
+  evidencias: svg('<path d="M4 8h3l1.6-2.5h6.8L17 8h3v11H4z"/><circle cx="12" cy="13.5" r="3.4"/>'),
   comites: svg('<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.4"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M15 14.2c.6-.2 1.3-.2 2-.2 2.2 0 4 1.8 4 4"/>'),
   asesorias: svg('<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/>'),
   estadisticas: svg('<path d="M4 20V4M4 20h16"/><path d="M8 16v-4M12 16V8M16 16v-6"/>'),
@@ -20,6 +21,7 @@ const ICONOS = {
 // zona: "principal" (cuadrícula) o "dock" (fila de abajo, módulos de toda la app)
 export const MODULOS_INICIO = [
   { id: "asistencia", nombre: "Listas de asistencia", ruta: "#/asistencia", color: "#8c1d4f", zona: "principal" },
+  { id: "evidencias", nombre: "Evidencias fotográficas", ruta: "#/evidencias", color: "#2f7a6b", zona: "principal" },
   { id: "estadisticas", nombre: "Estadísticas", ruta: "#/estadisticas", color: "#8a6620", zona: "principal" },
   { id: "comites", nombre: "Comités", color: "#2f6f8f", zona: "principal", proximamente: "En este módulo se llevará el registro de los comités y sus reuniones." },
   { id: "asesorias", nombre: "Asesorías personales", color: "#4f7a3a", zona: "principal", proximamente: "En este módulo se llevará el registro de las asesorías individuales." },

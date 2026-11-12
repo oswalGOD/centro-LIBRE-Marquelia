@@ -11,7 +11,7 @@ import { $, esc, aviso, errores, descargar, dobleToque } from "../core/ui.js";
 const ITERACIONES = 600000;
 const ABIERTA_POR = 15 * 60 * 1000;
 const CLAVE_SESION = "clm-desarrollo-hasta";
-const ALMACENES_DATOS = ["perfiles", "usuarias", "actividades", "asistencias"];
+const ALMACENES_DATOS = ["perfiles", "usuarias", "actividades", "asistencias", "evidencias"];
 let fallos = 0, bloqueoHasta = 0;
 
 async function huella(clave, sal, iteraciones) {
