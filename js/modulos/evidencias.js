@@ -3,6 +3,7 @@
 
 import * as db from "../core/db.js";
 import * as ev from "../core/evidencias.js";
+import { descargarFoto } from "../core/sync.js";
 import { abrirCamara } from "../core/camara.js";
 import { fechaLarga, mesCorto, normalizar } from "../core/catalogos.js";
 import { puedeVer, puedeEditar } from "../core/permisos.js";
@@ -74,12 +75,21 @@ async function carpeta({ yo, pintar, ir }, id) {
     </div>
     ${fotos.length ? `<div class="evid-grid">${items.map(({ f, url }, i) => `
       <button type="button" class="evid" data-i="${i}" aria-label="Fotografía ${i + 1}${f.leyenda ? `: ${esc(f.leyenda)}` : ""}">
-        ${url ? `<img src="${url}" alt="">` : `<span class="evid-falta">Pendiente de descarga<br><small>Se recibirá al sincronizar con internet</small></span>`}
+        ${url ? `<img src="${url}" alt="">` : `<span class="evid-falta">${navigator.onLine ? "Descargando…" : "Sin descargar<br><small>Se descargará al abrir con internet</small>"}</span>`}
         <span class="evid-pie"><b>${i + 1}.</b> ${esc(f.leyenda) || "<i>Sin leyenda</i>"}</span>
       </button>`).join("")}</div>`
     : `<div class="empty"><b>Esta carpeta aún no tiene fotografías.</b><p>${editable ? "Seleccione “Tomar fotografías”. Puede tomar varias seguidas." : "La actividad está cerrada."}</p></div>`}`, { atras: "#/evidencias" });
 
   $("#tomar", c)?.addEventListener("click", async () => { if (await tomarFotos(yo, a)) carpeta({ yo, pintar, ir }, id); });
+  // Las fotos tomadas en otros dispositivos se descargan al abrir la carpeta, una por una
+  (async () => {
+    for (const [i, it] of items.entries()) {
+      if (it.url || !(await descargarFoto(it.f))) continue;
+      it.url = await ev.urlDe(it.f.id);
+      const hueco = $(`.evid[data-i="${i}"] .evid-falta`, c);
+      if (it.url && hueco) hueco.outerHTML = `<img src="${it.url}" alt="">`;
+    }
+  })();
   $$(".evid", c).forEach(b => (b.onclick = () => visor(items, Number(b.dataset.i), { editable, recargar: () => carpeta({ yo, pintar, ir }, id) })));
 }
 
@@ -99,7 +109,7 @@ function visor(items, i, { editable, recargar }) {
     capa.innerHTML = `
       <div class="camara-caja">
         <h2 class="h3">Fotografía ${i + 1} de ${items.length}</h2>
-        <div class="camara-visor">${url ? `<img src="${url}" alt="${esc(f.leyenda || `Fotografía ${i + 1}`)}">` : `<span class="evid-falta">Pendiente de descarga</span>`}</div>
+        <div class="camara-visor">${url ? `<img src="${url}" alt="${esc(f.leyenda || `Fotografía ${i + 1}`)}">` : `<span class="evid-falta">Foto sin descargar en este dispositivo</span>`}</div>
         <p class="hint">Tomada por ${esc(f.tomadaPorNombre || "—")} · ${hora(f.tomadaEn)}</p>
         <div class="field"><label for="leyenda">Leyenda (opcional, aparecerá bajo la foto al imprimir)</label>
           <input id="leyenda" maxlength="140" value="${esc(f.leyenda || "")}" ${editable ? "" : "disabled"}></div>

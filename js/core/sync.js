@@ -11,9 +11,7 @@ import * as db from "./db.js";
 import { SUPABASE_URL, SUPABASE_ANON, VERSION_APP } from "./config.js";
 import { anotar, leer as leerErrores } from "./bitacora.js";
 
-const SINCRONIZADOS = ["perfiles", "usuarias", "actividades", "asistencias", "evidencias"];
-const FOTOS_POR_VEZ = 25; // descargas por sincronización, para no gastar datos móviles de golpe
-const LOTE = 200;
+const SINCRONIZADOS = ["perfiles", "usuarias", "actividades", "asistencias", "evidencias"];const LOTE = 200;
 const MARGEN_RECEPCION = 2 * 60 * 1000; // se vuelve a pedir un poco de atrás por si algo llegó tarde
 const CADA = 5 * 60 * 1000;
 
@@ -149,22 +147,29 @@ async function subirFotos() {
   return n;
 }
 
-/** Descarga las fotos que otros dispositivos tomaron y limpia las de evidencias eliminadas. Devuelve cuántas bajó. */
-async function bajarFotos() {
+/** Limpia de este dispositivo las imágenes de evidencias que ya se eliminaron. */
+async function limpiarFotos() {
   const locales = await db.idsFotosLocales();
-  let n = 0;
   for (const e of await db.crudos("evidencias")) {
-    if (e.borrado) {
-      if (locales.has(e.id) && (await db.fotoLocal(e.id))?.estado !== "borrar") await db.eliminarFotoLocal(e.id);
-      continue;
-    }
-    if (locales.has(e.id) || n >= FOTOS_POR_VEZ) continue;
-    const r = await almacenamiento(`authenticated/evidencias/${e.ruta || `${e.id}.jpg`}`);
-    if (!r.ok) continue; // todavía no se ha enviado desde el otro dispositivo: se reintenta en la siguiente sincronización
-    const blob = await r.blob();
-    if (blob.size) { await db.guardarFoto(e.id, blob, "ok"); n++; }
+    if (e.borrado && locales.has(e.id) && (await db.fotoLocal(e.id))?.estado !== "borrar") await db.eliminarFotoLocal(e.id);
   }
-  return n;
+}
+
+/**
+ * Descarga la imagen de una evidencia tomada en otro dispositivo. Solo se baja cuando alguien abre la carpeta
+ * (no al sincronizar), para no llenar el equipo ni gastar los datos del plan gratuito. Devuelve true si quedó guardada.
+ */
+export async function descargarFoto(e) {
+  if (await db.fotoLocal(e.id)) return true;
+  if (!navigator.onLine || !(await db.leerMeta("nube"))) return false;
+  try {
+    const r = await almacenamiento(`authenticated/evidencias/${e.ruta || `${e.id}.jpg`}`);
+    if (!r.ok) return false; // aún no se ha enviado desde el otro dispositivo
+    const blob = await r.blob();
+    if (!blob.size) return false;
+    await db.guardarFoto(e.id, blob, "ok");
+    return true;
+  } catch { return false; }
 }
 
 /* ---------- Envío ---------- */
@@ -342,7 +347,7 @@ export function sincronizar() {
       // Las fotografías van aparte: si falla (p. ej. falta el SQL de evidencias), lo demás ya quedó sincronizado
       try {
         await subirFotos();
-        r.recibidos += await bajarFotos();
+        await limpiarFotos();
       } catch (e) {
         estado.error = e.message;
         if (navigator.onLine) anotar(e.message, "sincronización");
