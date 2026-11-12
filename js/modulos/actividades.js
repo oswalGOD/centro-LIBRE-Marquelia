@@ -7,6 +7,8 @@ import { puedeVer, puedeEditar } from "../core/permisos.js";
 import { $, $$, esc, aviso, errores, leerCampos, dobleToque, plural, unaVez } from "../core/ui.js";
 import { captura } from "./captura.js";
 import { formato } from "./formato.js";
+import * as evidencias from "../core/evidencias.js";
+import { seccionActividad, tomarFotos } from "./evidencias.js";
 
 const ID = "([\\w-]+)";
 const OTRO = "__otro";
@@ -144,6 +146,7 @@ async function formulario({ yo, pintar, ir }, id, origenId) {
 }
 
 async function detalle({ yo, pintar, ir }, id) {
+  evidencias.liberarUrls();
   const a = await db.uno("actividades", id);
   if (!a || !puedeVer(yo, a)) return ir("#/asistencia");
   const editable = puedeEditar(yo, a);
@@ -181,6 +184,7 @@ async function detalle({ yo, pintar, ir }, id) {
         return editable ? `<a class="row person" href="#/actividad/${esc(a.id)}/registrar/${esc(x.id)}">${inner}</a>` : `<div class="row person">${inner}</div>`;
       }).join("")}</div>` : `<div class="empty"><b>Aún no hay asistentes.</b><p>${editable ? "Seleccione “Registrar asistente” para capturar a la primera persona. Si ya asistió antes, al ingresar su CURP se completarán sus datos." : "Esta actividad está cerrada."}</p></div>`}
     </section>
+    ${await seccionActividad(yo, a)}
     <section class="panel stack">
       <div><h2 class="h3">Notas de la actividad</h2>
         <p class="hint">Temas tratados, acuerdos y observaciones. Pueden registrarse aunque la actividad esté cerrada y se imprimen en una hoja aparte, a continuación de la lista.</p></div>
@@ -197,6 +201,8 @@ async function detalle({ yo, pintar, ir }, id) {
       </div>
     </section>
   `, { atras: "#/asistencia" });
+
+  $("#tomarFotos", c)?.addEventListener("click", async () => { if (await tomarFotos(yo, a)) detalle({ yo, pintar, ir }, id); });
 
   $("#guardarNotas", c).addEventListener("click", async () => {
     const notas = $("#notas", c).value.trim();
@@ -216,8 +222,9 @@ async function detalle({ yo, pintar, ir }, id) {
     detalle({ yo, pintar, ir }, id);
   });
   const eliminar = $("#eliminar", c);
-  if (eliminar) dobleToque(eliminar, `Se eliminará la actividad con ${plural(asis.length, "asistente", "asistentes")}. Toque nuevamente para confirmar`, async () => {
+  if (eliminar) dobleToque(eliminar, `Se eliminará la actividad con ${plural(asis.length, "asistente", "asistentes")} y sus fotografías. Toque nuevamente para confirmar`, async () => {
     for (const x of asis) await db.borrar("asistencias", x.id);
+    for (const f of await evidencias.de(a.id)) await evidencias.quitar(f.id);
     await db.borrar("actividades", a.id);
     aviso("Actividad eliminada");
     ir("#/asistencia");

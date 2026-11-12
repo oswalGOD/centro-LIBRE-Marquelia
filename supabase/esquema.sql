@@ -7,7 +7,7 @@
 -- Todos los registros de la app (perfiles, usuarias, actividades, asistencias)
 -- en una sola tabla. Cada fila es un registro tal como se guarda en el dispositivo.
 create table if not exists public.registros (
-  almacen      text        not null,              -- perfiles | usuarias | actividades | asistencias
+  almacen      text        not null,              -- perfiles | usuarias | actividades | asistencias | evidencias
   id           text        not null,
   datos        jsonb       not null,              -- el registro completo
   actualizado  bigint      not null,              -- hora del cambio en el dispositivo (ms)

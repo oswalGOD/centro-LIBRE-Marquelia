@@ -5,7 +5,7 @@
 import { prefijoFolio } from "./catalogos.js";
 
 const NOMBRE = "centro-libre-marquelia";
-const VERSION = 3;
+const VERSION = 4;
 
 let conexion;
 
@@ -28,12 +28,23 @@ export function convertirV1(datos) {
 }
 
 /** Versión 3: índice por fecha de cambio, para que la sincronización lea solo lo que cambió y no toda la base. */
-const CON_INDICE_CAMBIO = ["perfiles", "usuarias", "actividades", "asistencias"];
+const CON_INDICE_CAMBIO = ["perfiles", "usuarias", "actividades", "asistencias", "evidencias"];
 function agregarIndiceCambio(t) {
   for (const a of CON_INDICE_CAMBIO) {
     const s = t.objectStore(a);
     if (!s.indexNames.contains("actualizado")) s.createIndex("actualizado", "actualizado");
   }
+}
+
+/**
+ * Versión 4: evidencias fotográficas. «evidencias» guarda los datos de cada foto y viaja en la sincronización;
+ * «fotos» guarda la imagen en este dispositivo (nunca viaja por `registros`: va al almacenamiento de archivos).
+ * `estado` de una foto: "subir" (falta enviarla), "ok" (ya está en la nube) o "borrar" (falta quitarla de la nube).
+ */
+function crearEvidencias(d) {
+  if (d.objectStoreNames.contains("evidencias")) return;
+  d.createObjectStore("evidencias", { keyPath: "id" }).createIndex("actividadId", "actividadId");
+  d.createObjectStore("fotos", { keyPath: "id" }).createIndex("estado", "estado");
 }
 
 function migrarV1(d, t, despues) {
@@ -61,8 +72,11 @@ export function abrir() {
     const r = indexedDB.open(NOMBRE, VERSION);
     r.onupgradeneeded = e => {
       const d = r.result, t = r.transaction;
-      if (e.oldVersion === 1) return migrarV1(d, t, () => agregarIndiceCambio(t));
-      if (e.oldVersion === 2) return agregarIndiceCambio(t);
+      if (e.oldVersion === 1) return migrarV1(d, t, () => { crearEvidencias(d); agregarIndiceCambio(t); });
+      if (e.oldVersion === 2 || e.oldVersion === 3) {
+        crearEvidencias(d);
+        return agregarIndiceCambio(t);
+      }
       d.createObjectStore("perfiles", { keyPath: "id" });
       crearAlmacenUsuarias(d);
       const actividades = d.createObjectStore("actividades", { keyPath: "id" });
@@ -71,6 +85,7 @@ export function abrir() {
       asistencias.createIndex("actividadId", "actividadId");
       asistencias.createIndex("usuariaId", "usuariaId");
       d.createObjectStore("meta", { keyPath: "clave" });
+      crearEvidencias(d);
       agregarIndiceCambio(t);
     };
     r.onsuccess = () => renombrarMeta(r.result).then(() => resolve(r.result), reject);
@@ -107,7 +122,7 @@ export async function eliminarTodo() {
   });
 }
 
-export const ALMACENES = ["perfiles", "usuarias", "actividades", "asistencias", "meta"];
+export const ALMACENES = ["perfiles", "usuarias", "actividades", "asistencias", "evidencias", "meta"];
 
 const pedir = r => new Promise((resolve, reject) => { r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error); });
 const terminar = t => new Promise((resolve, reject) => { t.oncomplete = resolve; t.onerror = t.onabort = () => reject(t.error); });
@@ -131,6 +146,7 @@ export function registroValido(almacen, r) {
     case "perfiles": return texto(r.nombre) && texto(r.rol) && texto(r.sal) && texto(r.pin);
     case "usuarias": return texto(r.nombre);
     case "actividades": return texto(r.nombre) && /^\d{4}-\d{2}-\d{2}$/.test(r.fecha) && texto(r.folio);
+    case "evidencias": return texto(r.actividadId) && texto(r.ruta);
     case "asistencias": return texto(r.actividadId) && texto(r.usuariaId) && !!r.datos && typeof r.datos === "object" && (!r.firma || /^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(r.firma));
     default: return true;
   }
@@ -251,6 +267,42 @@ export async function importar(respaldo) {
   t.objectStore("meta").delete("ultimaRecepcion");
   await terminar(t);
   avisarCambio("todos");
+}
+
+/* ---------- Imágenes de las evidencias (solo en este dispositivo) ---------- */
+/** Guarda (o reemplaza) la imagen de una evidencia. `estado`: "subir" si aún no está en la nube, "ok" si ya está. */
+export async function guardarFoto(id, blob, estado = "subir") {
+  const t = (await abrir()).transaction("fotos", "readwrite");
+  t.objectStore("fotos").put({ id, blob, estado });
+  await terminar(t);
+}
+
+export async function fotoLocal(id) {
+  return (await pedir((await abrir()).transaction("fotos").objectStore("fotos").get(id))) || null;
+}
+
+export async function fotosPorEstado(estado) {
+  return pedir((await abrir()).transaction("fotos").objectStore("fotos").index("estado").getAll(estado));
+}
+
+export async function idsFotosLocales() {
+  return new Set(await pedir((await abrir()).transaction("fotos").objectStore("fotos").getAllKeys()));
+}
+
+export async function eliminarFotoLocal(id) {
+  const t = (await abrir()).transaction("fotos", "readwrite");
+  t.objectStore("fotos").delete(id);
+  await terminar(t);
+}
+
+/** Marca una foto para quitarla de la nube (si ya estaba allá) o la elimina de inmediato (si nunca se envió). */
+export async function retirarFoto(id) {
+  const t = (await abrir()).transaction("fotos", "readwrite");
+  const s = t.objectStore("fotos");
+  const f = await pedir(s.get(id));
+  if (f?.estado === "ok") s.put({ id, blob: null, estado: "borrar" });
+  else s.delete(id);
+  await terminar(t);
 }
 
 /** Identificador interno y único de este dispositivo (UUID); distinto del ID de dispositivo que va en los folios. */

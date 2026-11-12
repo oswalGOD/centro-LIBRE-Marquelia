@@ -14,7 +14,7 @@ const LIMITE_GRATIS_MB = 500; // base de datos del plan gratuito de Supabase
 const DESFASE_TOLERADO = 5 * 60 * 1000;
 const DIA = 24 * 60 * 60 * 1000;
 const REPO = "oswalgod/centro-libre-marquelia";
-const NOMBRES = { perfiles: "Perfiles", usuarias: "Usuarias", actividades: "Actividades", asistencias: "Asistencias" };
+const NOMBRES = { perfiles: "Perfiles", usuarias: "Usuarias", actividades: "Actividades", asistencias: "Asistencias", evidencias: "Evidencias fotográficas" };
 
 /* ---------- Sesión ---------- */
 const leerSesion = () => { try { return JSON.parse(sessionStorage.getItem(CLAVE_SESION)); } catch { return null; } };

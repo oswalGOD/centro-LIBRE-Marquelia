@@ -11,8 +11,7 @@ import * as db from "./db.js";
 import { SUPABASE_URL, SUPABASE_ANON, VERSION_APP } from "./config.js";
 import { anotar, leer as leerErrores } from "./bitacora.js";
 
-const SINCRONIZADOS = ["perfiles", "usuarias", "actividades", "asistencias"];
-const LOTE = 200;
+const SINCRONIZADOS = ["perfiles", "usuarias", "actividades", "asistencias", "evidencias"];const LOTE = 200;
 const MARGEN_RECEPCION = 2 * 60 * 1000; // se vuelve a pedir un poco de atrás por si algo llegó tarde
 const CADA = 5 * 60 * 1000;
 
@@ -113,6 +112,64 @@ async function api(ruta, opciones = {}, reintento = false) {
     throw new Error(j?.message || `El servidor respondió ${r.status}.`);
   }
   return j;
+}
+
+/* ---------- Fotografías de las evidencias (Supabase Storage, bucket privado «evidencias») ---------- */
+async function almacenamiento(ruta, opciones = {}, reintento = false) {
+  const r = await fetch(`${SUPABASE_URL}/storage/v1/object/${ruta}`, {
+    ...opciones,
+    headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${await token(reintento)}`, ...opciones.headers },
+  });
+  if (r.status === 401 && !reintento) return almacenamiento(ruta, opciones, true);
+  return r;
+}
+const FALTA_ALMACEN = "Falta crear el almacenamiento de fotografías en Supabase (supabase/evidencias.sql).";
+
+/** Envía las fotos nuevas y quita de la nube las que se eliminaron. Devuelve cuántas se enviaron. */
+async function subirFotos() {
+  let n = 0;
+  for (const f of await db.fotosPorEstado("subir")) {
+    if (!f.blob) { await db.eliminarFotoLocal(f.id); continue; }
+    const r = await almacenamiento(`evidencias/${f.id}.jpg`, { method: "POST", headers: { "Content-Type": "image/jpeg", "x-upsert": "true", "cache-control": "max-age=31536000" }, body: f.blob });
+    if (!r.ok) {
+      const j = await leerJson(r);
+      if (r.status === 404 || /bucket not found/i.test(j?.message || j?.error || "")) throw new Error(FALTA_ALMACEN);
+      throw new Error(j?.message || `No fue posible enviar una fotografía (${r.status}).`);
+    }
+    await db.guardarFoto(f.id, f.blob, "ok");
+    n++;
+  }
+  for (const f of await db.fotosPorEstado("borrar")) {
+    const r = await almacenamiento(`evidencias/${f.id}.jpg`, { method: "DELETE" });
+    if (r.ok || r.status === 404 || r.status === 400) await db.eliminarFotoLocal(f.id); // 400/404: ya no existe en la nube
+    else throw new Error(`No fue posible quitar una fotografía de la nube (${r.status}).`);
+  }
+  return n;
+}
+
+/** Limpia de este dispositivo las imágenes de evidencias que ya se eliminaron. */
+async function limpiarFotos() {
+  const locales = await db.idsFotosLocales();
+  for (const e of await db.crudos("evidencias")) {
+    if (e.borrado && locales.has(e.id) && (await db.fotoLocal(e.id))?.estado !== "borrar") await db.eliminarFotoLocal(e.id);
+  }
+}
+
+/**
+ * Descarga la imagen de una evidencia tomada en otro dispositivo. Solo se baja cuando alguien abre la carpeta
+ * (no al sincronizar), para no llenar el equipo ni gastar los datos del plan gratuito. Devuelve true si quedó guardada.
+ */
+export async function descargarFoto(e) {
+  if (await db.fotoLocal(e.id)) return true;
+  if (!navigator.onLine || !(await db.leerMeta("nube"))) return false;
+  try {
+    const r = await almacenamiento(`authenticated/evidencias/${e.ruta || `${e.id}.jpg`}`);
+    if (!r.ok) return false; // aún no se ha enviado desde el otro dispositivo
+    const blob = await r.blob();
+    if (!blob.size) return false;
+    await db.guardarFoto(e.id, blob, "ok");
+    return true;
+  } catch { return false; }
 }
 
 /* ---------- Envío ---------- */
@@ -267,7 +324,7 @@ export async function actualizarEstado() {
   estado.conectada = !!nube;
   estado.cuenta = nube?.cuenta || "";
   estado.ultima = await db.leerMeta("ultimaSincronizacion");
-  estado.pendientes = nube ? (await porEnviar()).length : 0;
+  estado.pendientes = nube ? (await porEnviar()).length + (await db.fotosPorEstado("subir")).length + (await db.fotosPorEstado("borrar")).length : 0;
   estado.sinInternet = !navigator.onLine;
   estado.desfase = nube ? (await db.leerMeta("desfaseReloj")) || 0 : 0;
   publicar();
@@ -287,6 +344,14 @@ export function sincronizar() {
       const r = await recibir();
       if (r.fusiones) await enviar(); // las fusiones generan cambios que los demás deben recibir
       await db.escribirMeta("ultimaSincronizacion", Date.now());
+      // Las fotografías van aparte: si falla (p. ej. falta el SQL de evidencias), lo demás ya quedó sincronizado
+      try {
+        await subirFotos();
+        await limpiarFotos();
+      } catch (e) {
+        estado.error = e.message;
+        if (navigator.onLine) anotar(e.message, "sincronización");
+      }
       return r;
     } catch (e) {
       estado.error = e.message;
