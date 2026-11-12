@@ -375,13 +375,14 @@ body.con-camara { overflow: hidden; }
 .camara-obturador span { border-radius: 50%; background: #fff; color: #26161e; display: grid; place-items: center; }
 .camara-obturador:active span { background: #ddd; }
 .camara-obturador:disabled { opacity: .5; }
-.camara-sistema { margin: 12px; align-self: center; }
 .camara.visor .camara-visor { width: min(100%, 60dvh); justify-self: center; }
 .camara-caja { min-height: 0; }
-/* Celular en horizontal: los botones pasan a la orilla derecha, al alcance del pulgar */
+/* Celular en horizontal: la barra de botones no cambia de lugar; solo se ajusta el recuadro */
 @media (orientation: landscape) and (max-height: 600px) {
-  .camara.en-vivo { flex-direction: row; }
-  .camara-barra { flex-direction: column; justify-content: space-between; padding: max(14px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) 12px; }
   .camara-info p { font-size: .75rem; }
-  .camara.visor .camara-caja { max-height: 100%; }
+  .camara-barra { padding-top: 6px; }
+  .camara-icono { width: 48px; height: 48px; }
+  .camara-obturador { width: 64px; height: 64px; }
 }
+.camara-info .camara-giro { background: #9a5200; border-radius: 12px; }
+.camara-info .camara-sistema { pointer-events: auto; margin: 2px 0 0; }
