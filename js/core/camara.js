@@ -25,6 +25,24 @@ export function recortar43(fuente, w, h) {
   return new Promise((ok, mal) => lienzo.toBlob(blob => (blob ? ok({ blob, ancho, alto }) : mal(new Error("No fue posible procesar la fotografía."))), "image/jpeg", CALIDAD));
 }
 
+/** Procesa una fotografía de la galería con los mismos criterios que la cámara: orientación corregida, recorte 4:3 y 1600 × 1200 JPEG. */
+export async function desdeArchivo(archivo) {
+  let imagen;
+  try {
+    imagen = await createImageBitmap(archivo, { imageOrientation: "from-image" });
+  } catch {
+    imagen = await new Promise((ok, mal) => {
+      const url = URL.createObjectURL(archivo);
+      const i = new Image();
+      i.onload = () => { URL.revokeObjectURL(url); ok(i); };
+      i.onerror = () => { URL.revokeObjectURL(url); mal(new Error("No fue posible abrir la fotografía.")); };
+      i.src = url;
+    });
+  }
+  const w = imagen.width || imagen.naturalWidth, h = imagen.height || imagen.naturalHeight;
+  try { return await recortar43(imagen, w, h); } finally { imagen.close?.(); }
+}
+
 const svg = (d, t = 28) => `<svg viewBox="0 0 24 24" width="${t}" height="${t}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 // Iconos de Lucide (licencia ISC)
 const ICONO_GIRAR = svg('<path d="M11 19H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/><path d="M13 5h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5"/><circle cx="12" cy="12" r="3"/><path d="m18 22-3-3 3-3"/><path d="m6 2 3 3-3 3"/>', 30);

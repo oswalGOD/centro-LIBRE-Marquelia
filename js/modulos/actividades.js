@@ -8,7 +8,7 @@ import { $, $$, esc, aviso, errores, leerCampos, dobleToque, plural, unaVez } fr
 import { captura } from "./captura.js";
 import { formato } from "./formato.js";
 import * as evidencias from "../core/evidencias.js";
-import { seccionActividad, tomarFotos } from "./evidencias.js";
+import { seccionActividad, tomarFotos, agregarDeGaleria } from "./evidencias.js";
 
 const ID = "([\\w-]+)";
 const OTRO = "__otro";
@@ -203,6 +203,7 @@ async function detalle({ yo, pintar, ir }, id) {
   `, { atras: "#/asistencia" });
 
   $("#tomarFotos", c)?.addEventListener("click", async () => { if (await tomarFotos(yo, a)) detalle({ yo, pintar, ir }, id); });
+  $("#desdeGaleria", c)?.addEventListener("click", async () => { if (await agregarDeGaleria(yo, a)) detalle({ yo, pintar, ir }, id); });
 
   $("#guardarNotas", c).addEventListener("click", async () => {
     const notas = $("#notas", c).value.trim();
