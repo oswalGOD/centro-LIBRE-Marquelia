@@ -93,16 +93,16 @@ async function carpeta({ yo, pintar, ir }, id, ordenando = false) {
   ordenando = ordenando && editable && fotos.length > 1;
   const items = await Promise.all(fotos.map(async f => ({ f, url: await ev.urlDe(f.id) })));
   const c = pintar(`Evidencias ·${a.nombre}`, `
-    <section class="panel"><dl class="facts">
-      <div><dt>Folio</dt><dd class="mono">${esc(a.folio)}</dd></div>
-      <div><dt>Fecha</dt><dd>${fechaLarga(a.fecha)}</dd></div>
-      <div><dt>Lugar</dt><dd>${esc(a.lugar)}</dd></div>
-      <div><dt>Fotografías</dt><dd>${fotos.length}</dd></div></dl></section>
-    <div class="toolbar">
-      ${editable ? `<button class="btn primary" id="tomar">Tomar fotografías</button><button class="btn" id="desdeGaleria">Agregar de la galería</button>` : ""}
-      ${editable && fotos.length > 1 ? `<button class="btn" id="reordenar">${ordenando ? "Terminar de reordenar" : "Reordenar"}</button>` : ""}
-      ${fotos.length ? `<a class="btn" href="#/actividad/${esc(a.id)}/evidencias/formato">Imprimir o exportar PDF</a>` : ""}
-      <a class="btn ghost" href="#/actividad/${esc(a.id)}">Ver actividad</a>
+    <section class="panel stack">
+      <div class="card-head"><span class="hint">${plural(fotos.length, "fotografía", "fotografías")}</span><a class="enlace-act" href="#/actividad/${esc(a.id)}">Ver actividad ›</a></div>
+      <dl class="facts">
+        <div><dt>Folio</dt><dd class="mono">${esc(a.folio)}</dd></div>
+        <div><dt>Fecha</dt><dd>${fechaLarga(a.fecha)}</dd></div>
+        <div><dt>Lugar</dt><dd>${esc(a.lugar)}</dd></div></dl></section>
+    <div class="icon-row barra-iconos">
+      ${editable ? `${botonIcono("camara", "Cámara", { id: "tomar", clase: "primary" })}${botonIcono("galeria", "Galería", { id: "desdeGaleria" })}` : ""}
+      ${editable && fotos.length > 1 ? botonIcono("reordenar", ordenando ? "Terminar" : "Reordenar", { id: "reordenar" }) : ""}
+      ${fotos.length ? botonIcono("formato", "PDF", { href: `#/actividad/${a.id}/evidencias/formato` }) : ""}
     </div>
     ${ordenando ? `<p class="hint">Use las flechas para mover cada fotografía. Este es el orden en que saldrán en el PDF.</p>` : ""}
     ${fotos.length ? `<div class="evid-grid">${items.map(({ f, url }, i) => {
@@ -154,16 +154,16 @@ function visor(items, i, { editable, recargar }) {
     const { f, url } = items[i];
     capa.innerHTML = `
       <div class="camara-caja">
-        <h2 class="h3">Fotografía ${i + 1} de ${items.length}</h2>
+        <div class="card-head"><h2 class="h3">Fotografía ${i + 1} de ${items.length}</h2>${botonIcono("salir", "Cerrar", { extra: "data-cerrar" })}</div>
         <div class="camara-visor">${url ? `<img src="${url}" alt="${esc(f.leyenda || `Fotografía ${i + 1}`)}">` : `<span class="evid-falta">Foto sin descargar en este dispositivo</span>`}</div>
         <p class="hint">Tomada por ${esc(f.tomadaPorNombre || "—")} · ${hora(f.tomadaEn)}</p>
-        <div class="field"><label for="leyenda">Leyenda (opcional, aparecerá bajo la foto al imprimir)</label>
+        <div class="field"><label for="leyenda">Leyenda (opcional, aparecerá bajo la foto al imprimir). Toque Guardar para conservarla.</label>
           <input id="leyenda" maxlength="140" value="${esc(f.leyenda || "")}" ${editable ? "" : "disabled"}></div>
-        <div class="camara-botones">
-          <button type="button" class="btn" data-ant ${i === 0 ? "disabled" : ""}>← Anterior</button>
-          <button type="button" class="btn" data-sig ${i === items.length - 1 ? "disabled" : ""}>Siguiente →</button>
-          ${editable ? `<button type="button" class="btn primary" data-guardar>Guardar leyenda</button><button type="button" class="btn danger" data-quitar>Eliminar foto</button>` : ""}
-          <button type="button" class="btn ghost" data-cerrar>Cerrar</button>
+        <div class="camara-botones iconos">
+          ${botonIcono("anterior", "Anterior", { extra: `data-ant ${i === 0 ? "disabled" : ""}` })}
+          ${editable ? botonIcono("guardar", "Guardar", { clase: "primary", extra: "data-guardar" }) : ""}
+          ${editable ? botonIcono("eliminar", "Eliminar", { clase: "danger", extra: "data-quitar" }) : ""}
+          ${botonIcono("siguiente", "Siguiente", { extra: `data-sig ${i === items.length - 1 ? "disabled" : ""}` })}
         </div>
       </div>`;
     const q = s => capa.querySelector(s);

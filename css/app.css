@@ -441,3 +441,7 @@ body.con-camara { overflow: hidden; }
 .barra-fija { position: sticky; bottom: 0; z-index: 4; display: flex; gap: 10px; padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px))); background: var(--surface); border-top: 1px solid var(--line); }
 .barra-fija .btn { flex: 1; min-height: 52px; }
 .autoguardado { color: var(--muted); font-size: .9rem; min-height: 1.3em; }
+.camara-botones.iconos { flex-wrap: nowrap; justify-content: space-between; }
+.camara-botones.iconos .ib { flex: 1; }
+.barra-iconos .ib { flex: 1 1 0; max-width: 120px; }
+.enlace-act { font-weight: 700; color: var(--accent); text-decoration: none; padding: 10px 0; }
