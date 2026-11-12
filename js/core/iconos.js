@@ -22,6 +22,10 @@ const TRAZOS = {
   filtros: '<path d="M4 6h16M7 12h10M10 18h4"/>',
   escaner: '<rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h2v2h-2zM18 18h2M18 14v2"/>',
   identificacion: '<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="9" cy="12" r="2"/><path d="M14 10h4M14 14h4"/>',
+  llave: '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3M14 9l2 2"/>',
+  apagar: '<path d="M12 3v8M7 6.5a8 8 0 1 0 10 0"/>',
+  activar: '<circle cx="12" cy="12" r="8"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/>',
+  descargar: '<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>',
   reabrir: '<path d="M4 12a8 8 0 1 0 3-6.2M4 4v4h4"/>',
 };
 
