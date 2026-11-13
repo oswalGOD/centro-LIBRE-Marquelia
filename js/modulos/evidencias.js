@@ -66,7 +66,7 @@ export async function seccionActividad(yo, a) {
 }
 
 async function lista({ yo, pintar }) {
-  const acts = (await db.todos("actividades")).filter(a => puedeVer(yo, a)).sort((a, b) => b.fecha.localeCompare(a.fecha) || b.creado - a.creado);
+  const acts = (await db.todos("actividades")).filter(a => puedeVer(yo, a) && !a.programado && !a.cancelado).sort((a, b) => b.fecha.localeCompare(a.fecha) || b.creado - a.creado);
   const cuenta = await ev.conteos();
   const total = acts.reduce((s, a) => s + (cuenta[a.id] || 0), 0);
   const conFotos = acts.filter(a => cuenta[a.id]).length;
