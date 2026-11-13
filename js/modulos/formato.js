@@ -6,6 +6,7 @@ import { GRUPOS, RANGOS, edad, rangoDe, fechaCorta } from "../core/catalogos.js"
 import { puedeVer } from "../core/permisos.js";
 import { $, $$, esc, plural, aviso } from "../core/ui.js";
 import { hojasAPDF } from "../core/pdf.js";
+import { colorearFirma } from "../core/firma.js";
 
 export const POR_HOJA = 10;
 const ANCHO = 1056, ALTO = 816; // 11 × 8.5 pulgadas a 96 dpi
@@ -127,6 +128,7 @@ export async function formato({ yo, pintar, ir }, id) {
   const act = await db.uno("actividades", id);
   if (!act || !puedeVer(yo, act)) return ir("#/asistencia");
   const asis = (await db.todos("asistencias", "actividadId", id)).sort((a, b) => a.orden - b.orden);
+  await Promise.all(asis.map(async x => { if (x.firma) x.firma = await colorearFirma(x.firma); })); // solo para mostrar e imprimir
   const hojas = Math.max(1, Math.ceil(asis.length / POR_HOJA)) + (act.notas ? 1 : 0);
   const sinFirma = asis.filter(x => !x.firma && !x.sinFirma).length;
   const c = pintar("Formato para imprimir", `

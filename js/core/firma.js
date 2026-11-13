@@ -3,7 +3,38 @@
 // Opciones:
 //   girado(): true cuando el panel se muestra rotado 90° con CSS (celular en vertical)
 //   conservar: el trazo existente sigue siendo parte de la firma en curso (al redibujar tras girar)
-const GROSOR = 3.64; // grosor del trazo en px
+const GROSOR = 5.5; // grosor del trazo en px (≈0,3 mm sobre el papel, como un bolígrafo)
+export const COLOR_FIRMA = "#2747b0"; // azul bolígrafo
+
+const recoloreadas = new Map();
+/**
+ * Devuelve la firma con el color actual (azul bolígrafo), conservando la forma y la transparencia.
+ * Sirve para mostrar e imprimir las firmas guardadas con el color anterior; no modifica lo guardado.
+ * El grosor no se puede cambiar en una imagen ya trazada, por lo que solo aplica a firmas nuevas.
+ */
+export function colorearFirma(src) {
+  if (!src || !/^data:image\/png;base64,/.test(src)) return Promise.resolve(src);
+  if (!recoloreadas.has(src)) {
+    recoloreadas.set(src, new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const lienzo = document.createElement("canvas");
+          lienzo.width = img.naturalWidth; lienzo.height = img.naturalHeight;
+          const cx = lienzo.getContext("2d");
+          cx.drawImage(img, 0, 0);
+          cx.globalCompositeOperation = "source-in"; // conserva la transparencia y sustituye el color
+          cx.fillStyle = COLOR_FIRMA;
+          cx.fillRect(0, 0, lienzo.width, lienzo.height);
+          resolve(lienzo.toDataURL("image/png"));
+        } catch { resolve(src); }
+      };
+      img.onerror = () => resolve(src);
+      img.src = src;
+    }));
+  }
+  return recoloreadas.get(src);
+}
 
 export function panelFirma(canvas, existente = "", { girado = () => false, conservar = false } = {}) {
   const ctx = canvas.getContext("2d");
@@ -18,7 +49,7 @@ export function panelFirma(canvas, existente = "", { girado = () => false, conse
     ctx.lineWidth = GROSOR;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    ctx.strokeStyle = ctx.fillStyle = "#1d2b6b";
+    ctx.strokeStyle = ctx.fillStyle = COLOR_FIRMA;
     if (existente) {
       const img = new Image();
       img.onload = () => {
@@ -27,7 +58,7 @@ export function panelFirma(canvas, existente = "", { girado = () => false, conse
         const w = img.width * s, h = img.height * s;
         ctx.drawImage(img, (r.width - w) / 2, (r.height - h) / 2 - 10, w, h);
       };
-      img.src = existente;
+      colorearFirma(existente).then(u => { img.src = u; });
     }
   }
   preparar();

@@ -4,7 +4,7 @@ import * as db from "../core/db.js";
 import { botonIcono } from "../core/iconos.js";
 import { aMayusculas, aCapital, FORMATOS, GRUPOS, SEXOS, leerCurp, limpiarCurp, edad, rangoDe, etiquetaRango, normalizar, fechaLarga } from "../core/catalogos.js";
 import { puedeVer, puedeEditar } from "../core/permisos.js";
-import { pedirFirma } from "../core/firma.js";
+import { pedirFirma, colorearFirma } from "../core/firma.js";
 import { escanearCurp } from "../core/escaner.js";
 import { escanearIne } from "../core/ine.js";
 import { $, $$, esc, aviso, errores, dobleToque, unaVez } from "../core/ui.js";
@@ -92,6 +92,7 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
   function pintarFirma() {
     const vista = $("#firmaVista", c);
     vista.innerHTML = firma ? `<img src="${esc(firma)}" alt="Firma capturada">` : `<span>${omitir ? esc(sinFirma || "Firma omitida") : "Sin firma"}</span>`;
+    if (firma) { const actual = firma; colorearFirma(actual).then(u => { const im = vista.querySelector("img"); if (im && firma === actual) im.src = u; }); }
     vista.classList.toggle("vacia", !firma);
     $("#firmar", c).textContent = firma ? "Volver a firmar" : "Firmar";
     $("#omitirFirma", c).checked = omitir;

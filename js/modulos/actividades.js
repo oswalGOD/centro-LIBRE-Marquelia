@@ -7,6 +7,7 @@ import { puedeVer, puedeEditar } from "../core/permisos.js";
 import { $, $$, esc, aviso, errores, leerCampos, dobleToque, plural, unaVez } from "../core/ui.js";
 import { captura } from "./captura.js";
 import { formato } from "./formato.js";
+import { colorearFirma } from "../core/firma.js";
 import * as evidencias from "../core/evidencias.js";
 import * as kiosko from "../core/kiosko.js";
 import { icono, botonIcono, menuMas, conectarMenus } from "../core/iconos.js";
@@ -283,6 +284,7 @@ async function detalle({ yo, pintar, ir }, id) {
   const curso = Boolean(a.curso);
   const editable = puedeEditar(yo, a);
   const asis = (await db.todos("asistencias", "actividadId", id)).sort((x, y) => x.orden - y.orden);
+  await Promise.all(asis.map(async x => { if (x.firma) x.firma = await colorearFirma(x.firma); })); // solo para mostrar
   const n = s => asis.filter(x => x.datos.sexo === s).length;
   const sinFirma = asis.filter(x => !x.firma && !x.sinFirma).length;
 
