@@ -11,6 +11,7 @@ import * as evidencias from "../core/evidencias.js";
 import * as kiosko from "../core/kiosko.js";
 import { icono, botonIcono, menuMas, conectarMenus } from "../core/iconos.js";
 import { esProximo, sinRealizar, estadoDe, cuandoEs, ordenarCursos } from "../core/cursos.js";
+import { tarjetas } from "../core/resumen.js";
 import { seccionActividad, tomarFotos, agregarDeGaleria } from "./evidencias.js";
 
 const ID = "([\\w-]+)";
@@ -41,6 +42,13 @@ async function lista({ yo, pintar }, curso = false) {
   const asis = await db.todos("asistencias");
   const cuenta = id => asis.filter(x => x.actividadId === id).length;
   const abiertas = acts.filter(a => estadoDe(a) === "abierta").length;
+  const cerradas = acts.filter(a => estadoDe(a) === "cerrada").length;
+  const fechaHoy = hoy();
+  const idsVisibles = new Set(acts.map(a => a.id));
+  const nAsistentes = asis.filter(x => idsVisibles.has(x.actividadId)).length;
+  const resumen = curso
+    ? [[abiertas, "Abiertos", "ok"], [cerradas, "Cerrados"], [proximos.length, "Próximos", "gold"], [nAsistentes, "Asistentes"]]
+    : [[abiertas, "Abiertas", "ok"], [acts.length - abiertas, "Cerradas"], [acts.filter(a => a.fecha.slice(0, 7) === fechaHoy.slice(0, 7)).length, "Este mes", "gold"], [nAsistentes, "Asistentes"]];
   const muchas = acts.length > 6;
   const opciones = (lista, actual) => lista.map(([v, t]) => `<option value="${esc(v)}" ${v === actual ? "selected" : ""}>${esc(t)}</option>`).join("");
   const meses = [...new Set(acts.map(a => a.fecha.slice(0, 7)))].map(m => [m, `${mesCorto(m + "-01")} ${m.slice(0, 4)}`]);
@@ -48,6 +56,7 @@ async function lista({ yo, pintar }, curso = false) {
   const facilitadoras = [...new Map(acts.map(a => [a.facilitadoraId, a.facilitadora]))].sort((x, y) => x[1].localeCompare(y[1], "es"));
 
   const c = pintar(N.titulo, `
+    ${tarjetas(resumen, { etiqueta: `Resumen de ${N.varios}` })}
     <div class="toolbar">
       ${muchas ? `<input type="search" id="buscar" class="search" placeholder="${N.buscar}" aria-label="Buscar ${N.uno}">
       <span class="ib-badge"><button type="button" class="ib" id="verFiltros" aria-expanded="false" aria-controls="filtros" aria-label="Filtros" title="Filtros">${icono("filtros")}<span class="ib-et">Filtros</span></button><b id="nFiltros" hidden></b></span>` : ""}

@@ -1,6 +1,7 @@
 // Perfiles de las integrantes del Centro que usan la app. Solo la Coordinadora puede dar de alta, cambiar PIN o desactivar.
 
 import * as db from "../core/db.js";
+import { tarjetas } from "../core/resumen.js";
 import { botonIcono } from "../core/iconos.js";
 import { ROLES } from "../core/catalogos.js";
 import { crearPerfil, cambiarPin, pinValido } from "../core/auth.js";
@@ -11,7 +12,9 @@ async function vista(ctx) {
   const lista = (await db.todos("perfiles")).sort((a, b) => b.activa - a.activa || ROLES.indexOf(a.rol) - ROLES.indexOf(b.rol));
   const coordinadorasActivas = lista.filter(u => u.activa && u.rol === "Coordinadora").length;
 
+  const activas = lista.filter(u => u.activa);
   const c = pintar("Perfiles", `
+    ${tarjetas([[activas.length, "Activos", "ok"], [lista.length - activas.length, "Desactivados", lista.length > activas.length ? "warn" : ""], [activas.filter(u => u.rol === "Coordinadora").length, "Coordinación"]], { etiqueta: "Resumen de perfiles" })}
     <div class="list">${lista.map(u => `
       <div class="row user ${u.activa ? "" : "inactive"}" data-id="${esc(u.id)}">
         <span class="avatar" aria-hidden="true">${esc(u.nombre[0])}</span>
