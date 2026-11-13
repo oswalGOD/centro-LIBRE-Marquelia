@@ -69,11 +69,16 @@ export function panelFirma(canvas, existente = "", { girado = () => false, conse
     return girado() ? [e.clientY - r.top, r.right - e.clientX] : [e.clientX - r.left, e.clientY - r.top];
   };
 
+  // Suavizado: se filtra levemente cada punto y se unen con curvas que pasan por los puntos medios,
+  // así no se ven picos y el trazo sigue siendo fiel a la mano (solo afecta a firmas nuevas).
+  const SUAVIZADO = 0.5; // 1 = sin filtro; menor = más liso
+  let filtrado = null, medio = null, crudo = null;
+
   canvas.addEventListener("pointerdown", e => {
     e.preventDefault();
     if (!trazada && existente) limpiar();
     dibujando = trazada = true;
-    ultimo = punto(e);
+    ultimo = crudo = filtrado = medio = punto(e);
     canvas.setPointerCapture(e.pointerId);
     ctx.beginPath();
     ctx.arc(ultimo[0], ultimo[1], GROSOR / 2, 0, Math.PI * 2);
@@ -81,14 +86,29 @@ export function panelFirma(canvas, existente = "", { girado = () => false, conse
   });
   canvas.addEventListener("pointermove", e => {
     if (!dibujando) return;
-    const p = punto(e);
+    const eventos = e.getCoalescedEvents?.().length ? e.getCoalescedEvents() : [e]; // todos los puntos que entrega el dispositivo
     ctx.beginPath();
-    ctx.moveTo(...ultimo);
-    ctx.lineTo(...p);
+    ctx.moveTo(...medio);
+    for (const ev of eventos) {
+      const p = punto(ev);
+      if (Math.hypot(p[0] - crudo[0], p[1] - crudo[1]) < 0.75) continue; // ignora temblor mínimo
+      crudo = p;
+      const f = [filtrado[0] + (p[0] - filtrado[0]) * SUAVIZADO, filtrado[1] + (p[1] - filtrado[1]) * SUAVIZADO];
+      const m = [(filtrado[0] + f[0]) / 2, (filtrado[1] + f[1]) / 2];
+      ctx.quadraticCurveTo(filtrado[0], filtrado[1], m[0], m[1]);
+      filtrado = f; medio = m;
+    }
     ctx.stroke();
-    ultimo = p;
   });
-  ["pointerup", "pointercancel", "pointerleave"].forEach(t => canvas.addEventListener(t, () => (dibujando = false)));
+  function terminar() {
+    if (!dibujando) return;
+    dibujando = false;
+    if (crudo && medio) { // cierra el trazo en el último punto real, sin recortar el final
+      ctx.beginPath(); ctx.moveTo(...medio); ctx.lineTo(...crudo); ctx.stroke();
+    }
+    filtrado = medio = crudo = null;
+  }
+  ["pointerup", "pointercancel", "pointerleave"].forEach(t => canvas.addEventListener(t, terminar));
 
   function limpiar() {
     ctx.save();
