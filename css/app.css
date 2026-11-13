@@ -341,7 +341,7 @@ table.data tbody tr:hover { background: var(--surface-2); }
 @media (max-width: 480px) {
   .input-row { gap: 6px; }
   .input-row input.upper { font-size: clamp(.66rem, 3.3vw, .95rem); letter-spacing: 0; padding-inline: 6px; }
-  .input-row .ib { min-width: 44px; padding-inline: 3px; font-size: .66rem; }
+  .input-row .ib { min-width: 52px; min-height: 52px; padding-inline: 3px; }
 }
 .input-row .btn { flex: 1 0 auto; }
 .scan-view { position: relative; min-height: 0; border-radius: var(--radius); overflow: hidden; background: #000; }
