@@ -479,3 +479,13 @@ body.con-camara { overflow: hidden; }
 .ayuda { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 4px 14px; }
 .ayuda[open] { padding-bottom: 12px; }
 @media (prefers-reduced-motion: reduce) { .plegable > summary::after, .ayuda > summary::after { transition: none; } }
+
+/* ---------- Mini tarjetas de resumen por módulo ---------- */
+.resumen { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); gap: 8px; }
+.rm { display: grid; justify-items: center; align-content: center; gap: 1px; min-width: 0; padding: 6px 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; text-align: center; }
+.rm b { font-family: var(--f-display); font-size: 1.3rem; line-height: 1.1; color: var(--accent); font-variant-numeric: tabular-nums; }
+.rm span { max-width: 100%; color: var(--muted); font-size: .78rem; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rm.ok b { color: var(--ok); }
+.rm.warn b { color: var(--warn); }
+.rm.gold b { color: var(--gold); }
+@media (max-width: 360px) { .resumen { gap: 6px; } .rm { padding-inline: 2px; } .rm b { font-size: 1.15rem; } .rm span { font-size: .72rem; } }
