@@ -305,6 +305,21 @@ table.data tbody tr:hover { background: var(--surface-2); }
 .sheet.evid-hoja figcaption { font-size: 11px; line-height: 1.2; height: 26px; overflow: hidden; padding-top: 2px; overflow-wrap: anywhere; }
 .sheet.evid-hoja .evid-pagina { text-align: right; font-size: 10px; position: relative; z-index: 1; margin-top: 2px; }
 
+/* Constancia de participación */
+.sheet.constancia { padding: 20px 24px; gap: 0; }
+.sheet.constancia .cons-marco { flex: 1; margin: 12px 10px 4px; border: 3px double var(--paper-band); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 16px 70px 18px; position: relative; z-index: 1; }
+.sheet.constancia .cons-centro { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: .18em; }
+.sheet.constancia .cons-titulo { margin: 6px 0 14px; font-size: 52px; font-weight: 700; letter-spacing: .22em; color: var(--paper-band); line-height: 1.1; }
+.sheet.constancia .cons-texto { margin: 6px 0; font-size: 18px; line-height: 1.4; }
+.sheet.constancia .cons-nombre { margin: 8px 0 2px; font-size: 38px; font-weight: 700; line-height: 1.15; border-bottom: 1.5px solid var(--paper-ink); padding: 0 24px 4px; max-width: 100%; overflow-wrap: anywhere; }
+.sheet.constancia .cons-curp { margin: 2px 0 8px; font-size: 14px; letter-spacing: .08em; }
+.sheet.constancia .cons-curso { margin: 6px 0; font-size: 28px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
+.sheet.constancia .cons-firmas { display: flex; justify-content: space-around; gap: 60px; width: 100%; margin-top: 54px; }
+.sheet.constancia .cons-firmas > div { flex: 1; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.sheet.constancia .cons-firmas .linea { border-top: 1.5px solid var(--paper-ink); margin-bottom: 4px; }
+.sheet.constancia .cons-firmas b { font-size: 15px; }
+.sheet.constancia .cons-folio { margin: 22px 0 0; font-size: 11px; align-self: flex-end; }
+
 /* ---------- Impresión: solo las hojas, a tamaño real ---------- */
 @page { size: letter landscape; margin: 0; }
 @media print {

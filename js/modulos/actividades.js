@@ -14,13 +14,18 @@ import { seccionActividad, tomarFotos, agregarDeGaleria } from "./evidencias.js"
 
 const ID = "([\\w-]+)";
 const OTRO = "__otro";
+const TIPO_CURSO = "Curso";
+const listaDe = a => (a?.curso ? "#/cursos" : "#/asistencia");
 
 // Filtros de la lista, vigentes mientras la app está abierta
 const filtros = { mes: "", tipo: "", facilitadoraId: "", estado: "" };
 
-async function lista({ yo, pintar }) {
+async function lista({ yo, pintar }, curso = false) {
+  const N = curso
+    ? { titulo: "Cursos y capacitaciones", uno: "curso", varios: "cursos", abierto: "abierto", abiertos: "abiertos", nuevo: "#/curso/nuevo", buscar: "Buscar por nombre, folio, lugar o instructora" }
+    : { titulo: "Actividades", uno: "actividad", varios: "actividades", abierto: "abierta", abiertos: "abiertas", nuevo: "#/actividad/nueva", buscar: "Buscar por nombre, folio o lugar" };
   const acts = (await db.todos("actividades"))
-    .filter(a => puedeVer(yo, a))
+    .filter(a => Boolean(a.curso) === curso && puedeVer(yo, a))
     .sort((a, b) => b.fecha.localeCompare(a.fecha) || b.creado - a.creado);
   const asis = await db.todos("asistencias");
   const cuenta = id => asis.filter(x => x.actividadId === id).length;
@@ -31,12 +36,12 @@ async function lista({ yo, pintar }) {
   const tipos = [...new Set(acts.map(a => a.tipo))].sort((x, y) => x.localeCompare(y, "es")).map(t => [t, t]);
   const facilitadoras = [...new Map(acts.map(a => [a.facilitadoraId, a.facilitadora]))].sort((x, y) => x[1].localeCompare(y[1], "es"));
 
-  const c = pintar("Actividades", `
+  const c = pintar(N.titulo, `
     <div class="toolbar">
-      ${muchas ? `<input type="search" id="buscar" class="search" placeholder="Buscar por nombre, folio o lugar" aria-label="Buscar actividad">
+      ${muchas ? `<input type="search" id="buscar" class="search" placeholder="${N.buscar}" aria-label="Buscar ${N.uno}">
       <span class="ib-badge"><button type="button" class="ib" id="verFiltros" aria-expanded="false" aria-controls="filtros" aria-label="Filtros" title="Filtros">${icono("filtros")}<span class="ib-et">Filtros</span></button><b id="nFiltros" hidden></b></span>` : ""}
-      ${botonIcono("mas2", "Nueva", { href: "#/actividad/nueva", clase: "primary", extra: 'aria-label="Nueva actividad" title="Nueva actividad"' })}
-      <p class="hint" id="cuenta">${plural(acts.length, "actividad", "actividades")} · ${plural(abiertas, "abierta", "abiertas")}</p>
+      ${botonIcono("mas2", curso ? "Nuevo" : "Nueva", { href: N.nuevo, clase: "primary", extra: `aria-label="${curso ? "Nuevo curso" : "Nueva actividad"}" title="${curso ? "Nuevo curso" : "Nueva actividad"}"` })}
+      <p class="hint" id="cuenta">${plural(acts.length, N.uno, N.varios)} · ${plural(abiertas, N.abierto, N.abiertos)}</p>
     </div>
     ${muchas ? `<div class="filters" id="filtros" hidden>
       <div class="field"><label for="f-mes">Mes</label><select id="f-mes" data-filtro="mes"><option value="">Todos</option>${opciones(meses, filtros.mes)}</select></div>
@@ -45,15 +50,15 @@ async function lista({ yo, pintar }) {
       <div class="field"><label for="f-estado">Estado</label><select id="f-estado" data-filtro="estado"><option value="">Todas</option>${opciones([["abierta", "Abiertas"], ["cerrada", "Cerradas"]], filtros.estado)}</select></div>
     </div>` : ""}
     ${acts.length ? `<div class="list" id="lista">${acts.map(a => `
-      <a class="row" href="#/actividad/${esc(a.id)}" data-buscar="${esc(normalizar(`${a.nombre} ${a.folio} ${a.lugar} ${a.tipo} ${a.facilitadora}`))}"
+      <a class="row" href="#/actividad/${esc(a.id)}" data-buscar="${esc(normalizar(`${a.nombre} ${a.folio} ${a.lugar} ${a.tipo} ${a.facilitadora} ${a.instructora || ""}`))}"
         data-mes="${a.fecha.slice(0, 7)}" data-tipo="${esc(a.tipo)}" data-facilitadora-id="${esc(a.facilitadoraId)}" data-estado="${a.estado === "cerrada" ? "cerrada" : "abierta"}">
         <span class="date"><b>${Number(a.fecha.slice(8, 10))}</b><small>${mesCorto(a.fecha)}</small></span>
         <span class="body"><span class="name">${esc(a.nombre)}</span>
-          <span class="meta"><span>${esc(a.folio)}</span><span>${esc(a.tipo)}</span><span>${esc(a.lugar)}</span>${esCoordinadora(yo) ? `<span>${esc(a.facilitadora)}</span>` : ""}</span></span>
+          <span class="meta"><span>${esc(a.folio)}</span><span>${esc(curso ? `${a.horas} h` : a.tipo)}</span><span>${esc(a.lugar)}</span>${esCoordinadora(yo) ? `<span>${esc(a.facilitadora)}</span>` : ""}</span></span>
         <span class="end"><span class="big">${cuenta(a.id)}</span><small>asistentes</small>
-          ${a.estado === "cerrada" ? `<span class="chip">Cerrada</span>` : `<span class="chip ok">Abierta</span>`}</span>
+          ${a.estado === "cerrada" ? `<span class="chip">${curso ? "Cerrado" : "Cerrada"}</span>` : `<span class="chip ok">${curso ? "Abierto" : "Abierta"}</span>`}</span>
       </a>`).join("")}</div>`
-    : `<div class="empty"><b>Aún no hay actividades registradas.</b><p>Cree la primera con “Nueva actividad”. Posteriormente podrá registrar a cada asistente con su firma e imprimir la lista.</p></div>`}
+    : `<div class="empty">${curso ? `<b>Aún no hay cursos registrados.</b><p>Cree el primero con “Nuevo”. Después podrá registrar a cada asistente con su firma, imprimir la lista y emitir las constancias.</p>` : `<b>Aún no hay actividades registradas.</b><p>Cree la primera con “Nueva actividad”. Posteriormente podrá registrar a cada asistente con su firma e imprimir la lista.</p>`}</div>`}
   `, { atras: "#/" });
   const buscar = $("#buscar", c);
   function filtrar() {
@@ -90,43 +95,46 @@ async function lista({ yo, pintar }) {
 }
 
 /** Alta (id null), edición (id) o repetición de una actividad anterior (origenId). */
-async function formulario({ yo, pintar, ir }, id, origenId) {
+async function formulario({ yo, pintar, ir }, id, origenId, nuevoCurso = false) {
   const act = id ? await db.uno("actividades", id) : null;
   if (id && (!act || !puedeEditar(yo, act))) return ir(id ? `#/actividad/${id}` : "#/asistencia");
   const origen = origenId ? await db.uno("actividades", origenId) : null;
   if (origenId && (!origen || !puedeVer(yo, origen))) return ir("#/asistencia");
+  const curso = nuevoCurso || Boolean((act || origen)?.curso);
   const perfiles = (await db.todos("perfiles")).filter(u => u.activa);
   const ultimoLugar = await db.leerMeta("ultimoLugar", "Marquelia, Gro.");
   const a = act || (origen
-    ? { nombre: origen.nombre, fecha: hoy(), lugar: origen.lugar, facilitadoraId: origen.facilitadoraId, tipo: origen.tipo, horaInicio: origen.horaInicio, horaFin: origen.horaFin }
-    : { nombre: "", fecha: hoy(), lugar: ultimoLugar, facilitadoraId: yo.id, tipo: "Taller" });
+    ? { nombre: origen.nombre, fecha: hoy(), lugar: origen.lugar, facilitadoraId: origen.facilitadoraId, tipo: origen.tipo, horaInicio: origen.horaInicio, horaFin: origen.horaFin, horas: origen.horas, instructora: origen.instructora }
+    : { nombre: "", fecha: hoy(), lugar: ultimoLugar, facilitadoraId: yo.id, tipo: curso ? TIPO_CURSO : "Taller" });
   // Los tipos del catálogo más los que ya se escribieron a mano en otras actividades
-  const usados = (await db.todos("actividades")).map(x => x.tipo).filter(t => t && !TIPOS_RETIRADOS.includes(t));
+  const usados = (await db.todos("actividades")).map(x => x.tipo).filter(t => t && t !== TIPO_CURSO && !TIPOS_RETIRADOS.includes(t));
   const tipos = [...new Set([...TIPOS_ACTIVIDAD, ...usados.sort((x, y) => x.localeCompare(y, "es")), a.tipo].filter(Boolean))];
-  const volver = act ? `#/actividad/${act.id}` : origen ? `#/actividad/${origen.id}` : "#/asistencia";
+  const volver = act ? `#/actividad/${act.id}` : origen ? `#/actividad/${origen.id}` : curso ? "#/cursos" : "#/asistencia";
 
-  const c = pintar(act ? "Editar actividad" : origen ? "Repetir actividad" : "Nueva actividad", `
+  const c = pintar(`${act ? "Editar" : origen ? "Repetir" : "Nuevo"} ${curso ? "curso" : "actividad"}`.replace("Nuevo actividad", "Nueva actividad"), `
     <section class="panel stack">
       <p class="hint">${origen ? `Copia de «${esc(origen.nombre)}» del ${fechaLarga(origen.fecha)}. Verifique la fecha y ajuste lo que sea necesario. Al registrar asistentes se mostrará quiénes asistieron en esa ocasión.` : "Estos datos forman el encabezado del formato."}${act ? "" : " El folio se asigna al guardar."}</p>
       <div class="grid" id="f">
-        <div class="field span-2"><label for="a-nombre">Nombre de la actividad</label><input id="a-nombre" data-campo="nombre" value="${esc(a.nombre)}"></div>
+        <div class="field span-2"><label for="a-nombre">${curso ? "Nombre del curso o capacitación" : "Nombre de la actividad"}</label><input id="a-nombre" data-campo="nombre" value="${esc(a.nombre)}"></div>
         <div class="field"><label for="a-fecha">Fecha</label><input id="a-fecha" type="date" data-campo="fecha" value="${esc(a.fecha)}"></div>
         <div class="field"><label for="a-lugar">Lugar de desarrollo</label><input id="a-lugar" data-campo="lugar" value="${esc(a.lugar)}"></div>
         <div class="field"><label for="a-facilitadora">Facilitadora</label>
           <select id="a-facilitadora" data-campo="facilitadoraId">${perfiles.map(u => `<option value="${esc(u.id)}" ${u.id === a.facilitadoraId ? "selected" : ""}>${esc(u.nombre)} · ${esc(u.rol)}</option>`).join("")}</select></div>
-        <div class="field"><label for="a-tipo">Tipo de actividad</label>
+        ${curso ? `<div class="field span-2"><label for="a-instructora">Instructora que imparte el curso</label><input id="a-instructora" data-campo="instructora" value="${esc(a.instructora || "")}" autocomplete="off"></div>
+        <div class="field"><label for="a-horas">Duración total (horas)</label><input id="a-horas" type="number" inputmode="decimal" min="0.5" max="999" step="0.5" data-campo="horas" value="${esc(a.horas ?? "")}"></div>
+        <input type="hidden" data-campo="tipo" value="${TIPO_CURSO}">` : `<div class="field"><label for="a-tipo">Tipo de actividad</label>
           <select id="a-tipo" data-campo="tipo">${tipos.map(t => `<option ${t === a.tipo ? "selected" : ""}>${esc(t)}</option>`).join("")}<option value="${OTRO}">Otro tipo…</option></select>
-          <input id="a-tipoOtro" aria-label="Ingrese el tipo de actividad" placeholder="Ingrese el tipo de actividad" autocomplete="off" hidden></div>
+          <input id="a-tipoOtro" aria-label="Ingrese el tipo de actividad" placeholder="Ingrese el tipo de actividad" autocomplete="off" hidden></div>`}
         <div class="field"><label for="a-inicio">Hora de inicio</label><input id="a-inicio" type="time" data-campo="horaInicio" value="${esc(a.horaInicio || "")}"></div>
         <div class="field"><label for="a-fin">Hora de término</label><input id="a-fin" type="time" data-campo="horaFin" value="${esc(a.horaFin || "")}"></div>
         ${act ? `<div class="field"><label>Folio</label><input value="${esc(act.folio)}" disabled></div>` : ""}
       </div>
       <div id="err"></div>
-      <div class="actions"><button class="btn primary" id="guardar">${act ? "Guardar cambios" : "Crear actividad"}</button><a class="btn ghost" href="${volver}">Cancelar</a></div>
+      <div class="actions"><button class="btn primary" id="guardar">${act ? "Guardar cambios" : curso ? "Crear curso" : "Crear actividad"}</button><a class="btn ghost" href="${volver}">Cancelar</a></div>
     </section>`, { atras: volver });
 
   const tipo = $("#a-tipo", c), tipoOtro = $("#a-tipoOtro", c);
-  tipo.addEventListener("change", () => {
+  tipo?.addEventListener("change", () => {
     tipoOtro.hidden = tipo.value !== OTRO;
     if (!tipoOtro.hidden) tipoOtro.focus();
   });
@@ -135,7 +143,12 @@ async function formulario({ yo, pintar, ir }, id, origenId) {
     const d = leerCampos($("#f", c));
     if (d.tipo === OTRO) d.tipo = tipoOtro.value.trim().replace(/\s+/g, " ");
     const e = [];
-    if (!d.nombre) e.push("Ingrese el nombre de la actividad.");
+    if (!d.nombre) e.push(curso ? "Ingrese el nombre del curso." : "Ingrese el nombre de la actividad.");
+    if (curso) {
+      d.horas = Number(d.horas);
+      if (!d.instructora) e.push("Ingrese el nombre de la instructora.");
+      if (!(d.horas > 0)) e.push("Ingrese la duración del curso en horas.");
+    }
     if (!d.fecha) e.push("Seleccione la fecha.");
     if (!d.lugar) e.push("Ingrese el lugar de desarrollo.");
     if (!d.tipo) e.push("Ingrese el tipo de actividad.");
@@ -148,12 +161,13 @@ async function formulario({ yo, pintar, ir }, id, origenId) {
       ...(act || { id: db.uid(), folio: await db.siguienteFolio(d.fecha), creadaPor: yo.id, estado: "abierta" }),
       nombre: d.nombre, fecha: d.fecha, lugar: d.lugar, tipo: d.tipo,
       horaInicio: d.horaInicio || "", horaFin: d.horaFin || "",
+      ...(curso ? { curso: true, horas: d.horas, instructora: d.instructora } : {}),
       facilitadoraId: f.id, facilitadora: f.nombre, puesto: f.rol,
       ...(origen ? { anteriorId: origen.id } : {}),
     };
     await db.guardar("actividades", registro);
     await db.escribirMeta("ultimoLugar", d.lugar);
-    aviso(act ? "Cambios guardados" : `Actividad creada con folio ${registro.folio}`);
+    aviso(act ? "Cambios guardados" : `${curso ? "Curso creado" : "Actividad creada"} con folio ${registro.folio}`);
     ir(`#/actividad/${registro.id}`);
   });
 }
@@ -162,6 +176,7 @@ async function detalle({ yo, pintar, ir }, id) {
   evidencias.liberarUrls();
   const a = await db.uno("actividades", id);
   if (!a || !puedeVer(yo, a)) return ir("#/asistencia");
+  const curso = Boolean(a.curso);
   const editable = puedeEditar(yo, a);
   const asis = (await db.todos("asistencias", "actividadId", id)).sort((x, y) => x.orden - y.orden);
   const n = s => asis.filter(x => x.datos.sexo === s).length;
@@ -188,12 +203,13 @@ async function detalle({ yo, pintar, ir }, id) {
         <div><dt>Lugar</dt><dd>${esc(a.lugar)}</dd></div>
         ${a.horaInicio ? `<div><dt>Horario</dt><dd>${esc(a.horaInicio)} a ${esc(a.horaFin)} · ${duracion(minutosEntre(a.horaInicio, a.horaFin))}</dd></div>` : ""}
         <div><dt>Facilitadora</dt><dd>${esc(a.facilitadora)} · ${esc(a.puesto)}</dd></div>
-        <div><dt>Tipo</dt><dd>${esc(a.tipo)}</dd></div>
+        ${curso ? `<div><dt>Instructora</dt><dd>${esc(a.instructora)}</dd></div><div><dt>Duración</dt><dd>${esc(a.horas)} ${a.horas === 1 ? "hora" : "horas"}</dd></div>` : `<div><dt>Tipo</dt><dd>${esc(a.tipo)}</dd></div>`}
       </dl>
     </section>
     <div class="actions-bar">
       ${editable ? `<a class="btn primary" href="#/actividad/${esc(a.id)}/registrar">${icono("mas2")}Registrar asistente</a>` : ""}
       ${botonIcono("formato", "Formato", { href: `#/actividad/${a.id}/formato` })}
+      ${curso ? botonIcono("constancia", "Constancias", { href: `#/actividad/${a.id}/constancias` }) : ""}
       ${editable ? botonIcono("captura", "Modo captura", { id: "modoCaptura" }) : ""}
     </div>
     <section class="stack">
@@ -216,7 +232,7 @@ async function detalle({ yo, pintar, ir }, id) {
       <p class="autoguardado" id="estadoNotas" role="status"></p>
     </section>
     ${a.estado !== "cerrada" && puedeVer(yo, a) ? `<div class="barra-fija"><button class="btn" id="cerrar">${icono("cerrar", 20)}Cerrar actividad</button></div>` : ""}
-  `, { atras: "#/asistencia" });
+  `, { atras: listaDe(a) });
 
   $("#tomarFotos", c)?.addEventListener("click", async () => { if (await tomarFotos(yo, a)) detalle({ yo, pintar, ir }, id); });
   $("#desdeGaleria", c)?.addEventListener("click", async () => { if (await agregarDeGaleria(yo, a)) detalle({ yo, pintar, ir }, id); });
@@ -256,15 +272,17 @@ async function detalle({ yo, pintar, ir }, id) {
     for (const x of asis) await db.borrar("asistencias", x.id);
     for (const f of await evidencias.de(a.id)) await evidencias.quitar(f.id);
     await db.borrar("actividades", a.id);
-    aviso("Actividad eliminada");
-    ir("#/asistencia");
+    aviso(curso ? "Curso eliminado" : "Actividad eliminada");
+    ir(listaDe(a));
   });
 }
 
 export default {
-  menu: [{ href: "#/asistencia", texto: "Actividades", activa: /^#\/(asistencia|actividad.*)$/ }],
+  menu: [{ href: "#/asistencia", texto: "Actividades", activa: /^#\/(asistencia|actividad.*|cursos|curso.*)$/ }],
   rutas: [
-    [/^#\/asistencia$/, lista],
+    [/^#\/asistencia$/, ctx => lista(ctx, false)],
+    [/^#\/cursos$/, ctx => lista(ctx, true)],
+    [/^#\/curso\/nuevo$/, ctx => formulario(ctx, null, null, true)],
     [/^#\/actividad\/nueva$/, ctx => formulario(ctx, null)],
     [new RegExp(`^#/actividad/${ID}/editar$`), formulario],
     [new RegExp(`^#/actividad/${ID}/repetir$`), (ctx, origenId) => formulario(ctx, null, origenId)],

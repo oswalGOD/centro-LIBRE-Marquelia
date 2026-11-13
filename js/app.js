@@ -18,8 +18,9 @@ import ajustes, { VERSION_APP } from "./modulos/ajustes.js";
 import desarrollo from "./modulos/desarrollo.js";
 import inicio from "./modulos/inicio.js";
 import evidencias from "./modulos/evidencias.js";
+import constancias from "./modulos/constancias.js";
 
-const MODULOS = [inicio, actividades, evidencias, usuarias, estadisticas, perfiles, ajustes, desarrollo];
+const MODULOS = [inicio, actividades, constancias, evidencias, usuarias, estadisticas, perfiles, ajustes, desarrollo];
 
 const raiz = document.getElementById("app");
 let yo = null;
