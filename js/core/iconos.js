@@ -26,6 +26,7 @@ const TRAZOS = {
   apagar: '<path d="M12 3v8M7 6.5a8 8 0 1 0 10 0"/>',
   activar: '<circle cx="12" cy="12" r="8"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/>',
   descargar: '<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>',
+  constancia: '<path d="M5 4h14v12H5z"/><path d="M8 8h8M8 11h5"/><circle cx="15.5" cy="15.5" r="2.6"/><path d="M14 18l-.8 3 2.3-1.2 2.3 1.2-.8-3"/>',
   reabrir: '<path d="M4 12a8 8 0 1 0 3-6.2M4 4v4h4"/>',
 };
 
