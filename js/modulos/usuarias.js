@@ -2,7 +2,7 @@
 
 import * as db from "../core/db.js";
 import { tarjetas } from "../core/resumen.js";
-import { botonIcono } from "../core/iconos.js";
+import { botonIcono, menuMas, conectarMenus } from "../core/iconos.js";
 import { aMayusculas, aCapital, GRUPOS, SEXOS, leerCurp, limpiarCurp, edad, hoy, etiquetaGrupo, etiquetaSexo, fechaLarga, normalizar } from "../core/catalogos.js";
 import { esCoordinadora } from "../core/auth.js";
 import { puedeVer } from "../core/permisos.js";
@@ -40,15 +40,11 @@ async function lista({ pintar }) {
   });
 }
 
-async function ficha({ yo, pintar, ir }, id) {
+async function editar({ yo, pintar, ir }, id) {
   const p = await db.uno("usuarias", id);
   if (!p) return ir("#/usuarias");
-  const asis = await db.todos("asistencias", "usuariaId", id);
-  const acts = (await db.todos("actividades")).filter(a => asis.some(x => x.actividadId === a.id)).sort((a, b) => b.fecha.localeCompare(a.fecha));
-  const visibles = acts.filter(a => puedeVer(yo, a));
-  const ocultas = acts.length - visibles.length;
 
-  const c = pintar(p.nombre, `
+  const c = pintar(`Editar: ${p.nombre}`, `
     <section class="panel stack">
       <div class="section-head"><h2 class="h3">Datos personales</h2><p class="hint">Los cambios se aplicarán a partir de su siguiente asistencia. Las listas ya firmadas conservan los datos vigentes en su fecha.</p></div>
       <div class="grid" id="f">
@@ -63,15 +59,9 @@ async function ficha({ yo, pintar, ir }, id) {
       </div>
       <div id="err"></div>
       <div class="actions"><button class="btn primary" id="guardar">Guardar cambios</button>
-        ${esCoordinadora(yo) && !asis.length ? `<span class="push">${botonIcono("eliminar", "Eliminar", { id: "eliminar", clase: "danger", titulo: "Eliminar usuaria" })}</span>` : ""}</div>
+        <a class="btn" href="#/usuarias/${esc(p.id)}">Cancelar</a></div>
     </section>
-    <section class="stack">
-      <h2>Historial de asistencia</h2>
-      ${visibles.length ? `<div class="list">${visibles.map(a => `<a class="row" href="#/actividad/${esc(a.id)}"><span class="body"><span class="name">${esc(a.nombre)}</span><span class="meta"><span>${fechaLarga(a.fecha)}</span><span class="mono">${esc(a.folio)}</span><span>${esc(a.tipo)}</span></span></span></a>`).join("")}</div>` : ""}
-      ${ocultas ? `<p class="hint">Además asistió a ${plural(ocultas, "actividad", "actividades")} de otras facilitadoras.</p>` : ""}
-      ${!acts.length ? `<p class="hint">Aún no registra asistencia a ninguna actividad.</p>` : ""}
-    </section>
-  `, { atras: "#/usuarias" });
+  `, { atras: `#/usuarias/${p.id}` });
 
   $("#guardar", c).onclick = unaVez(async () => {
     const v = k => $(`#p-${k}`, c).value.trim();
@@ -90,8 +80,52 @@ async function ficha({ yo, pintar, ir }, id) {
     await db.guardar("usuarias", nuevo);
     if (curp) await db.completarCurp(p.id, curp);
     aviso("Datos actualizados");
-    ficha({ yo, pintar, ir }, id);
+    ir(`#/usuarias/${id}`);
   });
+}
+
+async function ficha({ yo, pintar, ir }, id) {
+  const p = await db.uno("usuarias", id);
+  if (!p) return ir("#/usuarias");
+  const asis = await db.todos("asistencias", "usuariaId", id);
+  const acts = (await db.todos("actividades")).filter(a => asis.some(x => x.actividadId === a.id)).sort((a, b) => b.fecha.localeCompare(a.fecha));
+  const visibles = acts.filter(a => puedeVer(yo, a));
+  const ocultas = acts.length - visibles.length;
+  const cursos = acts.filter(a => a.curso && !a.cancelado).length;
+  const puedeEliminar = esCoordinadora(yo) && !asis.length;
+  const opcionesMas = puedeEliminar ? [{ id: "eliminar", icono: "eliminar", texto: "Eliminar usuaria", clase: "danger" }] : [];
+  const iniciales = p.nombre.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("");
+  const dato = (t, v, mono) => `<div><dt>${t}</dt><dd${mono ? ' class="mono"' : ""}>${v ? esc(v) : "—"}</dd></div>`;
+
+  const c = pintar(p.nombre, `
+    <section class="panel stack ficha-usuaria">
+      <div class="card-head">
+        <span class="ficha-id"><span class="avatar grande" aria-hidden="true">${esc(iniciales)}</span>
+          <span class="meta">${asis.length > 1 ? '<span class="chip ok">Frecuente</span>' : '<span class="chip">Registrada</span>'}${p.curp ? "" : '<span class="chip warn">Sin CURP</span>'}</span></span>
+        <span class="icon-row">
+          ${botonIcono("editar", "Editar", { href: `#/usuarias/${esc(p.id)}/editar`, clase: "quieto" })}
+          ${menuMas(opcionesMas)}
+        </span>
+      </div>
+      <dl class="facts">
+        ${dato("CURP", p.curp, true)}
+        ${dato("Fecha de nacimiento", p.fnac ? `${fechaLarga(p.fnac)} (${edad(p.fnac)} años)` : "")}
+        ${dato("Lugar de nacimiento", p.lugar)}
+        ${dato("Sexo", etiquetaSexo(p.sexo))}
+        ${dato("Grupo", p.grupo ? `${p.grupo}) ${etiquetaGrupo(p.grupo)}` : "")}
+        ${dato("Ocupación", p.ocupacion)}
+        ${dato("Teléfono", p.telefono)}
+        ${dato("Asistencias", `${asis.length}${cursos ? ` (${plural(cursos, "curso", "cursos")})` : ""}`)}
+      </dl>
+    </section>
+    <section class="stack">
+      <h2>Historial de asistencia</h2>
+      ${visibles.length ? `<div class="list">${visibles.map(a => `<a class="row" href="#/actividad/${esc(a.id)}"><span class="body"><span class="name">${esc(a.nombre)}</span><span class="meta"><span>${fechaLarga(a.fecha)}</span><span class="mono">${esc(a.folio)}</span><span>${esc(a.tipo)}</span></span></span></a>`).join("")}</div>` : ""}
+      ${ocultas ? `<p class="hint">Además asistió a ${plural(ocultas, "actividad", "actividades")} de otras facilitadoras.</p>` : ""}
+      ${!acts.length ? `<p class="hint">Aún no registra asistencia a ninguna actividad.</p>` : ""}
+    </section>
+  `, { atras: "#/usuarias" });
+  conectarMenus(c);
   const eliminar = $("#eliminar", c);
   if (eliminar) dobleToque(eliminar, "Toque nuevamente para eliminar", async () => {
     await db.borrar("usuarias", id);
@@ -105,5 +139,6 @@ export default {
   rutas: [
     [/^#\/usuarias$/, lista],
     [/^#\/usuarias\/([\w-]+)$/, ficha],
+    [/^#\/usuarias\/([\w-]+)\/editar$/, editar],
   ],
 };

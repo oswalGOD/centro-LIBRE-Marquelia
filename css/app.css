@@ -493,3 +493,9 @@ body.con-camara { overflow: hidden; }
 .rm.warn b { color: var(--warn); }
 .rm.gold b { color: var(--gold); }
 @media (max-width: 360px) { .resumen { gap: 6px; } .rm { padding-inline: 2px; } .rm b { font-size: 1.15rem; } .rm span { font-size: .72rem; } }
+
+/* Tarjeta de detalle de usuaria */
+.avatar.grande { width: 52px; height: 52px; font-size: 1.15rem; }
+.ficha-id { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.ficha-id .meta { display: flex; gap: 6px; flex-wrap: wrap; min-width: 0; }
+.ficha-usuaria .facts { padding-top: 14px; border-top: 1px solid var(--line); }
