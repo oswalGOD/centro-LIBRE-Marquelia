@@ -4,7 +4,46 @@
 //   girado(): true cuando el panel se muestra rotado 90° con CSS (celular en vertical)
 //   conservar: el trazo existente sigue siendo parte de la firma en curso (al redibujar tras girar)
 const GROSOR = 5.5; // grosor del trazo en px (≈0,3 mm sobre el papel, como un bolígrafo)
+const PUNTA_INICIO = [10, 0.35]; // largo (px) y grosor relativo de la entrada del trazo
+const PUNTA_FINAL = [40, 0.12];  // largo (px) y grosor relativo de la salida: punta marcada de bolígrafo
 export const COLOR_FIRMA = "#2747b0"; // azul bolígrafo
+
+/** Puntos filtrados y unidos con curvas (los mismos que se ven mientras se traza), listos para dibujar con punta. */
+function curvaSuave(puntos, f) {
+  let s = puntos[0];
+  const S = [s];
+  for (const p of puntos.slice(1)) { s = [s[0] + (p[0] - s[0]) * f, s[1] + (p[1] - s[1]) * f]; S.push(s); }
+  S.push(puntos[puntos.length - 1]);
+  const salida = [S[0]];
+  for (let i = 1; i < S.length - 1; i++) {
+    const m = [(S[i][0] + S[i + 1][0]) / 2, (S[i][1] + S[i + 1][1]) / 2], a = salida[salida.length - 1];
+    for (let t = 0.125; t <= 1.001; t += 0.125) {
+      const u = 1 - t;
+      salida.push([u * u * a[0] + 2 * u * t * S[i][0] + t * t * m[0], u * u * a[1] + 2 * u * t * S[i][1] + t * t * m[1]]);
+    }
+  }
+  salida.push(S[S.length - 1]);
+  return salida;
+}
+
+/** Dibuja un trazo con la entrada y la salida afinadas, como la punta de un bolígrafo. */
+function trazoConPuntas(ctx, puntos, grosor, f) {
+  const P = curvaSuave(puntos, f), L = [0];
+  for (let i = 1; i < P.length; i++) L.push(L[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]));
+  const T = L[L.length - 1];
+  const ini = [Math.min(PUNTA_INICIO[0], T * 0.25), PUNTA_INICIO[1]], fin = [Math.min(PUNTA_FINAL[0], T * 0.5), PUNTA_FINAL[1]];
+  const suavizar = x => x * x * (3 - 2 * x);
+  ctx.lineCap = ctx.lineJoin = "round";
+  ctx.strokeStyle = COLOR_FIRMA;
+  for (let i = 1; i < P.length; i++) {
+    const d = (L[i] + L[i - 1]) / 2, resto = T - d;
+    let k = 1;
+    if (d < ini[0]) k = Math.min(k, ini[1] + (1 - ini[1]) * suavizar(d / ini[0]));
+    if (resto < fin[0]) k = Math.min(k, fin[1] + (1 - fin[1]) * suavizar(resto / fin[0]));
+    ctx.lineWidth = grosor * k;
+    ctx.beginPath(); ctx.moveTo(...P[i - 1]); ctx.lineTo(...P[i]); ctx.stroke();
+  }
+}
 
 const recoloreadas = new Map();
 /**
@@ -72,13 +111,21 @@ export function panelFirma(canvas, existente = "", { girado = () => false, conse
   // Suavizado: se filtra levemente cada punto y se unen con curvas que pasan por los puntos medios,
   // así no se ven picos y el trazo sigue siendo fiel a la mano (solo afecta a firmas nuevas).
   const SUAVIZADO = 0.5; // 1 = sin filtro; menor = más liso
-  let filtrado = null, medio = null, crudo = null;
+  let filtrado = null, medio = null, crudo = null, lista = [], base = null;
+  const copiar = () => { // imagen del lienzo antes del trazo, para redibujarlo con puntas al terminar
+    const c = document.createElement("canvas");
+    c.width = canvas.width; c.height = canvas.height;
+    c.getContext("2d").drawImage(canvas, 0, 0);
+    return c;
+  };
 
   canvas.addEventListener("pointerdown", e => {
     e.preventDefault();
     if (!trazada && existente) limpiar();
     dibujando = trazada = true;
     ultimo = crudo = filtrado = medio = punto(e);
+    lista = [ultimo];
+    base = copiar();
     canvas.setPointerCapture(e.pointerId);
     ctx.beginPath();
     ctx.arc(ultimo[0], ultimo[1], GROSOR / 2, 0, Math.PI * 2);
@@ -93,6 +140,7 @@ export function panelFirma(canvas, existente = "", { girado = () => false, conse
       const p = punto(ev);
       if (Math.hypot(p[0] - crudo[0], p[1] - crudo[1]) < 0.75) continue; // ignora temblor mínimo
       crudo = p;
+      lista.push(p);
       const f = [filtrado[0] + (p[0] - filtrado[0]) * SUAVIZADO, filtrado[1] + (p[1] - filtrado[1]) * SUAVIZADO];
       const m = [(filtrado[0] + f[0]) / 2, (filtrado[1] + f[1]) / 2];
       ctx.quadraticCurveTo(filtrado[0], filtrado[1], m[0], m[1]);
@@ -103,10 +151,16 @@ export function panelFirma(canvas, existente = "", { girado = () => false, conse
   function terminar() {
     if (!dibujando) return;
     dibujando = false;
-    if (crudo && medio) { // cierra el trazo en el último punto real, sin recortar el final
-      ctx.beginPath(); ctx.moveTo(...medio); ctx.lineTo(...crudo); ctx.stroke();
+    if (lista.length > 1) { // se redibuja el trazo completo con punta de entrada y de salida
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(base, 0, 0);
+      ctx.restore();
+      trazoConPuntas(ctx, lista, GROSOR, SUAVIZADO);
     }
-    filtrado = medio = crudo = null;
+    filtrado = medio = crudo = base = null;
+    lista = [];
   }
   ["pointerup", "pointercancel", "pointerleave"].forEach(t => canvas.addEventListener(t, terminar));
 
