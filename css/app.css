@@ -334,8 +334,15 @@ table.data tbody tr:hover { background: var(--surface-2); }
 }
 
 /* Escanear la constancia de CURP */
-.input-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
-.input-row input { flex: 1 1 15em; min-width: 0; }
+.input-row { display: flex; gap: 8px; align-items: stretch; }
+.input-row input { flex: 1 1 8em; min-width: 0; }
+.input-row .ib { flex: 0 0 auto; }
+/* Celulares angostos: el CURP (18 caracteres) y los botones CURP e INE caben en una sola fila */
+@media (max-width: 480px) {
+  .input-row { gap: 6px; }
+  .input-row input.upper { font-size: clamp(.66rem, 3.3vw, .95rem); letter-spacing: 0; padding-inline: 6px; }
+  .input-row .ib { min-width: 44px; padding-inline: 3px; font-size: .66rem; }
+}
 .input-row .btn { flex: 1 0 auto; }
 .scan-view { position: relative; min-height: 0; border-radius: var(--radius); overflow: hidden; background: #000; }
 .scan-view video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -451,8 +458,10 @@ body.con-camara { overflow: hidden; }
 .ib-lista button { display: flex; gap: 10px; align-items: center; min-height: 48px; padding: 8px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font-weight: 700; font-size: .95rem; text-align: left; cursor: pointer; }
 .ib-lista button:hover, .ib-lista button:focus-visible { background: var(--accent-soft); }
 .ib-lista button.danger { color: var(--warn); }
-.actions-bar { display: flex; gap: 8px; align-items: stretch; }
+.actions-bar { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; }
 .actions-bar .btn { flex: 1 1 auto; min-height: 52px; }
+/* Celulares angostos: «Registrar asistente» ocupa su propia fila y los iconos se reparten el ancho */
+@media (max-width: 480px) { .actions-bar > .btn { flex: 1 1 100%; } .actions-bar > .ib { flex: 1 1 0; min-width: 0; padding-inline: 4px; } }
 .barra-fija { position: sticky; bottom: 0; z-index: 4; display: flex; gap: 10px; padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px))); background: var(--surface); border-top: 1px solid var(--line); }
 .barra-fija .btn { flex: 1; min-height: 52px; }
 .autoguardado { color: var(--muted); font-size: .9rem; min-height: 1.3em; }
