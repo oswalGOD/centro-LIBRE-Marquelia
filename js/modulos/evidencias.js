@@ -71,7 +71,7 @@ async function lista({ yo, pintar }) {
   const total = acts.reduce((s, a) => s + (cuenta[a.id] || 0), 0);
   const conFotos = acts.filter(a => cuenta[a.id]).length;
   const c = pintar("Evidencias fotográficas", `
-    ${tarjetas([[total, "Fotografías", "gold"], [conFotos, "Con carpeta", "ok"], [acts.length - conFotos, "Sin fotos", acts.length > conFotos ? "warn" : ""]], { etiqueta: "Resumen de evidencias" })}
+    ${tarjetas([[total, "Fotografías", "gold"], [conFotos, "Con fotos", "ok"], [acts.length - conFotos, "Sin fotos", acts.length > conFotos ? "warn" : ""]], { etiqueta: "Resumen de evidencias" })}
     <p class="hint">Cada actividad tiene su carpeta de fotografías. Se toman en proporción 4:3 en cualquier dispositivo, para que después se impriman ordenadas. ${plural(total, "fotografía en total", "fotografías en total")}.</p>
     ${acts.length > 6 ? `<input type="search" id="buscar" class="search" placeholder="Buscar por nombre, folio o lugar" aria-label="Buscar actividad">` : ""}
     ${acts.length ? `<div class="list" id="lista">${acts.map(a => `
