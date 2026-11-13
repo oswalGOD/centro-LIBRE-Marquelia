@@ -93,7 +93,7 @@ async function ficha({ yo, pintar, ir }, id) {
   const ocultas = acts.length - visibles.length;
   const cursos = acts.filter(a => a.curso && !a.cancelado).length;
   const puedeEliminar = esCoordinadora(yo) && !asis.length;
-  const opcionesMas = puedeEliminar ? [{ id: "eliminar", icono: "eliminar", texto: "Eliminar usuaria", clase: "danger" }] : [];
+  const opcionesMas = esCoordinadora(yo) ? [{ id: "eliminar", icono: "eliminar", texto: puedeEliminar ? "Eliminar usuaria" : "Eliminar (no disponible)", clase: "danger" }] : [];
   const iniciales = p.nombre.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("");
   const dato = (t, v, mono) => `<div><dt>${t}</dt><dd${mono ? ' class="mono"' : ""}>${v ? esc(v) : "—"}</dd></div>`;
 
@@ -127,7 +127,8 @@ async function ficha({ yo, pintar, ir }, id) {
   `, { atras: "#/usuarias" });
   conectarMenus(c);
   const eliminar = $("#eliminar", c);
-  if (eliminar) dobleToque(eliminar, "Toque nuevamente para eliminar", async () => {
+  if (eliminar && !puedeEliminar) eliminar.addEventListener("click", () => aviso(`No se puede eliminar: tiene ${plural(asis.length, "asistencia registrada", "asistencias registradas")}. Quite primero esas asistencias de las listas.`));
+  else if (eliminar) dobleToque(eliminar, "Toque nuevamente para eliminar", async () => {
     await db.borrar("usuarias", id);
     aviso("Usuaria eliminada");
     ir("#/usuarias");
