@@ -14,7 +14,7 @@ const filtros = { desde: hoy().slice(0, 4) + "-01-01", hasta: hoy(), tipo: "", f
 
 async function cargar(yo) {
   const [acts, asis] = await Promise.all([db.todos("actividades"), db.todos("asistencias")]);
-  const visibles = acts.filter(a => puedeVer(yo, a));
+  const visibles = acts.filter(a => puedeVer(yo, a) && !a.programado && !a.cancelado); // los cursos por realizar no cuentan
   return { visibles, asis };
 }
 

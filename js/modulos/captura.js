@@ -28,7 +28,7 @@ async function sesionAnterior(yo, act) {
  */
 export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, asistenciaId) {
   const act = await db.uno("actividades", actividadId);
-  if (!act || !puedeEditar(yo, act)) return ir(`#/actividad/${actividadId}`);
+  if (!act || !puedeEditar(yo, act) || act.programado || act.cancelado) return ir(`#/actividad/${actividadId}`);
   const existente = asistenciaId ? await db.uno("asistencias", asistenciaId) : null;
   if (asistenciaId && !existente) return ir(`#/actividad/${actividadId}`);
   const registradas = await db.todos("usuarias");
