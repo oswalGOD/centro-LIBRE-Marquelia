@@ -9,6 +9,7 @@ import { abrirCamara, desdeArchivo } from "../core/camara.js";
 import { fechaLarga, mesCorto, normalizar } from "../core/catalogos.js";
 import { puedeVer, puedeEditar } from "../core/permisos.js";
 import { $, $$, esc, aviso, dobleToque, plural } from "../core/ui.js";
+import { tarjetas } from "../core/resumen.js";
 import { botonIcono } from "../core/iconos.js";
 
 const ID = "([\\w-]+)";
@@ -68,7 +69,9 @@ async function lista({ yo, pintar }) {
   const acts = (await db.todos("actividades")).filter(a => puedeVer(yo, a)).sort((a, b) => b.fecha.localeCompare(a.fecha) || b.creado - a.creado);
   const cuenta = await ev.conteos();
   const total = acts.reduce((s, a) => s + (cuenta[a.id] || 0), 0);
+  const conFotos = acts.filter(a => cuenta[a.id]).length;
   const c = pintar("Evidencias fotográficas", `
+    ${tarjetas([[total, "Fotografías", "gold"], [conFotos, "Con fotos", "ok"], [acts.length - conFotos, "Sin fotos", acts.length > conFotos ? "warn" : ""]], { etiqueta: "Resumen de evidencias" })}
     <p class="hint">Cada actividad tiene su carpeta de fotografías. Se toman en proporción 4:3 en cualquier dispositivo, para que después se impriman ordenadas. ${plural(total, "fotografía en total", "fotografías en total")}.</p>
     ${acts.length > 6 ? `<input type="search" id="buscar" class="search" placeholder="Buscar por nombre, folio o lugar" aria-label="Buscar actividad">` : ""}
     ${acts.length ? `<div class="list" id="lista">${acts.map(a => `

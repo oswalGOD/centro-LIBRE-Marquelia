@@ -1,8 +1,9 @@
 // Usuarias: todas las personas que han asistido alguna vez, con su historial.
 
 import * as db from "../core/db.js";
+import { tarjetas } from "../core/resumen.js";
 import { botonIcono } from "../core/iconos.js";
-import { aMayusculas, aCapital, GRUPOS, SEXOS, leerCurp, limpiarCurp, edad, etiquetaGrupo, etiquetaSexo, fechaLarga, normalizar } from "../core/catalogos.js";
+import { aMayusculas, aCapital, GRUPOS, SEXOS, leerCurp, limpiarCurp, edad, hoy, etiquetaGrupo, etiquetaSexo, fechaLarga, normalizar } from "../core/catalogos.js";
 import { esCoordinadora } from "../core/auth.js";
 import { puedeVer } from "../core/permisos.js";
 import { $, $$, esc, aviso, errores, dobleToque, plural, unaVez } from "../core/ui.js";
@@ -11,8 +12,14 @@ async function lista({ pintar }) {
   const usuarias = (await db.todos("usuarias")).sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
   const asis = await db.todos("asistencias");
   const visitas = id => asis.filter(x => x.usuariaId === id).length;
+  const veces = new Map();
+  for (const x of asis) veces.set(x.usuariaId, (veces.get(x.usuariaId) || 0) + 1);
+  const mes = hoy().slice(0, 7);
+  const creadaEnMes = p => p.creado && new Date(p.creado - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 7) === mes;
+  const resumen = [[usuarias.length, "Registradas"], [usuarias.filter(creadaEnMes).length, "Nuevas", "gold"], [usuarias.filter(p => (veces.get(p.id) || 0) > 1).length, "Frecuentes", "ok"], [usuarias.filter(p => !p.curp).length, "Sin CURP", "warn"]];
 
   const c = pintar("Usuarias", `
+    ${tarjetas(resumen, { etiqueta: "Resumen de usuarias" })}
     <div class="toolbar">
       <input type="search" id="buscar" class="search" placeholder="Buscar por nombre, CURP o teléfono" aria-label="Buscar usuaria">
       <p class="hint" id="conteo">${plural(usuarias.length, "usuaria", "usuarias")}</p>
