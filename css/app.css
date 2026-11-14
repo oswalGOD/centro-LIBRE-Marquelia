@@ -442,7 +442,12 @@ body.con-camara { overflow: hidden; }
 @supports (-webkit-touch-callout: none) {
   body { padding-top: 0; }
   body::before { content: none; }
-  .topbar { position: relative; top: auto; padding-top: env(safe-area-inset-top, 0px); }
+  .topbar { position: relative; top: auto; padding-top: calc(env(safe-area-inset-top, 0px) + 14px); }
+}
+/* El desenfoque del sistema en iPad se extiende unos 40 pt por debajo de la barra de estado
+   y empañaba el logotipo y el nombre. Se baja el contenido de la barra para dejarlo libre. */
+@supports (-webkit-touch-callout: none) and (min-width: 700px) {
+  .topbar { padding-top: calc(env(safe-area-inset-top, 0px) + 30px); }
 }
 
 /* ---------- Botones de icono con etiqueta y menú «Más» (v0.20) ---------- */
