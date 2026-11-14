@@ -109,8 +109,8 @@ async function vista(ctx) {
       <summary><h2 class="h3">Mi PIN</h2></summary>
       <div class="stack">
       <div class="grid">
-        <div class="field"><label for="pinActual">PIN actual</label><input id="pinActual" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password"></div>
-        <div class="field"><label for="pinNuevo">PIN nuevo</label><input id="pinNuevo" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>
+        <div class="field"><label for="pinActual">PIN actual</label><input id="pinActual" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="current-password"></div>
+        <div class="field"><label for="pinNuevo">PIN nuevo</label><input id="pinNuevo" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password"></div>
       </div>
       <div id="errPin"></div>
       <div class="actions"><button class="btn" id="cambiarPin">Cambiar mi PIN</button></div>

@@ -7,7 +7,7 @@ import { descargarFoto } from "../core/sync.js";
 import { formatoEvidencias } from "./evidencias-formato.js";
 import { abrirCamara, desdeArchivo } from "../core/camara.js";
 import { fechaLarga, mesCorto, normalizar } from "../core/catalogos.js";
-import { puedeVer, puedeEditar } from "../core/permisos.js";
+import { puedeVer, puedeCapturar } from "../core/permisos.js";
 import { $, $$, esc, aviso, dobleToque, plural } from "../core/ui.js";
 import { tarjetas } from "../core/resumen.js";
 import { botonIcono } from "../core/iconos.js";
@@ -54,7 +54,7 @@ export function agregarDeGaleria(yo, actividad) {
 /** Sección que se muestra dentro de una actividad abierta: botón para tomar fotos y vista previa de la carpeta. */
 export async function seccionActividad(yo, a) {
   const fotos = await ev.de(a.id);
-  const editable = puedeEditar(yo, a);
+  const editable = puedeCapturar(yo, a);
   const mini = await Promise.all(fotos.slice(-4).map(async f => ({ f, url: await ev.urlDe(f.id) })));
   return `
     <section class="panel stack">
@@ -91,7 +91,7 @@ async function carpeta({ yo, pintar, ir }, id, ordenando = false) {
   ev.liberarUrls();
   const a = await db.uno("actividades", id);
   if (!a || !puedeVer(yo, a)) return ir("#/evidencias");
-  const editable = puedeEditar(yo, a);
+  const editable = puedeCapturar(yo, a);
   const fotos = await ev.de(id);
   ordenando = ordenando && editable && fotos.length > 1;
   const items = await Promise.all(fotos.map(async f => ({ f, url: await ev.urlDe(f.id) })));

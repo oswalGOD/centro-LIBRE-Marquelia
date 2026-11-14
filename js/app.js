@@ -88,7 +88,7 @@ async function pedirPinSalida() {
     <form class="pin-card stack" role="dialog" aria-modal="true" aria-labelledby="pinSalidaT">
       <h2 class="h3" id="pinSalidaT">Salir del modo captura</h2>
       <p class="hint">Ingrese el PIN de ${esc(perfil.nombre)} para salir.</p>
-      <div class="field"><label for="pinS">PIN</label><input id="pinS" type="password" inputmode="numeric" maxlength="6" autocomplete="off"></div>
+      <div class="field"><label for="pinS">PIN</label><input id="pinS" type="password" inputmode="numeric" pattern="[0-9]*" enterkeyhint="go" maxlength="6" autocomplete="off"></div>
       <div id="errS"></div>
       <div class="actions"><button class="btn primary" type="submit">Salir</button><button class="btn ghost" type="button" id="cancelarS">Cancelar</button></div>
     </form>`;
@@ -218,8 +218,8 @@ async function primerUso() {
         <p class="hint">La cuenta del Centro aún no tiene perfiles. Cree el perfil de la Coordinadora; posteriormente, ella podrá dar de alta a la Psicóloga y a la Abogada.</p>
         <div class="grid" id="f">
           <div class="field span-2"><label for="c-nombre">Nombre completo de la Coordinadora</label><input id="c-nombre" data-campo="nombre" autocomplete="name"></div>
-          <div class="field"><label for="c-pin">PIN de 4 a 6 dígitos</label><input id="c-pin" data-campo="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>
-          <div class="field"><label for="c-pin2">Confirme el PIN</label><input id="c-pin2" data-campo="pin2" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>
+          <div class="field"><label for="c-pin">PIN de 4 a 6 dígitos</label><input id="c-pin" data-campo="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password"></div>
+          <div class="field"><label for="c-pin2">Confirme el PIN</label><input id="c-pin2" data-campo="pin2" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password"></div>
         </div>
         <div class="actions"><button class="btn primary" id="crear">Crear perfil y comenzar</button></div>
       </section>
@@ -277,7 +277,7 @@ function entrar(lista) {
       <h2>Seleccione su perfil</h2>
       <div class="people">${lista.map(u => `<button class="person-btn" data-id="${esc(u.id)}"><span class="avatar">${esc(u.nombre[0])}</span><span><b>${esc(u.nombre)}</b><small>${esc(u.rol)}</small></span></button>`).join("")}</div>
       <form id="pinForm" class="stack" hidden>
-        <div class="field"><label for="pin" id="pinLabel">PIN</label><input id="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password"></div>
+        <div class="field"><label for="pin" id="pinLabel">PIN</label><input id="pin" type="password" inputmode="numeric" pattern="[0-9]*" enterkeyhint="go" maxlength="6" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
         <div id="err"></div>
         <div class="actions"><button class="btn primary" type="submit">Ingresar</button></div>
       </form>
