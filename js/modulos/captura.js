@@ -3,7 +3,7 @@
 import * as db from "../core/db.js";
 import { botonIcono } from "../core/iconos.js";
 import { aMayusculas, aCapital, FORMATOS, GRUPOS, SEXOS, leerCurp, limpiarCurp, edad, rangoDe, etiquetaRango, normalizar, fechaLarga } from "../core/catalogos.js";
-import { puedeVer, puedeEditar } from "../core/permisos.js";
+import { puedeVer, puedeEditar, puedeCapturar } from "../core/permisos.js";
 import { pedirFirma, colorearFirma } from "../core/firma.js";
 import { escanearCurp } from "../core/escaner.js";
 import { escanearIne } from "../core/ine.js";
@@ -28,7 +28,7 @@ async function sesionAnterior(yo, act) {
  */
 export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, asistenciaId) {
   const act = await db.uno("actividades", actividadId);
-  if (!act || !puedeEditar(yo, act) || act.programado || act.cancelado) return ir(`#/actividad/${actividadId}`);
+  if (!act || !(kiosko ? puedeCapturar : puedeEditar)(yo, act) || act.programado || act.cancelado) return ir(`#/actividad/${actividadId}`);
   const existente = asistenciaId ? await db.uno("asistencias", asistenciaId) : null;
   if (asistenciaId && !existente) return ir(`#/actividad/${actividadId}`);
   const registradas = await db.todos("usuarias");

@@ -1,11 +1,11 @@
-// Estado de los cursos y capacitaciones. Un curso es una actividad con `curso: true`.
+// Estado de las actividades y cursos programados. Un curso es una actividad con `curso: true`.
 // - programado: se agendó a futuro y aún no se realiza (sin asistentes ni constancias).
 // - cancelado: se programó pero no se llevó a cabo.
 // «Próximo» = programado, no cancelado y con fecha de hoy en adelante.
 
 import { hoy } from "./catalogos.js";
 
-export const esProximo = (a, ref = hoy()) => Boolean(a.curso && a.programado && !a.cancelado && a.fecha >= ref);
+export const esProximo = (a, ref = hoy()) => Boolean(a.programado && !a.cancelado && a.fecha >= ref);
 /** Programado o cancelado: todavía no admite asistentes, constancias ni evidencias. */
 export const sinRealizar = a => Boolean(a.programado || a.cancelado);
 
@@ -21,7 +21,7 @@ export function cuandoEs(fecha, ref = hoy()) {
   return d === 0 ? "hoy" : d === 1 ? "mañana" : d > 1 ? `en ${d} días` : d === -1 ? "ayer" : `hace ${-d} días`;
 }
 
-/** Orden de la lista de cursos: primero los próximos (el más cercano arriba) y después el resto, del más reciente al más antiguo. */
+/** Orden de la lista (cursos o actividades): primero los próximos (el más cercano arriba) y después el resto, del más reciente al más antiguo. */
 export function ordenarCursos(lista, ref = hoy()) {
   const proximos = lista.filter(a => esProximo(a, ref)).sort((a, b) => a.fecha.localeCompare(b.fecha) || (a.horaInicio || "").localeCompare(b.horaInicio || ""));
   const resto = lista.filter(a => !esProximo(a, ref)).sort((a, b) => b.fecha.localeCompare(a.fecha) || (b.creado || 0) - (a.creado || 0));

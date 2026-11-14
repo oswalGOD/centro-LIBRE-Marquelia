@@ -25,7 +25,7 @@ async function vista(ctx) {
           ${u.activa ? "" : `${botonIcono("activar", "Activar", { extra: 'data-accion="activar"' })}`}
         </span>
         <div class="pin-form span-all" hidden>
-          <div class="field"><label for="pin-${esc(u.id)}">PIN nuevo de 4 a 6 dígitos</label><input id="pin-${esc(u.id)}" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>
+          <div class="field"><label for="pin-${esc(u.id)}">PIN nuevo de 4 a 6 dígitos</label><input id="pin-${esc(u.id)}" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password"></div>
           <button class="btn small primary" data-accion="guardarPin">Guardar PIN</button>
         </div>
       </div>`).join("")}</div>
@@ -34,7 +34,7 @@ async function vista(ctx) {
       <div class="grid" id="f">
         <div class="field span-2"><label for="u-nombre">Nombre completo</label><input id="u-nombre" data-campo="nombre" autocomplete="off"></div>
         <div class="field"><label for="u-rol">Rol</label><select id="u-rol" data-campo="rol">${ROLES.map(r => `<option ${r === "Psicóloga" ? "selected" : ""}>${r}</option>`).join("")}</select></div>
-        <div class="field"><label for="u-pin">PIN inicial de 4 a 6 dígitos</label><input id="u-pin" data-campo="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>
+        <div class="field"><label for="u-pin">PIN inicial de 4 a 6 dígitos</label><input id="u-pin" data-campo="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password"></div>
       </div>
       <div id="err"></div>
       <div class="actions"><button class="btn primary" id="agregar">Agregar perfil</button></div>
