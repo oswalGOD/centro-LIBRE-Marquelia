@@ -5,7 +5,7 @@
 import { prefijoFolio } from "./catalogos.js";
 
 const NOMBRE = "centro-libre-marquelia";
-const VERSION = 4;
+const VERSION = 5;
 
 let conexion;
 
@@ -28,7 +28,7 @@ export function convertirV1(datos) {
 }
 
 /** Versión 3: índice por fecha de cambio, para que la sincronización lea solo lo que cambió y no toda la base. */
-const CON_INDICE_CAMBIO = ["perfiles", "usuarias", "actividades", "asistencias", "evidencias"];
+const CON_INDICE_CAMBIO = ["perfiles", "usuarias", "actividades", "asistencias", "evidencias", "casos", "notasCaso"];
 function agregarIndiceCambio(t) {
   for (const a of CON_INDICE_CAMBIO) {
     const s = t.objectStore(a);
@@ -45,6 +45,16 @@ function crearEvidencias(d) {
   if (d.objectStoreNames.contains("evidencias")) return;
   d.createObjectStore("evidencias", { keyPath: "id" }).createIndex("actividadId", "actividadId");
   d.createObjectStore("fotos", { keyPath: "id" }).createIndex("estado", "estado");
+}
+
+/**
+ * Versión 5: seguimiento de casos confidenciales. Los dos almacenes guardan solo estructura en claro
+ * (perfil, usuaria, caso) y el contenido cifrado en `sobre`.
+ */
+function crearCasos(d) {
+  if (d.objectStoreNames.contains("casos")) return;
+  d.createObjectStore("casos", { keyPath: "id" }).createIndex("usuariaId", "usuariaId");
+  d.createObjectStore("notasCaso", { keyPath: "id" }).createIndex("casoId", "casoId");
 }
 
 function migrarV1(d, t, despues) {
@@ -72,9 +82,10 @@ export function abrir() {
     const r = indexedDB.open(NOMBRE, VERSION);
     r.onupgradeneeded = e => {
       const d = r.result, t = r.transaction;
-      if (e.oldVersion === 1) return migrarV1(d, t, () => { crearEvidencias(d); agregarIndiceCambio(t); });
-      if (e.oldVersion === 2 || e.oldVersion === 3) {
+      if (e.oldVersion === 1) return migrarV1(d, t, () => { crearEvidencias(d); crearCasos(d); agregarIndiceCambio(t); });
+      if (e.oldVersion >= 2) {
         crearEvidencias(d);
+        crearCasos(d);
         return agregarIndiceCambio(t);
       }
       d.createObjectStore("perfiles", { keyPath: "id" });
@@ -86,6 +97,7 @@ export function abrir() {
       asistencias.createIndex("usuariaId", "usuariaId");
       d.createObjectStore("meta", { keyPath: "clave" });
       crearEvidencias(d);
+      crearCasos(d);
       agregarIndiceCambio(t);
     };
     r.onsuccess = () => renombrarMeta(r.result).then(() => resolve(r.result), reject);
@@ -122,7 +134,7 @@ export async function eliminarTodo() {
   });
 }
 
-export const ALMACENES = ["perfiles", "usuarias", "actividades", "asistencias", "evidencias", "meta"];
+export const ALMACENES = ["perfiles", "usuarias", "actividades", "asistencias", "evidencias", "casos", "notasCaso", "meta"];
 
 const pedir = r => new Promise((resolve, reject) => { r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error); });
 const terminar = t => new Promise((resolve, reject) => { t.oncomplete = resolve; t.onerror = t.onabort = () => reject(t.error); });
@@ -147,6 +159,8 @@ export function registroValido(almacen, r) {
     case "usuarias": return texto(r.nombre);
     case "actividades": return texto(r.nombre) && /^\d{4}-\d{2}-\d{2}$/.test(r.fecha) && texto(r.folio);
     case "evidencias": return texto(r.actividadId) && texto(r.ruta);
+    case "casos": return texto(r.perfilId) && texto(r.usuariaId) && texto(r.sobre?.datos) && texto(r.sobre?.iv) && texto(r.sobre?.kid);
+    case "notasCaso": return texto(r.casoId) && texto(r.perfilId) && texto(r.sobre?.datos) && texto(r.sobre?.iv) && texto(r.sobre?.kid);
     case "asistencias": return texto(r.actividadId) && texto(r.usuariaId) && !!r.datos && typeof r.datos === "object" && (!r.firma || /^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(r.firma));
     default: return true;
   }

@@ -5,7 +5,8 @@ import { tarjetas } from "../core/resumen.js";
 import { botonIcono, menuMas, conectarMenus } from "../core/iconos.js";
 import { aMayusculas, aCapital, GRUPOS, SEXOS, leerCurp, limpiarCurp, edad, hoy, etiquetaGrupo, etiquetaSexo, fechaLarga, normalizar } from "../core/catalogos.js";
 import { esCoordinadora } from "../core/auth.js";
-import { puedeVer } from "../core/permisos.js";
+import { puedeVer, llevaCasos, puedeUsarCasos } from "../core/permisos.js";
+import { contarCasos } from "../core/casos.js";
 import { $, $$, esc, aviso, errores, dobleToque, plural, unaVez } from "../core/ui.js";
 
 async function lista({ pintar }) {
@@ -92,7 +93,10 @@ async function ficha({ yo, pintar, ir }, id) {
   const visibles = acts.filter(a => puedeVer(yo, a));
   const ocultas = acts.length - visibles.length;
   const cursos = acts.filter(a => a.curso && !a.cancelado).length;
-  const puedeEliminar = esCoordinadora(yo) && !asis.length;
+  const nCasos = puedeUsarCasos(yo) ? await contarCasos(yo, id) : 0;
+  // Con casos (aun los de otro perfil) no se elimina: dejarían un expediente huérfano
+  const hayCasos = (await db.todos("casos", "usuariaId", id)).length > 0;
+  const puedeEliminar = esCoordinadora(yo) && !asis.length && !hayCasos;
   const opcionesMas = puedeEliminar ? [{ id: "eliminar", icono: "eliminar", texto: "Eliminar usuaria", clase: "danger" }] : [];
   const iniciales = p.nombre.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("");
   const dato = (t, v, mono) => `<div><dt>${t}</dt><dd${mono ? ' class="mono"' : ""}>${v ? esc(v) : "—"}</dd></div>`;
@@ -118,6 +122,10 @@ async function ficha({ yo, pintar, ir }, id) {
         ${dato("Asistencias", `${asis.length}${cursos ? ` (${plural(cursos, "curso", "cursos")})` : ""}`)}
       </dl>
     </section>
+    ${puedeUsarCasos(yo) ? `<section class="panel stack">
+      <div class="section-head"><h2 class="h3">Seguimiento de casos</h2><p class="hint">${nCasos ? `${plural(nCasos, "caso registrado", "casos registrados")}${esCoordinadora(yo) ? "" : " por usted"}. ` : "Sin casos registrados. "}El contenido es confidencial y se abre con su PIN.</p></div>
+      <div class="actions">${nCasos ? `<a class="btn" href="#/casos/usuaria/${esc(p.id)}">Ver casos</a>` : ""}${llevaCasos(yo) ? `<a class="btn primary" href="#/casos/nuevo/${esc(p.id)}">Nuevo caso</a>` : ""}</div>
+    </section>` : ""}
     <section class="stack">
       <h2>Historial de asistencia</h2>
       ${visibles.length ? `<div class="list">${visibles.map(a => `<a class="row" href="#/actividad/${esc(a.id)}"><span class="body"><span class="name">${esc(a.nombre)}</span><span class="meta"><span>${fechaLarga(a.fecha)}</span><span class="mono">${esc(a.folio)}</span><span>${esc(a.tipo)}</span></span></span></a>`).join("")}</div>` : ""}

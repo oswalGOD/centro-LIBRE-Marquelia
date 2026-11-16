@@ -2,6 +2,7 @@
 // El PIN se guarda derivado con PBKDF2, nunca en texto plano.
 
 import * as db from "./db.js";
+import * as expedientes from "./expedientes.js";
 
 const CLAVE_SESION = "clm-sesion";
 const DURACION_SESION = 12 * 60 * 60 * 1000; // máximo 12 horas seguidas
@@ -23,9 +24,17 @@ export async function crearPerfil({ nombre, rol, pin }) {
   return db.guardar("perfiles", { id: db.uid(), nombre: nombre.trim(), rol, sal, pin: await derivarPin(pin, sal), activa: true });
 }
 
-export async function cambiarPin(perfil, pin) {
-  perfil.sal = hex(crypto.getRandomValues(new Uint8Array(16)));
-  perfil.pin = await derivarPin(pin, perfil.sal);
+/**
+ * Cambia el PIN. Si el perfil tiene expedientes cifrados, sus claves se vuelven a proteger con el PIN nuevo;
+ * si eso no es posible lanza un error con `codigo: "BLOQUEADOS"` sin cambiar nada (ver expedientes.reenvolver).
+ */
+export async function cambiarPin(perfil, pin, { forzar = false } = {}) {
+  const sal = hex(crypto.getRandomValues(new Uint8Array(16)));
+  const nuevo = { ...perfil };
+  await expedientes.reenvolver(nuevo, pin, sal, forzar);
+  nuevo.sal = sal;
+  nuevo.pin = await derivarPin(pin, sal);
+  Object.assign(perfil, nuevo);
   return db.guardar("perfiles", perfil);
 }
 

@@ -11,7 +11,7 @@ import * as db from "./db.js";
 import { SUPABASE_URL, SUPABASE_ANON, VERSION_APP } from "./config.js";
 import { anotar, leer as leerErrores } from "./bitacora.js";
 
-const SINCRONIZADOS = ["perfiles", "usuarias", "actividades", "asistencias", "evidencias"];const LOTE = 200;
+const SINCRONIZADOS = ["perfiles", "usuarias", "actividades", "asistencias", "evidencias", "casos", "notasCaso"];const LOTE = 200;
 const MARGEN_RECEPCION = 2 * 60 * 1000; // se vuelve a pedir un poco de atrás por si algo llegó tarde
 const CADA = 5 * 60 * 1000;
 
