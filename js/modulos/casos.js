@@ -7,7 +7,7 @@ import * as exp from "../core/expedientes.js";
 import * as c from "../core/casos.js";
 import { tarjetas } from "../core/resumen.js";
 import { botonIcono } from "../core/iconos.js";
-import { selectorUsuaria } from "../core/componentes.js";
+import { selectorUsuaria, botonFiltros, conectarFiltros } from "../core/componentes.js";
 import { esperaPin, pinFallido, pinCorrecto, verificarPin, esCoordinadora } from "../core/auth.js";
 import { puedeCrearCaso, puedeEditarCaso, puedeUsarCasos } from "../core/permisos.js";
 import { agregarAlCalendario } from "../core/calendario.js";
@@ -79,8 +79,11 @@ async function lista(ctx, usuariaId) {
     <p class="hint">${esCoordinadora(yo) ? "Vista de la Coordinadora: puede consultar todos los expedientes, sin modificarlos." : "Solo usted ve estos expedientes. Se abren con su PIN y viajan cifrados."}</p>
     <div class="toolbar">
       <input type="search" id="buscar" class="search" placeholder="Buscar por usuaria o asunto" aria-label="Buscar caso">
-      <select id="estatus" class="search filtro" aria-label="Filtrar por estatus"><option value="">Todos los estatus</option>${c.ESTATUS.map(([v, t]) => `<option value="${v}">${t}</option>`).join("")}</select>
+      ${botonFiltros()}
       ${puedeCrearCaso(yo) ? botonIcono("mas2", "Nuevo caso", { href: filtrada ? `#/casos/nuevo/${esc(filtrada.id)}` : "#/casos/nuevo", clase: "quieto" }) : ""}
+    </div>
+    <div class="filters" id="filtros" hidden>
+      <div class="field"><label for="estatus">Estatus</label><select id="estatus"><option value="">Todos los estatus</option>${c.ESTATUS.map(([v, t]) => `<option value="${v}">${t}</option>`).join("")}</select></div>
     </div>
     ${sinAbrir ? `<div class="issues" role="alert"><b>${plural(sinAbrir, "expediente no se puede abrir", "expedientes no se pueden abrir")} en este dispositivo.</b><p>${esCoordinadora(yo) ? "La persona que lo lleva debe ingresar con su PIN para dejar su copia a la Coordinadora." : "Pueden pertenecer a una clave anterior. Si el problema continúa, avise a la Coordinadora."}</p></div>` : ""}
     ${legibles.length ? `<div class="list" id="lista">${legibles.map(k => `
@@ -92,10 +95,16 @@ async function lista(ctx, usuariaId) {
     : `<div class="empty"><b>Aún no hay casos${filtrada ? " de esta usuaria" : ""}.</b>${puedeCrearCaso(yo) ? "<p>Use «Nuevo caso» para abrir un expediente con notas de sesión y fechas de seguimiento.</p>" : ""}</div>`}
   `, { atras: filtrada ? `#/usuarias/${filtrada.id}` : "#/" });
 
+  const panel = conectarFiltros(cuerpo);
+  $("#lista", cuerpo)?.insertAdjacentHTML("afterend", `<div class="empty" id="sinResultados" hidden><b>Ningún caso coincide.</b><p>Modifique la búsqueda o los filtros.</p></div>`);
   const filtrar = () => {
     const q = normalizar($("#buscar", cuerpo).value).replace(/\s+/g, " ").trim().split(" ");
     const st = $("#estatus", cuerpo).value;
-    $$("#lista .row", cuerpo).forEach(r => (r.hidden = !(q.every(w => r.dataset.buscar.includes(w)) && (!st || r.dataset.estatus === st))));
+    let n = 0;
+    $$("#lista .row", cuerpo).forEach(r => { r.hidden = !(q.every(w => r.dataset.buscar.includes(w)) && (!st || r.dataset.estatus === st)); if (!r.hidden) n++; });
+    const aviso = $("#sinResultados", cuerpo);
+    if (aviso) aviso.hidden = n > 0;
+    panel.contar(st ? 1 : 0);
   };
   $("#buscar", cuerpo).addEventListener("input", filtrar);
   $("#estatus", cuerpo).addEventListener("change", filtrar);

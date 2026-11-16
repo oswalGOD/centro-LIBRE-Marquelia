@@ -81,9 +81,13 @@ async function lista({ yo, pintar }) {
         <span class="end"><span class="big">${cuenta[a.id] || 0}</span><small>fotografías</small></span>
       </a>`).join("")}</div>`
     : `<div class="empty"><b>Aún no hay actividades.</b><p>Las evidencias se guardan dentro de una actividad. Cree primero la actividad en “Listas de asistencia”.</p></div>`}`);
+  $("#lista", c)?.insertAdjacentHTML("afterend", `<div class="empty" id="sinResultados" hidden><b>Ninguna actividad coincide.</b><p>Modifique la búsqueda.</p></div>`);
   $("#buscar", c)?.addEventListener("input", e => {
     const q = normalizar(e.target.value);
-    $$("#lista .row", c).forEach(r => (r.hidden = !r.dataset.buscar.includes(q)));
+    let n = 0;
+    $$("#lista .row", c).forEach(r => { r.hidden = !r.dataset.buscar.includes(q); if (!r.hidden) n++; });
+    const aviso = $("#sinResultados", c);
+    if (aviso) aviso.hidden = n > 0;
   });
 }
 

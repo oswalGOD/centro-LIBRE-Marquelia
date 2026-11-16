@@ -33,11 +33,14 @@ async function lista({ pintar }) {
       </a>`).join("")}</div>`
     : `<div class="empty"><b>Aún no hay usuarias registradas.</b><p>Cada persona que se registre en una actividad se agrega aquí. En su siguiente asistencia, bastará con ingresar su CURP o buscar su nombre.</p></div>`}
   `);
+  $("#lista", c)?.insertAdjacentHTML("afterend", `<div class="empty" id="sinResultados" hidden><b>Ninguna usuaria coincide.</b><p>Modifique la búsqueda.</p></div>`);
   $("#buscar", c).addEventListener("input", e => {
     const q = normalizar(e.target.value).replace(/\s+/g, " ").trim().split(" ");
     let n = 0;
     $$("#lista .row", c).forEach(r => { r.hidden = !q.every(w => r.dataset.buscar.includes(w)); if (!r.hidden) n++; });
     $("#conteo", c).textContent = plural(n, "usuaria", "usuarias");
+    const aviso = $("#sinResultados", c);
+    if (aviso) aviso.hidden = n > 0;
   });
 }
 
