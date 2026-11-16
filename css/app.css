@@ -305,6 +305,37 @@ table.data tbody tr:hover { background: var(--surface-2); }
 .sheet.evid-hoja figcaption { font-size: 11px; line-height: 1.2; height: 26px; overflow: hidden; padding-top: 2px; overflow-wrap: anywhere; }
 .sheet.evid-hoja .evid-pagina { text-align: right; font-size: 10px; position: relative; z-index: 1; margin-top: 2px; }
 
+/* Informe para financiadores */
+.sheet.inf-hoja .hdr { margin-top: 2px; }
+.sheet.inf-hoja .inf-tiles { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-top: 10px; position: relative; z-index: 1; }
+.sheet.inf-hoja .inf-tile { border: 1.5px solid var(--paper-ink); padding: 6px 4px 5px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 72px; background: rgba(255,255,255,.7); }
+.sheet.inf-hoja .inf-tile .v { font-size: 26px; font-weight: 700; line-height: 1.1; }
+.sheet.inf-hoja .inf-tile .e { font-size: 10.5px; font-weight: 700; line-height: 1.15; }
+.sheet.inf-hoja .inf-tile .s { font-size: 8.5px; line-height: 1.1; }
+.sheet.inf-hoja .inf-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px; align-items: start; position: relative; z-index: 1; }
+.sheet.inf-hoja .inf-cols.inf-tipos { grid-template-columns: 1.7fr 1fr; }
+.sheet.inf-hoja .inf-pila { display: grid; gap: 12px; }
+.sheet.inf-hoja .inf-tabla { width: 100%; background: rgba(255,255,255,.75); }
+.sheet.inf-hoja .inf-tabla caption { font-weight: 700; font-size: 12px; text-align: left; padding: 0 0 3px; }
+.sheet.inf-hoja .inf-tabla th { background: var(--paper-band); font-size: 10px; font-weight: 700; text-align: center; padding: 3px 4px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.sheet.inf-hoja .inf-tabla td { font-size: 11px; text-align: center; height: 21px; padding: 1px 5px; white-space: nowrap; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.sheet.inf-hoja .inf-tabla .l { text-align: left; }
+.sheet.inf-hoja .inf-tabla tfoot td { font-weight: 700; border-top: 2px solid var(--paper-ink); }
+.sheet.inf-hoja .inf-lista { margin-top: 12px; }
+.sheet.inf-hoja .inf-lista td { height: 24px; font-size: 11px; }
+.sheet.inf-hoja .inf-nota { margin: 8px 0 0; font-size: 10px; position: relative; z-index: 1; }
+.sheet.inf-hoja .inf-sub { margin: 8px 0 0; font-size: 13px; position: relative; z-index: 1; }
+.sheet.inf-hoja .inf-pie { margin-top: auto; display: flex; justify-content: space-between; gap: 12px; font-size: 9.5px; border-top: 1px solid var(--paper-ink); padding-top: 3px; position: relative; z-index: 1; }
+.inf-grupo { border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 12px 12px; margin: 0; min-width: 0; }
+.inf-grupo legend { font-weight: 700; padding: 0 6px; }
+.inf-fotos { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
+.inf-foto { display: grid; gap: 4px; position: relative; cursor: pointer; font-size: .78rem; }
+.inf-foto input { position: absolute; top: 6px; left: 6px; width: 24px; height: 24px; z-index: 1; }
+.inf-miniatura { display: grid; place-items: center; aspect-ratio: 4 / 3; background: var(--surface-2); border: 2px solid var(--line); border-radius: 8px; overflow: hidden; text-align: center; color: var(--muted); font-size: .72rem; }
+.inf-miniatura img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.inf-foto:has(input:checked) .inf-miniatura { border-color: var(--accent); }
+.inf-leyenda { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+
 /* Cursos programados */
 .chip.prog { background: var(--accent-soft); color: var(--ink); }
 .aviso-proximo { padding: 10px 14px; border: 1px solid var(--line); border-left: 4px solid var(--accent, #8c1d4f); border-radius: 10px; background: var(--surface); font-size: .95rem; }
