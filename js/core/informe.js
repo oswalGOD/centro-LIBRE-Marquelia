@@ -5,6 +5,7 @@
 import * as db from "./db.js";
 import { edad, rangoDe, minutosEntre, hoy } from "./catalogos.js";
 import { puedeVer } from "./permisos.js";
+import { citasDelPeriodo, contar as contarCitas } from "./citas.js";
 
 export const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 export const SEXOS_INFORME = [["M", "Mujeres"], ["H", "Hombres"], ["Otro", "Otro"]];
@@ -99,8 +100,11 @@ export async function calcularInforme(yo, { desde, hasta, alcance = "todo" }) {
     meses.push({ clave, etiqueta: `${MESES[m - 1][0].toUpperCase()}${MESES[m - 1].slice(1)} ${y}`, actividades: acs.length, asistencias: de.length, unicas: new Set(de.map(r => r.usuariaId)).size });
   }
 
+  // Citas individuales: solo conteos (nunca quién, con quién ni el motivo). Se incluyen cuando el informe abarca todo.
+  const citas = alcance === "todo" ? contarCitas(await citasDelPeriodo(yo, desde, hasta)) : null;
+
   return {
-    desde, hasta, alcance, generado: hoy(),
+    desde, hasta, alcance, generado: hoy(), citas,
     totales: {
       actividades: actividades.filter(a => !a.curso).length,
       cursos: actividades.filter(a => a.curso).length,

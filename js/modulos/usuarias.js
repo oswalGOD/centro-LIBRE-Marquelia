@@ -100,7 +100,8 @@ async function ficha({ yo, pintar, ir }, id) {
   const nCasos = puedeUsarCasos(yo) ? await contarCasos(yo, id) : 0;
   // Con casos (aun los de otro perfil) no se elimina: dejarían un expediente huérfano
   const hayCasos = (await db.todos("casos", "usuariaId", id)).length > 0;
-  const puedeEliminar = esCoordinadora(yo) && !asis.length && !hayCasos;
+  const hayCitas = (await db.todos("citas", "usuariaId", id)).length > 0;
+  const puedeEliminar = esCoordinadora(yo) && !asis.length && !hayCasos && !hayCitas;
   const opcionesMas = puedeEliminar ? [{ id: "eliminar", icono: "eliminar", texto: "Eliminar usuaria", clase: "danger" }] : [];
   const iniciales = p.nombre.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("");
   const dato = (t, v, mono, largo) => `<div${largo ? ' class="largo"' : ""}><dt>${t}</dt><dd${mono ? ' class="mono"' : ""}>${v ? esc(v) : "—"}</dd></div>`;

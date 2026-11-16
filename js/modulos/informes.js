@@ -68,6 +68,18 @@ export function libroDeInforme(inf, per) {
       ["Usuarias recurrentes (2 o más asistencias en el periodo)", t.recurrentes],
       ["Horas de actividad", Math.round((t.minutos / 60) * 100) / 100],
       ["Actividades sin horario registrado", t.sinHorario],
+      ...(inf.citas?.total ? [
+        [],
+        [{ v: "Citas individuales (conteos, sin datos personales)", e: "sub" }],
+        ["Citas en el periodo", inf.citas.total],
+        ["Asistieron", inf.citas.asistio],
+        ["No asistieron", inf.citas.noAsistio],
+        ["Reprogramadas", inf.citas.reprogramadas],
+        ["Canceladas", inf.citas.canceladas],
+        ["Aún programadas", inf.citas.programadas],
+        ["Porcentaje de asistencia (asistieron entre asistieron y no asistieron)", inf.citas.asistencia == null ? "" : `${inf.citas.asistencia} %`],
+        ["Usuarias distintas que asistieron a cita", inf.citas.unicas],
+      ] : []),
       [],
       [{ v: "Por sexo", e: "sub" }],
       [{ v: "Concepto", e: "enc" }, ...SEXOS_INFORME.map(([, x]) => ({ v: x, e: "enc" })), { v: "Total", e: "enc" }],
@@ -155,6 +167,7 @@ function paginasInforme(inf, per, fotos) {
         ${tile(t.actividades, "Actividades")}${tile(t.cursos, "Cursos y capacitaciones")}${tile(t.asistencias, "Asistencias")}
         ${tile(t.unicas, "Usuarias distintas")}${tile(t.nuevas, "Usuarias nuevas", "primera vez en el periodo")}${tile(t.recurrentes, "Usuarias recurrentes", "2 o más asistencias")}
         ${tile(horasTexto(t.minutos), "Horas de actividad", t.sinHorario ? `${plural(t.sinHorario, "actividad", "actividades")} sin horario` : "")}
+        ${inf.citas?.total ? `${tile(inf.citas.total, "Citas individuales", `${inf.citas.asistio} asistieron · ${inf.citas.noAsistio} no asistieron`)}${tile(inf.citas.asistencia == null ? "—" : `${inf.citas.asistencia} %`, "Asistencia a citas", `${plural(inf.citas.reprogramadas, "reprogramada", "reprogramadas")} · ${plural(inf.citas.canceladas, "cancelada", "canceladas")}`)}` : ""}
       </div>
       <div class="inf-cols">
         ${tablaCruzadaHoja("Usuarias distintas por rango de edad y sexo", "Rango de edad", cruzar(inf.unicas, "rango", RANGOS))}
@@ -262,7 +275,7 @@ async function pantalla({ yo, pintar }) {
       <div class="field"><label for="i-alcance">Incluir</label><select id="i-alcance" data-filtro="alcance">${opciones(Object.entries(ALCANCES), filtros.alcance)}</select></div>
     </div>
     <p class="hint"><b>${esc(capital(per.tipo.toLowerCase()))}:</b> ${esc(per.titulo)}.</p>
-    ${t.asistencias || inf.actividades.length ? `
+    ${t.asistencias || inf.actividades.length || inf.citas?.total ? `
       <div class="tiles">
         <div class="tile"><span class="label">Actividades</span><span class="value">${t.actividades}</span></div>
         <div class="tile"><span class="label">Cursos y capacitaciones</span><span class="value">${t.cursos}</span></div>
@@ -270,6 +283,8 @@ async function pantalla({ yo, pintar }) {
         <div class="tile"><span class="label">Usuarias distintas</span><span class="value">${t.unicas}</span></div>
         <div class="tile"><span class="label">Usuarias nuevas</span><span class="value">${t.nuevas}</span><span class="sub">primera vez en el periodo</span></div>
         <div class="tile"><span class="label">Usuarias recurrentes</span><span class="value">${t.recurrentes}</span><span class="sub">2 o más asistencias en el periodo</span></div>
+        ${inf.citas?.total ? `<div class="tile"><span class="label">Citas individuales</span><span class="value">${inf.citas.total}</span><span class="sub">${inf.citas.asistio} asistieron · ${inf.citas.noAsistio} no asistieron</span></div>
+        <div class="tile"><span class="label">Asistencia a citas</span><span class="value">${inf.citas.asistencia == null ? "—" : `${inf.citas.asistencia} %`}</span><span class="sub">${plural(inf.citas.reprogramadas, "reprogramada", "reprogramadas")} · ${plural(inf.citas.canceladas, "cancelada", "canceladas")}</span></div>` : ""}
         <div class="tile"><span class="label">Horas de actividad</span><span class="value">${t.minutos ? duracion(t.minutos) : "—"}</span>${t.sinHorario ? `<span class="sub">${plural(t.sinHorario, "actividad", "actividades")} sin horario</span>` : ""}</div>
       </div>
       <div class="two-col">
@@ -337,7 +352,7 @@ async function vistaPDF({ yo, pintar, ir }) {
   ev.liberarUrls();
   const per = periodo(filtros);
   const inf = await calcularInforme(yo, { ...per, alcance: filtros.alcance });
-  if (!inf.actividades.length) return ir("#/informes");
+  if (!inf.actividades.length && !inf.citas?.total) return ir("#/informes");
   const grupos = await evidenciasDelPeriodo(inf.actividades.map(a => ({ id: a.id, nombre: a.nombre, fecha: a.fecha, folio: a.folio })));
   const porId = new Map(grupos.flatMap(g => g.fotos.map(f => [f.id, { f, a: g.actividad }])));
   const elegidas = seleccion.filter(id => porId.has(id));
