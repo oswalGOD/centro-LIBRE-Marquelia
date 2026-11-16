@@ -206,7 +206,13 @@ a.row:hover { border-color: var(--accent); }
 .tile .value { font-family: var(--f-display); font-size: 2rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .tile .sub { font-size: .8rem; color: var(--muted); }
 .two-col { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); }
-.table-scroll { position: relative; overflow-x: auto; margin: 0 -4px; padding: 0 4px; }
+.table-scroll { position: relative; overflow-x: auto; margin: 0 -4px; padding: 0 4px;
+  /* Sombra en el borde que oculta más columnas: avisa que la tabla se desplaza */
+  background: linear-gradient(to right, var(--surface) 30%, transparent) left center / 28px 100% no-repeat local,
+    linear-gradient(to left, var(--surface) 30%, transparent) right center / 28px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, rgb(0 0 0 / .28), transparent) left center / 12px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgb(0 0 0 / .28), transparent) right center / 12px 100% no-repeat scroll; }
+@media (max-width: 540px) { .tiles > .tile:last-child:nth-child(odd) { grid-column: 1 / -1; } }
 table.data { width: 100%; border-collapse: collapse; font-size: .92rem; font-variant-numeric: tabular-nums; }
 table.data th, table.data td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
 table.data thead th { font-size: .74rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border-bottom-width: 1.5px; }
