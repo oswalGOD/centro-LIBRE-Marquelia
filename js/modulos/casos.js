@@ -26,7 +26,7 @@ const chipSeguimiento = d => {
 const textoSeguimiento = d => (d.proximo ? `${fechaLarga(d.proximo)}${hora12(d.hora) ? `, ${hora12(d.hora)} h` : ""}` : "");
 
 /* ---------- Puerta: pide el PIN si las claves no están abiertas en esta sesión ---------- */
-function puerta(ctx, titulo, atras) {
+export function puerta(ctx, titulo, atras) {
   const { yo, pintar } = ctx;
   const cuerpo = pintar(titulo, `
     <form class="panel stack" id="puerta">

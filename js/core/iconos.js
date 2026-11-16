@@ -29,6 +29,7 @@ const TRAZOS = {
   constancia: '<path d="M5 4h14v12H5z"/><path d="M8 8h8M8 11h5"/><circle cx="15.5" cy="15.5" r="2.6"/><path d="M14 18l-.8 3 2.3-1.2 2.3 1.2-.8-3"/>',
   calendario: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4M9 14h2M13 14h2M9 17h2"/>',
   casos: '<rect x="5" y="3" width="14" height="18" rx="2"/><rect x="9" y="11" width="6" height="5" rx="1"/><path d="M10 11V9.5a2 2 0 0 1 4 0V11M9 6.5h6"/>',
+  institucion: '<path d="M3 10l9-6 9 6M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18"/>',
   reabrir: '<path d="M4 12a8 8 0 1 0 3-6.2M4 4v4h4"/>',
 };
 
