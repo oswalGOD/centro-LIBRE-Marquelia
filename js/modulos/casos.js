@@ -193,7 +193,7 @@ async function detalle(ctx, id) {
     </section>
 
     ${edita ? `<section class="panel stack" id="editor" hidden>
-      <h2 class="h3">Datos del caso</h2>
+      <div class="card-head"><h2 class="h3">Datos del caso</h2><span class="icon-row">${botonIcono("salir", "Cancelar", { id: "cancelarCaso", clase: "quieto" })}</span></div>
       <div class="grid" id="fc">
         <div class="field span-2"><label for="e-asunto">Asunto del caso</label><input id="e-asunto" data-campo="asunto" value="${esc(d.asunto)}" autocomplete="off"></div>
         <div class="field"><label for="e-estatus">Estatus</label><select id="e-estatus" data-campo="estatus">${c.ESTATUS.map(([v, t]) => `<option value="${v}" ${v === d.estatus ? "selected" : ""}>${t}</option>`).join("")}</select></div>
@@ -201,7 +201,7 @@ async function detalle(ctx, id) {
         <div class="field"><label for="e-hora">Hora</label><input id="e-hora" type="time" data-campo="hora" value="${esc(d.hora)}"></div>
       </div>
       <div id="errc"></div>
-      <div class="actions"><button class="btn primary" id="guardarCaso">Guardar cambios</button><button class="btn" id="cancelarCaso">Cancelar</button></div>
+      <div class="actions"><button class="btn primary" id="guardarCaso">Guardar cambios</button></div>
     </section>` : ""}
 
     <section class="stack">

@@ -47,7 +47,8 @@ async function editar({ yo, pintar, ir }, id) {
 
   const c = pintar(`Editar: ${p.nombre}`, `
     <section class="panel stack">
-      <div class="section-head"><h2 class="h3">Datos personales</h2><p class="hint">Los cambios se aplicarán a partir de su siguiente asistencia. Las listas ya firmadas conservan los datos vigentes en su fecha.</p></div>
+      <div class="card-head"><h2 class="h3">Datos personales</h2><span class="icon-row">${botonIcono("salir", "Cancelar", { href: `#/usuarias/${esc(p.id)}`, clase: "quieto" })}</span></div>
+      <div class="section-head"><p class="hint">Los cambios se aplicarán a partir de su siguiente asistencia. Las listas ya firmadas conservan los datos vigentes en su fecha.</p></div>
       <div class="grid" id="f">
         <div class="field span-2"><label for="p-curp">CURP</label><input id="p-curp" class="upper" maxlength="18" value="${esc(p.curp || "")}" placeholder="Opcional: puede capturarse después"></div>
         <div class="field span-2"><label for="p-nombre">Nombre completo</label><input id="p-nombre" data-formato="mayus" value="${esc(p.nombre)}"></div>
@@ -59,9 +60,8 @@ async function editar({ yo, pintar, ir }, id) {
         <div class="field"><label for="p-grupo">Grupo</label><select id="p-grupo">${GRUPOS.map(([v, t]) => `<option value="${v}" ${p.grupo === v ? "selected" : ""}>${v}) ${t}</option>`).join("")}</select></div>
       </div>
       <div id="err"></div>
-      <div class="actions"><button class="btn primary" id="guardar">Guardar cambios</button>
-        <a class="btn" href="#/usuarias/${esc(p.id)}">Cancelar</a></div>
     </section>
+    <div class="barra-fija"><button class="btn primary" id="guardar">Guardar cambios</button></div>
   `, { atras: `#/usuarias/${p.id}` });
 
   $("#guardar", c).onclick = unaVez(async () => {
