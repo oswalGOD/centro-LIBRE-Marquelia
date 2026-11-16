@@ -1,4 +1,4 @@
-// Módulo «Informes»: informe mensual, trimestral o por periodo para financiadores y autoridades.
+// Módulo «Informes»: informe mensual, trimestral o por periodo.
 // Solo contiene datos agregados (sin nombres, CURP, teléfonos ni firmas). Se entrega en PDF (hojas carta horizontal)
 // y en Excel (.xlsx), y puede incluir fotografías de evidencias elegidas. Funciona sin conexión.
 
