@@ -2,6 +2,7 @@
 // (3 columnas × 2 filas), cada una con su número y su leyenda. Se puede imprimir o exportar a PDF.
 
 import * as db from "../core/db.js";
+import { botonIcono } from "../core/iconos.js";
 import * as ev from "../core/evidencias.js";
 import { descargarFoto } from "../core/sync.js";
 import { puedeVer } from "../core/permisos.js";
@@ -58,7 +59,7 @@ export async function formatoEvidencias({ yo, pintar, ir }, id) {
     <div class="toolbar no-print">
       <button class="btn primary" id="exportarPDF" disabled>Preparando PDF…</button>
       <a id="bajarPDF" hidden></a>
-      <button class="btn" id="imprimir">Imprimir</button>
+      ${botonIcono("formato", "Imprimir", { id: "imprimir" })}
       <p class="hint">${plural(hojas, "hoja", "hojas")} · ${plural(items.length, "fotografía", "fotografías")} · carta horizontal${faltan ? ` · <span class="chip warn">${plural(faltan, "foto sin descargar", "fotos sin descargar")}</span>` : ""}</p>
     </div>
     ${faltan ? `<p class="hint no-print">Algunas fotografías fueron tomadas en otro dispositivo y aún no se descargan aquí. Conéctese a internet y vuelva a abrir esta pantalla para incluirlas.</p>` : ""}
