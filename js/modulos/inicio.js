@@ -29,7 +29,7 @@ export const MODULOS_INICIO = [
   { id: "estadisticas", nombre: "Estadísticas", ruta: "#/estadisticas", color: "#8a6620", zona: "principal" },
   { id: "comites", nombre: "Comités", color: "#2f6f8f", zona: "principal", proximamente: "En este módulo se llevará el registro de los comités y sus reuniones." },
   { id: "asesorias", nombre: "Asesorías personales", color: "#4f7a3a", zona: "principal", proximamente: "En este módulo se llevará el registro de las asesorías individuales." },
-  { id: "reportes", nombre: "Reportes", color: "#6b4c9a", zona: "principal", proximamente: "En este módulo se elaborarán los reportes que reúnan la información de todos los módulos." },
+  { id: "reportes", nombre: "Informes", ruta: "#/informes", color: "#6b4c9a", zona: "principal" },
   { id: "usuarias", nombre: "Usuarias", ruta: "#/usuarias", color: "#a8552a", zona: "dock" },
   { id: "perfiles", nombre: "Perfiles", ruta: "#/perfiles", color: "#4a4a5a", zona: "dock", soloCoordinadora: true },
   { id: "ajustes", nombre: "Ajustes", ruta: "#/ajustes", color: "#5a5a66", zona: "dock" },
