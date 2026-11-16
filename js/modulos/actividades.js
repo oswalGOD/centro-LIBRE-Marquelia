@@ -141,7 +141,8 @@ async function formulario({ yo, pintar, ir }, id, origenId, nuevoCurso = false, 
 
   const c = pintar(programado ? (act ? `Editar ${curso ? "curso programado" : "actividad programada"}` : curso ? "Programar curso" : "Programar actividad") : `${act ? "Editar" : origen ? "Repetir" : "Nuevo"} ${curso ? "curso" : "actividad"}`.replace("Nuevo actividad", "Nueva actividad"), `
     <section class="panel stack">
-      <p class="hint">${origen ? `Copia de «${esc(origen.nombre)}» del ${fechaLarga(origen.fecha)}. Verifique la fecha y ajuste lo que sea necesario. Al registrar asistentes se mostrará quiénes asistieron en esa ocasión.` : "Estos datos forman el encabezado del formato."}${act ? "" : " El folio se asigna al guardar."}</p>
+      <div class="card-head"><p class="hint">${origen ? `Copia de «${esc(origen.nombre)}» del ${fechaLarga(origen.fecha)}. Verifique la fecha y ajuste lo que sea necesario. Al registrar asistentes se mostrará quiénes asistieron en esa ocasión.` : "Estos datos forman el encabezado del formato."}${act ? "" : " El folio se asigna al guardar."}</p>
+        <span class="icon-row">${botonIcono("salir", "Cancelar", { href: volver, clase: "quieto" })}</span></div>
       <div class="grid" id="f">
         <div class="field span-2"><label for="a-nombre">${curso ? "Nombre del curso o capacitación" : "Nombre de la actividad"}</label><input id="a-nombre" data-campo="nombre" value="${esc(a.nombre)}"></div>
         <div class="field"><label for="a-fecha">${programado ? "Fecha programada" : "Fecha"}</label><input id="a-fecha" type="date" data-campo="fecha" value="${esc(a.fecha)}"${programado ? ` min="${hoy()}"` : ""}></div>
@@ -158,8 +159,8 @@ async function formulario({ yo, pintar, ir }, id, origenId, nuevoCurso = false, 
         ${act ? `<div class="field"><label>Folio</label><input value="${esc(act.folio)}" disabled></div>` : ""}
       </div>
       <div id="err"></div>
-      <div class="actions"><button class="btn primary" id="guardar">${act ? "Guardar cambios" : programado ? (curso ? "Programar curso" : "Programar actividad") : curso ? "Crear curso" : "Crear actividad"}</button><a class="btn ghost" href="${volver}">Cancelar</a></div>
-    </section>`, { atras: volver });
+    </section>
+    <div class="barra-fija"><button class="btn primary" id="guardar">${act ? "Guardar cambios" : programado ? (curso ? "Programar curso" : "Programar actividad") : curso ? "Crear curso" : "Crear actividad"}</button></div>`, { atras: volver });
 
   const tipo = $("#a-tipo", c), tipoOtro = $("#a-tipoOtro", c);
   tipo?.addEventListener("change", () => {
