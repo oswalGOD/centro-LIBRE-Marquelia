@@ -5,7 +5,7 @@ import { tarjetas } from "../core/resumen.js";
 import { botonIcono, menuMas, conectarMenus } from "../core/iconos.js";
 import { aMayusculas, aCapital, GRUPOS, SEXOS, leerCurp, limpiarCurp, edad, hoy, etiquetaGrupo, etiquetaSexo, fechaLarga, normalizar } from "../core/catalogos.js";
 import { esCoordinadora } from "../core/auth.js";
-import { puedeVer, llevaCasos, puedeUsarCasos } from "../core/permisos.js";
+import { puedeVer, puedeCrearCaso, puedeUsarCasos } from "../core/permisos.js";
 import { contarCasos } from "../core/casos.js";
 import { $, $$, esc, aviso, errores, dobleToque, plural, unaVez } from "../core/ui.js";
 
@@ -124,7 +124,7 @@ async function ficha({ yo, pintar, ir }, id) {
     </section>
     ${puedeUsarCasos(yo) ? `<section class="panel stack">
       <div class="section-head"><h2 class="h3">Seguimiento de casos</h2><p class="hint">${nCasos ? `${plural(nCasos, "caso registrado", "casos registrados")}${esCoordinadora(yo) ? "" : " por usted"}. ` : "Sin casos registrados. "}El contenido es confidencial y se abre con su PIN.</p></div>
-      <div class="actions">${nCasos ? `<a class="btn" href="#/casos/usuaria/${esc(p.id)}">Ver casos</a>` : ""}${llevaCasos(yo) ? `<a class="btn primary" href="#/casos/nuevo/${esc(p.id)}">Nuevo caso</a>` : ""}</div>
+      <div class="actions">${nCasos ? `<a class="btn" href="#/casos/usuaria/${esc(p.id)}">Ver casos</a>` : ""}${puedeCrearCaso(yo) ? `<a class="btn primary" href="#/casos/nuevo/${esc(p.id)}">Nuevo caso</a>` : ""}</div>
     </section>` : ""}
     <section class="stack">
       <h2>Historial de asistencia</h2>

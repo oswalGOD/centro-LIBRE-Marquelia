@@ -35,10 +35,23 @@ export async function contarCasos(yo, usuariaId) {
   return (await db.todos("casos", "usuariaId", usuariaId)).filter(c => yo.rol === "Coordinadora" || c.perfilId === yo.id).length;
 }
 
-export async function crearCaso(yo, usuariaId, d) {
+/**
+ * Abre un caso. Lo lleva `destino` (por defecto, quien lo abre). La Coordinadora puede abrirlo y referirlo a la
+ * Psicóloga o la Abogada, con una nota opcional de primer contacto; a partir de ahí solo lo edita quien lo lleva.
+ */
+export async function crearCaso(yo, usuariaId, d, destino = yo, notaInicial = "") {
   const id = db.uid();
-  const sobre = await exp.cifrar(normalizarCaso(d), yo.id, id);
-  return db.guardar("casos", { id, perfilId: yo.id, usuariaId, sobre });
+  const referido = destino.id !== yo.id;
+  const datos = normalizarCaso(d);
+  if (referido) datos.referidoPor = yo.nombre;
+  const sobre = await exp.cifrar(datos, destino.id, id, { referir: referido });
+  const caso = await db.guardar("casos", { id, perfilId: destino.id, usuariaId, sobre });
+  if (notaInicial.trim()) {
+    const idNota = db.uid();
+    const sobreNota = await exp.cifrar({ fecha: hoy(), texto: notaInicial.trim(), autora: yo.nombre }, destino.id, idNota, { referir: referido });
+    await db.guardar("notasCaso", { id: idNota, casoId: id, perfilId: destino.id, sobre: sobreNota });
+  }
+  return caso;
 }
 
 export async function guardarCaso(caso, d) {
@@ -53,6 +66,7 @@ function normalizarCaso(d) {
     estatus: ESTATUS.some(e => e[0] === d.estatus) ? d.estatus : "abierto",
     proximo: d.proximo || "",
     hora: d.proximo ? d.hora || "" : "",
+    ...(d.referidoPor ? { referidoPor: d.referidoPor } : {}),
   };
 }
 
