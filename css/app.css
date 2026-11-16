@@ -159,6 +159,7 @@ a.row:hover { border-color: var(--accent); }
 .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px 20px; margin: 0; }
 .facts div { min-width: 0; }
 .facts dd { margin: 2px 0 0; font-weight: 700; overflow-wrap: anywhere; }
+@media (max-width: 540px) { .facts.dos { grid-template-columns: repeat(2, minmax(0, 1fr)); } .facts.dos .largo { grid-column: 1 / -1; } .facts.al-final .largo { order: 2; } }
 
 .empty { padding: 28px 20px; color: var(--muted); border: 1.5px dashed var(--line); border-radius: var(--radius); text-align: center; }
 .empty b { color: var(--ink); }
