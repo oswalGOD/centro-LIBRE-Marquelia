@@ -8,6 +8,7 @@ import { aMayusculas, aCapital, GRUPOS, SEXOS, leerCurp, limpiarCurp, edad, hoy,
 import { esCoordinadora } from "../core/auth.js";
 import { puedeVer, puedeCrearCaso, puedeUsarCasos } from "../core/permisos.js";
 import { contarCasos } from "../core/casos.js";
+import { contarCanalizaciones } from "../core/canalizaciones.js";
 import { $, $$, esc, aviso, errores, dobleToque, plural, unaVez } from "../core/ui.js";
 
 async function lista({ pintar }) {
@@ -98,6 +99,7 @@ async function ficha({ yo, pintar, ir }, id) {
   const ocultas = acts.length - visibles.length;
   const cursos = acts.filter(a => a.curso && !a.cancelado).length;
   const nCasos = puedeUsarCasos(yo) ? await contarCasos(yo, id) : 0;
+  const nCanal = puedeUsarCasos(yo) ? await contarCanalizaciones(yo, id) : 0;
   // Con casos (aun los de otro perfil) no se elimina: dejarían un expediente huérfano
   const hayCasos = (await db.todos("casos", "usuariaId", id)).length > 0;
   const hayCitas = (await db.todos("citas", "usuariaId", id)).length > 0;
@@ -130,6 +132,10 @@ async function ficha({ yo, pintar, ir }, id) {
     ${puedeUsarCasos(yo) ? `<section class="panel stack">
       <div class="section-head"><h2 class="h3">Seguimiento de casos</h2><p class="hint">${nCasos ? `${plural(nCasos, "caso registrado", "casos registrados")}${esCoordinadora(yo) ? "" : " por usted"}. ` : "Sin casos registrados. "}El contenido es confidencial y se abre con su PIN.</p></div>
       <div class="icon-row">${nCasos ? botonIcono("casos", "Ver casos", { href: `#/casos/usuaria/${esc(p.id)}` }) : ""}${puedeCrearCaso(yo) ? botonIcono("mas2", "Nuevo caso", { href: `#/casos/nuevo/${esc(p.id)}`, clase: "primary" }) : ""}</div>
+    </section>
+    <section class="panel stack">
+      <div class="section-head"><h2 class="h3">Canalizaciones</h2><p class="hint">${nCanal ? `${plural(nCanal, "canalización registrada", "canalizaciones registradas")}${esCoordinadora(yo) ? "" : " por usted"}. ` : "Sin canalizaciones registradas. "}El contenido es confidencial y se abre con su PIN.</p></div>
+      <div class="icon-row">${nCanal ? botonIcono("institucion", "Ver canalizaciones", { href: `#/canalizaciones/usuaria/${esc(p.id)}` }) : ""}${puedeCrearCaso(yo) ? botonIcono("mas2", "Nueva", { href: `#/canalizaciones/nueva/${esc(p.id)}`, clase: "primary" }) : ""}</div>
     </section>` : ""}
     <section class="stack">
       <h2>Historial de asistencia</h2>

@@ -8,6 +8,7 @@ import { descargarFoto } from "../core/sync.js";
 import { GRUPOS, RANGOS, hoy, fechaCorta, duracion } from "../core/catalogos.js";
 import { esCoordinadora } from "../core/auth.js";
 import { calcularInforme, cruzar, evidenciasDelPeriodo, periodo, MESES, SEXOS_INFORME } from "../core/informe.js";
+import { ESTATUS as ESTATUS_CANAL } from "../core/canalizaciones.js";
 import { libroXlsx } from "../core/xlsx.js";
 import { botonIcono } from "../core/iconos.js";
 import { $, $$, esc, aviso, plural, descargar } from "../core/ui.js";
@@ -123,7 +124,22 @@ export function libroDeInforme(inf, per) {
         ...SEXOS_INFORME.map((_, i) => ({ v: inf.actividades.reduce((s, a) => s + a.sexo[i], 0), e: "tot" })), { v: t.asistencias, e: "tot" }],
     ],
   };
-  return libroXlsx([resumen, edades, tipos, lista]);
+  const hojas = [resumen, edades, tipos, lista];
+  if (inf.canalizaciones?.total) {
+    const c = inf.canalizaciones;
+    hojas.push({
+      nombre: "Canalizaciones", anchos: [40, 12, 12, 14, 12, 10],
+      filas: [
+        [{ v: "Canalizaciones a instituciones", e: "titulo" }],
+        [{ v: "Solo conteos por institución y estatus: no incluye nombres ni motivos.", e: "nota" }],
+        [],
+        [{ v: "Institución", e: "enc" }, ...ESTATUS_CANAL.map(([, t]) => ({ v: t, e: "enc" })), { v: "Total", e: "enc" }],
+        ...c.filas.map(f => [f.nombre, ...ESTATUS_CANAL.map(([v]) => f[v]), f.total]),
+        [{ v: "Total", e: "tot" }, ...c.porEstatus.map(n => ({ v: n, e: "tot" })), { v: c.total, e: "tot" }],
+      ],
+    });
+  }
+  return libroXlsx(hojas);
 }
 
 /** Comparte el archivo con el menú del dispositivo (iPad, iPhone, Android) o lo descarga (computadora). */
@@ -214,6 +230,16 @@ function paginasInforme(inf, per, fotos) {
     }
   }
 
+  if (inf.canalizaciones?.total) {
+    const c = inf.canalizaciones;
+    paginas.push(`
+      <table class="inf-tabla"><caption>Canalizaciones a instituciones</caption>
+        <thead><tr><th class="l">Institución</th>${ESTATUS_CANAL.map(([, x]) => `<th>${x}</th>`).join("")}<th>Total</th></tr></thead>
+        <tbody>${c.filas.slice(0, 18).map(f => `<tr><td class="l">${esc(f.nombre)}</td>${ESTATUS_CANAL.map(([v]) => `<td>${f[v]}</td>`).join("")}<td><b>${f.total}</b></td></tr>`).join("")}</tbody>
+        <tfoot><tr><td class="l">Total</td>${c.porEstatus.map(n => `<td>${n}</td>`).join("")}<td>${c.total}</td></tr></tfoot></table>
+      <p class="inf-nota">Conteo de canalizaciones registradas en el periodo, por institución y estatus. No incluye nombres ni motivos.</p>`);
+  }
+
   const evidencias = [];
   for (let i = 0; i < fotos.length; i += POR_HOJA_FOTOS) {
     evidencias.push(`
@@ -268,6 +294,7 @@ async function pantalla({ yo, pintar }) {
 
   const c = pintar("Informes", `
     <p class="hint">Informe con datos agregados del periodo, listo para entregar. No incluye nombres, CURP, teléfonos ni firmas de las usuarias.${coord ? "" : " Solo contiene sus actividades."}</p>
+    <p class="hint">${inf.canalizaciones ? (inf.canalizaciones.total ? `Incluye ${plural(inf.canalizaciones.total, "canalización", "canalizaciones")} del periodo, solo como conteos por institución y estatus.` : "No hay canalizaciones registradas en el periodo.") : "Para incluir las canalizaciones del periodo, abra primero «Canalizaciones» con su PIN."}</p>
     <div class="filters" id="filtros">
       <div class="field"><span class="legend">Periodo</span><div class="segmented" role="radiogroup" aria-label="Tipo de periodo">
         ${[["mes", "Mensual"], ["trimestre", "Trimestral"], ["rango", "Por fechas"]].map(([v, x]) => `<button type="button" role="radio" aria-checked="${v === filtros.modo}" data-modo="${v}">${x}</button>`).join("")}</div></div>

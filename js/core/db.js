@@ -28,7 +28,7 @@ export function convertirV1(datos) {
 }
 
 /** Versión 3: índice por fecha de cambio, para que la sincronización lea solo lo que cambió y no toda la base. */
-const CON_INDICE_CAMBIO = ["perfiles", "usuarias", "actividades", "asistencias", "evidencias", "casos", "notasCaso", "citas"];
+const CON_INDICE_CAMBIO = ["perfiles", "usuarias", "actividades", "asistencias", "evidencias", "casos", "notasCaso", "instituciones", "canalizaciones", "citas"];
 function agregarIndiceCambio(t) {
   for (const a of CON_INDICE_CAMBIO) {
     const s = t.objectStore(a);
@@ -55,6 +55,16 @@ function crearCasos(d) {
   if (d.objectStoreNames.contains("casos")) return;
   d.createObjectStore("casos", { keyPath: "id" }).createIndex("usuariaId", "usuariaId");
   d.createObjectStore("notasCaso", { keyPath: "id" }).createIndex("casoId", "casoId");
+}
+
+/**
+ * Versión 6: canalizaciones a instituciones. «instituciones» es el catálogo (texto en claro, sin datos personales);
+ * «canalizaciones» guarda solo estructura en claro (perfil, usuaria) y el contenido cifrado en `sobre`.
+ */
+function crearCanalizaciones(d) {
+  if (d.objectStoreNames.contains("canalizaciones")) return;
+  d.createObjectStore("instituciones", { keyPath: "id" });
+  d.createObjectStore("canalizaciones", { keyPath: "id" }).createIndex("usuariaId", "usuariaId");
 }
 
 /**
@@ -93,10 +103,11 @@ export function abrir() {
     const r = indexedDB.open(NOMBRE, VERSION);
     r.onupgradeneeded = e => {
       const d = r.result, t = r.transaction;
-      if (e.oldVersion === 1) return migrarV1(d, t, () => { crearEvidencias(d); crearCasos(d); crearCitas(d); agregarIndiceCambio(t); });
+      if (e.oldVersion === 1) return migrarV1(d, t, () => { crearEvidencias(d); crearCasos(d); crearCanalizaciones(d); crearCitas(d); agregarIndiceCambio(t); });
       if (e.oldVersion >= 2) {
         crearEvidencias(d);
         crearCasos(d);
+        crearCanalizaciones(d);
         crearCitas(d);
         return agregarIndiceCambio(t);
       }
@@ -110,6 +121,7 @@ export function abrir() {
       d.createObjectStore("meta", { keyPath: "clave" });
       crearEvidencias(d);
       crearCasos(d);
+      crearCanalizaciones(d);
       crearCitas(d);
       agregarIndiceCambio(t);
     };
@@ -147,7 +159,7 @@ export async function eliminarTodo() {
   });
 }
 
-export const ALMACENES = ["perfiles", "usuarias", "actividades", "asistencias", "evidencias", "casos", "notasCaso", "citas", "meta"];
+export const ALMACENES = ["perfiles", "usuarias", "actividades", "asistencias", "evidencias", "casos", "notasCaso", "instituciones", "canalizaciones", "citas", "meta"];
 
 const pedir = r => new Promise((resolve, reject) => { r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error); });
 const terminar = t => new Promise((resolve, reject) => { t.oncomplete = resolve; t.onerror = t.onabort = () => reject(t.error); });
@@ -173,6 +185,8 @@ export function registroValido(almacen, r) {
     case "actividades": return texto(r.nombre) && /^\d{4}-\d{2}-\d{2}$/.test(r.fecha) && texto(r.folio);
     case "evidencias": return texto(r.actividadId) && texto(r.ruta);
     case "casos": return texto(r.perfilId) && texto(r.usuariaId) && texto(r.sobre?.datos) && texto(r.sobre?.iv) && texto(r.sobre?.kid);
+    case "instituciones": return texto(r.nombre);
+    case "canalizaciones": return texto(r.perfilId) && texto(r.usuariaId) && texto(r.sobre?.datos) && texto(r.sobre?.iv) && texto(r.sobre?.kid);
     case "notasCaso": return texto(r.casoId) && texto(r.perfilId) && texto(r.sobre?.datos) && texto(r.sobre?.iv) && texto(r.sobre?.kid);
     case "citas": return texto(r.perfilId) && texto(r.usuariaId) && /^\d{4}-\d{2}-\d{2}$/.test(r.fecha) && /^\d{2}:\d{2}$/.test(r.hora) && texto(r.estado) && texto(r.sobre?.datos) && texto(r.sobre?.iv) && texto(r.sobre?.kid);
     case "asistencias": return texto(r.actividadId) && texto(r.usuariaId) && !!r.datos && typeof r.datos === "object" && (!r.firma || /^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(r.firma));

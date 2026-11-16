@@ -22,9 +22,10 @@ import evidencias from "./modulos/evidencias.js";
 import constancias from "./modulos/constancias.js";
 import casos from "./modulos/casos.js";
 import citas from "./modulos/citas.js";
+import canalizaciones from "./modulos/canalizaciones.js";
 import informes from "./modulos/informes.js";
 
-const MODULOS = [inicio, actividades, constancias, evidencias, casos, citas, usuarias, estadisticas, informes, perfiles, ajustes, desarrollo];
+const MODULOS = [inicio, actividades, constancias, evidencias, casos, citas, canalizaciones, usuarias, estadisticas, informes, perfiles, ajustes, desarrollo];
 
 const raiz = document.getElementById("app");
 let yo = null;
