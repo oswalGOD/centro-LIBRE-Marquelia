@@ -7,7 +7,7 @@ import * as exp from "../core/expedientes.js";
 import * as c from "../core/casos.js";
 import { tarjetas } from "../core/resumen.js";
 import { botonIcono } from "../core/iconos.js";
-import { selectorUsuaria, botonFiltros, conectarFiltros } from "../core/componentes.js";
+import { selectorUsuaria, botonFiltros, conectarFiltros, estadoVacio } from "../core/componentes.js";
 import { esperaPin, pinFallido, pinCorrecto, verificarPin, esCoordinadora } from "../core/auth.js";
 import { puedeCrearCaso, puedeEditarCaso, puedeUsarCasos } from "../core/permisos.js";
 import { agregarAlCalendario } from "../core/calendario.js";
@@ -228,7 +228,7 @@ async function detalle(ctx, id) {
           <span class="body"><span class="name">${n.d ? `${esc(fechaLarga(n.d.fecha))}${n.d.autora ? ` · ${esc(n.d.autora)}` : ""}` : "Nota no disponible"}</span>
             ${n.d ? `<p class="nota-texto">${esc(n.d.texto)}</p>` : `<span class="meta"><span>No se pudo abrir esta nota con la clave actual.</span></span>`}</span>
           ${edita && n.d ? `<span class="end actions">${botonIcono("editar", "Editar", { clase: "quieto", extra: 'data-accion="editarNota"' })}${botonIcono("eliminar", "Eliminar", { clase: "danger", extra: 'data-accion="borrarNota"' })}</span>` : ""}
-        </div>`).join("")}</div>` : `<p class="hint">Aún no hay notas.</p>`}
+        </div>`).join("")}</div>` : `${estadoVacio("Aún no hay notas.", edita ? "Agregue la primera con el cuadro de arriba." : "")}`}
     </section>
   `, { atras: "#/casos" });
 
