@@ -1,7 +1,7 @@
 // Componentes de interfaz compartidos por varios módulos (ver plan-diseno-unificado.md).
 
 import { esc } from "./ui.js";
-import { botonIcono } from "./iconos.js";
+import { botonIcono, icono } from "./iconos.js";
 import { normalizar, etiquetaSexo, edad } from "./catalogos.js";
 
 const iniciales = u => u.nombre.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("");
@@ -70,4 +70,24 @@ export function selectorUsuaria(caja, opc) {
   }
   if (elegida) pintarElegida(); else sugerir();
   return { elegida: () => elegida };
+}
+
+/** Botón «Filtros» con un contador de filtros activos. Va en la barra de búsqueda; el panel `.filters#filtros` se pliega con `conectarFiltros`. */
+export const botonFiltros = () => `<span class="ib-badge"><button type="button" class="ib" id="verFiltros" aria-expanded="false" aria-controls="filtros" aria-label="Filtros" title="Filtros">${icono("filtros")}<span class="ib-et">Filtros</span></button><b id="nFiltros" hidden></b></span>`;
+
+/** Conecta el botón «Filtros» con el panel plegable. Devuelve { contar(n) } para actualizar el contador. */
+export function conectarFiltros(raiz) {
+  const boton = raiz.querySelector("#verFiltros"), caja = raiz.querySelector("#filtros"), marca = raiz.querySelector("#nFiltros");
+  boton?.addEventListener("click", () => {
+    caja.hidden = !caja.hidden;
+    boton.setAttribute("aria-expanded", String(!caja.hidden));
+  });
+  return {
+    contar(n) {
+      if (!boton) return;
+      marca.textContent = n;
+      marca.hidden = !n;
+      boton.setAttribute("aria-label", n ? `Filtros: ${n === 1 ? "1 activo" : `${n} activos`}` : "Filtros");
+    },
+  };
 }

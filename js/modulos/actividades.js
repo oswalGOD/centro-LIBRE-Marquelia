@@ -11,6 +11,7 @@ import { colorearFirma } from "../core/firma.js";
 import * as evidencias from "../core/evidencias.js";
 import * as kiosko from "../core/kiosko.js";
 import { icono, botonIcono, menuMas, conectarMenus } from "../core/iconos.js";
+import { botonFiltros, conectarFiltros } from "../core/componentes.js";
 import { esProximo, sinRealizar, estadoDe, cuandoEs, ordenarCursos } from "../core/cursos.js";
 import { agregarAlCalendario } from "../core/calendario.js";
 import { tarjetas } from "../core/resumen.js";
@@ -61,7 +62,7 @@ async function lista({ yo, pintar }, curso = false) {
     ${tarjetas(resumen, { etiqueta: `Resumen de ${N.varios}` })}
     <div class="toolbar">
       ${muchas ? `<input type="search" id="buscar" class="search" placeholder="${N.buscar}" aria-label="Buscar ${N.uno}">
-      <span class="ib-badge"><button type="button" class="ib" id="verFiltros" aria-expanded="false" aria-controls="filtros" aria-label="Filtros" title="Filtros">${icono("filtros")}<span class="ib-et">Filtros</span></button><b id="nFiltros" hidden></b></span>` : ""}
+      ${botonFiltros()}` : ""}
       ${administra ? botonIcono("mas2", curso ? "Nuevo" : "Nueva", { href: N.nuevo, clase: "primary", extra: `aria-label="${curso ? "Nuevo curso" : "Nueva actividad"}" title="${curso ? "Nuevo curso" : "Nueva actividad"}"` }) : ""}
       ${administra ? botonIcono("calendario", "Programar", { href: N.programar, extra: `aria-label="${curso ? "Programar curso" : "Programar actividad"}" title="${curso ? "Programar curso" : "Programar actividad"}"` }) : ""}
       <p class="hint" id="cuenta">${plural(acts.length, N.uno, N.varios)} · ${plural(abiertas, N.abierto, N.abiertos)}${proximos.length ? ` · ${curso ? plural(proximos.length, "programado", "programados") : plural(proximos.length, "programada", "programadas")}` : ""}</p>
@@ -99,16 +100,9 @@ async function lista({ yo, pintar }, curso = false) {
       ? `${n} de ${plural(acts.length, "actividad", "actividades")}`
       : `${plural(acts.length, N.uno, N.varios)} · ${plural(abiertas, N.abierto, N.abiertos)}`;
     $("#sinResultados", c).hidden = n > 0;
-    const nf = Object.values(filtros).filter(Boolean).length;
-    $("#nFiltros", c).textContent = nf;
-    $("#nFiltros", c).hidden = !nf;
-    $("#verFiltros", c).setAttribute("aria-label", nf ? `Filtros: ${plural(nf, "activo", "activos")}` : "Filtros");
+    panelFiltros?.contar(Object.values(filtros).filter(Boolean).length);
   }
-  $("#verFiltros", c)?.addEventListener("click", e => {
-    const caja = $("#filtros", c);
-    caja.hidden = !caja.hidden;
-    e.currentTarget.setAttribute("aria-expanded", String(!caja.hidden));
-  });
+  const panelFiltros = conectarFiltros(c);
   if (muchas) $("#lista", c).insertAdjacentHTML("afterend", `<div class="empty" id="sinResultados" hidden><b>Ninguna actividad coincide.</b><p>Modifique la búsqueda o los filtros.</p></div>`);
   buscar?.addEventListener("input", filtrar);
   for (const k in filtros) filtros[k] = $(`[data-filtro=${k}]`, c)?.value || ""; // descarta filtros que ya no tienen opción

@@ -2,6 +2,7 @@
 
 import * as db from "../core/db.js";
 import { botonIcono } from "../core/iconos.js";
+import { botonFiltros, conectarFiltros } from "../core/componentes.js";
 import { GRUPOS, RANGOS, SEXOS, edad, rangoDe, hoy, fechaCorta, fechaLarga, etiquetaGrupo, etiquetaRango, minutosEntre, duracion } from "../core/catalogos.js";
 import { esCoordinadora } from "../core/auth.js";
 import { puedeVer } from "../core/permisos.js";
@@ -92,14 +93,17 @@ async function vista(ctx) {
   const tipos = [...new Set(datos.visibles.map(a => a.tipo))].sort();
 
   const c = pintar("Estadísticas", `
-    <div class="filters" id="filtros">
+    <div class="toolbar">
+      ${botonFiltros()}
+      <div class="segmented" role="radiogroup" aria-label="Qué contar">
+        <button type="button" role="radio" data-contar="asistencias">Asistencias</button>
+        <button type="button" role="radio" data-contar="usuarias">Usuarias distintas</button></div>
+    </div>
+    <div class="filters" id="filtros" hidden>
       <div class="field"><label for="e-desde">Desde</label><input id="e-desde" type="date" data-filtro="desde" value="${filtros.desde}"></div>
       <div class="field"><label for="e-hasta">Hasta</label><input id="e-hasta" type="date" data-filtro="hasta" value="${filtros.hasta}"></div>
       <div class="field"><label for="e-tipo">Tipo de actividad</label><select id="e-tipo" data-filtro="tipo"><option value="">Todos</option>${tipos.map(t => `<option ${t === filtros.tipo ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></div>
       ${coord ? `<div class="field"><label for="e-fac">Facilitadora</label><select id="e-fac" data-filtro="facilitadoraId"><option value="">Todas</option>${perfiles.map(u => `<option value="${esc(u.id)}" ${u.id === filtros.facilitadoraId ? "selected" : ""}>${esc(u.nombre)}</option>`).join("")}</select></div>` : ""}
-      <div class="field"><span class="legend">Contar</span><div class="segmented" role="radiogroup" aria-label="Qué contar">
-        <button type="button" role="radio" data-contar="asistencias">Asistencias</button>
-        <button type="button" role="radio" data-contar="usuarias">Usuarias distintas</button></div></div>
     </div>
     <div id="resultado" class="stack"></div>
   `, { ancho: true });
@@ -177,9 +181,14 @@ async function vista(ctx) {
       $("#e-desde", c).value = filtros.desde;
       $("#e-hasta", c).value = filtros.hasta;
     }
+    contarFiltros();
     pintarResultado();
   }));
   $$("[data-contar]", c).forEach(b => b.addEventListener("click", () => { filtros.contar = b.dataset.contar; pintarResultado(); }));
+  // Filtros activos: tipo, facilitadora y un periodo distinto del año en curso hasta hoy
+  const panel = conectarFiltros(c);
+  const contarFiltros = () => panel.contar([filtros.tipo, filtros.facilitadoraId, filtros.desde !== hoy().slice(0, 4) + "-01-01" || filtros.hasta !== hoy()].filter(Boolean).length);
+  contarFiltros();
   pintarResultado();
 }
 
