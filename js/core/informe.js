@@ -5,6 +5,7 @@
 import * as db from "./db.js";
 import { edad, rangoDe, minutosEntre, hoy } from "./catalogos.js";
 import { puedeVer } from "./permisos.js";
+import { resumenCanalizaciones } from "./canalizaciones.js";
 
 export const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 export const SEXOS_INFORME = [["M", "Mujeres"], ["H", "Hombres"], ["Otro", "Otro"]];
@@ -111,6 +112,8 @@ export async function calcularInforme(yo, { desde, hasta, alcance = "todo" }) {
     sexoAsistencias: conteoSexo(registros),
     sexoUnicas: conteoSexo(unicas),
     registros, unicas, actividades, porTipo, meses,
+    // Solo conteos por institución y estatus; null si los expedientes del perfil no están abiertos en esta sesión
+    canalizaciones: await resumenCanalizaciones(yo, desde, hasta).catch(() => null),
   };
 }
 
