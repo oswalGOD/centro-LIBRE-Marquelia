@@ -2,6 +2,7 @@
 
 import * as db from "../core/db.js";
 import { botonIcono } from "../core/iconos.js";
+import { selectorUsuaria } from "../core/componentes.js";
 import { aMayusculas, aCapital, FORMATOS, GRUPOS, SEXOS, leerCurp, limpiarCurp, edad, rangoDe, etiquetaRango, normalizar, fechaLarga } from "../core/catalogos.js";
 import { puedeVer, puedeEditar, puedeCapturar } from "../core/permisos.js";
 import { pedirFirma, colorearFirma } from "../core/firma.js";
@@ -57,9 +58,7 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
     </section>` : ""}
     <section class="panel stack">
       ${existente || kiosko ? "" : `
-      <div class="field search-field"><label for="buscar">Buscar usuaria por nombre</label>
-        <input id="buscar" type="search" autocomplete="off" placeholder="Para quien ya asistió antes y no presenta su CURP">
-        <div class="results" id="resultados" hidden></div></div>`}
+      <div class="field" id="buscar-usuaria"></div>`}
       <div class="grid">
         <div class="field span-2"><label for="curp">CURP (opcional)</label>
           <div class="input-row"><input id="curp" class="upper" maxlength="18" autocomplete="off" spellcheck="false" placeholder="18 caracteres" value="${esc(d.curp)}">
@@ -260,23 +259,16 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
   const asistencias = await db.todos("asistencias");
   registradas.forEach(p => (p.visitas = asistencias.filter(x => x.usuariaId === p.id).length));
 
-  const buscar = $("#buscar", c);
-  if (buscar) buscar.addEventListener("input", () => {
-    const q = normalizar(buscar.value).trim();
-    const res = $("#resultados", c);
-    if (q.length < 3) { res.hidden = true; return; }
-    const palabras = q.split(/\s+/);
-    const hallados = registradas.filter(p => palabras.every(w => normalizar(p.nombre).includes(w))).slice(0, 6);
-    res.hidden = false;
-    res.innerHTML = hallados.length
-      ? hallados.map(p => `<button type="button" data-id="${esc(p.id)}"><b>${esc(p.nombre)}</b><small>${esc(p.curp || "Sin CURP")} · ${edad(p.fnac, act.fecha) ?? "?"} años</small></button>`).join("")
-      : `<p class="hint">No se encontró ninguna usuaria con ese nombre. Capture sus datos a continuación.</p>`;
-    $$("button", res).forEach(b => (b.onclick = () => {
-      reconocer(registradas.find(p => p.id === b.dataset.id));
-      res.hidden = true;
-      buscar.value = "";
-    }));
+  // Buscador de usuarias registradas (componente común): al elegir a una persona se completan sus datos
+  const cajaBuscar = $("#buscar-usuaria", c);
+  if (cajaBuscar) selectorUsuaria(cajaBuscar, {
+    usuarias: registradas, persistente: false, minimo: 3, max: 6, id: "buscar", etiqueta: "Buscar usuaria por nombre",
+    placeholder: "Para quien ya asistió antes y no presenta su CURP", campos: p => p.nombre,
+    detalle: p => (p.fnac ? `${edad(p.fnac, act.fecha)} años` : ""),
+    sinResultados: "No se encontró ninguna usuaria con ese nombre. Capture sus datos a continuación.",
+    onElegir: u => { if (u) reconocer(u); },
   });
+  const buscar = $("#buscar", c);
 
   $$("#deAntes button", c).forEach(b => (b.onclick = () => {
     reconocer(registradas.find(p => p.id === b.dataset.id));
