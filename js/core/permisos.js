@@ -26,4 +26,6 @@ export const puedeAdministrarCursos = yo => esCoordinadora(yo);
 export const llevaCasos = yo => yo?.rol === "Psicóloga" || yo?.rol === "Abogada";
 export const puedeVerCaso = (yo, caso) => esCoordinadora(yo) || caso.perfilId === yo.id;
 export const puedeEditarCaso = (yo, caso) => llevaCasos(yo) && caso.perfilId === yo.id;
+/** Abrir casos: Psicóloga y Abogada los suyos; la Coordinadora también, para referirlos a otro perfil (primer contacto). */
+export const puedeCrearCaso = yo => llevaCasos(yo) || esCoordinadora(yo);
 export const puedeUsarCasos = yo => llevaCasos(yo) || esCoordinadora(yo);

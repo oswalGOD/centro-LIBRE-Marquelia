@@ -187,9 +187,10 @@ export async function reenvolver(perfil, pin, sal, forzar = false) {
 
 /* ---------- Cifrar y descifrar registros ---------- */
 /** Devuelve el sobre cifrado `{ kid, iv, datos }` de un objeto, ligado al identificador del registro. */
-export async function cifrar(objeto, perfilId, idRegistro) {
+export async function cifrar(objeto, perfilId, idRegistro, { referir = false } = {}) {
   const k = llaves.get(perfilId);
-  if (!k || k.soloLectura) throw new Error("Los expedientes están bloqueados.");
+  // `referir`: la Coordinadora crea un caso (y su primera nota) dirigido a otro perfil con la copia de su clave
+  if (!k || (k.soloLectura && !referir)) throw new Error("Los expedientes están bloqueados.");
   const iv = aleatorio(12);
   const datos = await crypto.subtle.encrypt({ name: "AES-GCM", iv, additionalData: texto.encode(idRegistro) }, k.clave, texto.encode(JSON.stringify(objeto)));
   return { kid: k.kid, iv: aB64(iv), datos: aB64(datos) };

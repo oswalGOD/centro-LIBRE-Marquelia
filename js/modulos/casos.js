@@ -8,7 +8,7 @@ import * as c from "../core/casos.js";
 import { tarjetas } from "../core/resumen.js";
 import { botonIcono } from "../core/iconos.js";
 import { esperaPin, pinFallido, pinCorrecto, verificarPin, esCoordinadora } from "../core/auth.js";
-import { llevaCasos, puedeEditarCaso, puedeUsarCasos } from "../core/permisos.js";
+import { puedeCrearCaso, puedeEditarCaso, puedeUsarCasos } from "../core/permisos.js";
 import { agregarAlCalendario } from "../core/calendario.js";
 import { hoy, fechaLarga, normalizar } from "../core/catalogos.js";
 import { $, $$, esc, aviso, errores, dobleToque, plural, unaVez } from "../core/ui.js";
@@ -78,8 +78,8 @@ async function lista(ctx, usuariaId) {
     <p class="hint">${esCoordinadora(yo) ? "Vista de la Coordinadora: puede consultar todos los expedientes, sin modificarlos." : "Solo usted ve estos expedientes. Se abren con su PIN y viajan cifrados."}</p>
     <div class="toolbar">
       <input type="search" id="buscar" class="search" placeholder="Buscar por usuaria o asunto" aria-label="Buscar caso">
-      <select id="estatus" aria-label="Filtrar por estatus"><option value="">Todos los estatus</option>${c.ESTATUS.map(([v, t]) => `<option value="${v}">${t}</option>`).join("")}</select>
-      ${llevaCasos(yo) ? botonIcono("mas2", "Nuevo caso", { href: filtrada ? `#/casos/nuevo/${esc(filtrada.id)}` : "#/casos/nuevo", clase: "quieto" }) : ""}
+      <select id="estatus" class="search filtro" aria-label="Filtrar por estatus"><option value="">Todos los estatus</option>${c.ESTATUS.map(([v, t]) => `<option value="${v}">${t}</option>`).join("")}</select>
+      ${puedeCrearCaso(yo) ? botonIcono("mas2", "Nuevo caso", { href: filtrada ? `#/casos/nuevo/${esc(filtrada.id)}` : "#/casos/nuevo", clase: "quieto" }) : ""}
     </div>
     ${sinAbrir ? `<div class="issues" role="alert"><b>${plural(sinAbrir, "expediente no se puede abrir", "expedientes no se pueden abrir")} en este dispositivo.</b><p>${esCoordinadora(yo) ? "La persona que lo lleva debe ingresar con su PIN para dejar su copia a la Coordinadora." : "Pueden pertenecer a una clave anterior. Si el problema continúa, avise a la Coordinadora."}</p></div>` : ""}
     ${legibles.length ? `<div class="list" id="lista">${legibles.map(k => `
@@ -88,7 +88,7 @@ async function lista(ctx, usuariaId) {
           <span class="meta"><span>${esc(k.d.asunto || "Sin asunto")}</span>${esCoordinadora(yo) ? `<span>${esc(k.perfil?.nombre || "")} · ${esc(k.perfil?.rol || "")}</span>` : ""}${k.d.proximo ? `<span>Seguimiento: ${esc(textoSeguimiento(k.d))}</span>` : ""}</span></span>
         <span class="end">${chipEstatus(k.d)}${chipSeguimiento(k.d)}</span>
       </a>`).join("")}</div>`
-    : `<div class="empty"><b>Aún no hay casos${filtrada ? " de esta usuaria" : ""}.</b>${llevaCasos(yo) ? "<p>Use «Nuevo caso» para abrir un expediente con notas de sesión y fechas de seguimiento.</p>" : ""}</div>`}
+    : `<div class="empty"><b>Aún no hay casos${filtrada ? " de esta usuaria" : ""}.</b>${puedeCrearCaso(yo) ? "<p>Use «Nuevo caso» para abrir un expediente con notas de sesión y fechas de seguimiento.</p>" : ""}</div>`}
   `, { atras: filtrada ? `#/usuarias/${filtrada.id}` : "#/" });
 
   const filtrar = () => {
@@ -103,26 +103,33 @@ async function lista(ctx, usuariaId) {
 /* ---------- Nuevo caso ---------- */
 async function nuevo(ctx, usuariaId) {
   const { yo, pintar, ir } = ctx;
-  if (!llevaCasos(yo)) return ir("#/casos");
+  if (!puedeCrearCaso(yo)) return ir("#/casos");
   if (!exp.desbloqueado(yo)) return puerta(ctx, "Nuevo caso", "#/casos");
+  await exp.actualizarCopias(yo);
   const usuarias = (await db.todos("usuarias")).sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
   const fija = usuariaId && usuarias.find(u => u.id === usuariaId);
+  // La Coordinadora refiere el caso a la Psicóloga o la Abogada; solo se puede si ese perfil ya ingresó tras la actualización
+  const coord = esCoordinadora(yo);
+  const destinos = coord ? (await db.todos("perfiles")).filter(p => p.activa && (p.rol === "Psicóloga" || p.rol === "Abogada")).sort((a, b) => a.nombre.localeCompare(b.nombre, "es")) : [];
 
-  const cuerpo = pintar("Nuevo caso", `
+  const cuerpo = pintar(coord ? "Nuevo caso (referido)" : "Nuevo caso", `
     <section class="panel stack">
-      <p class="hint">El asunto, el estatus, las fechas y las notas se guardan cifrados. Solo usted podrá leerlos${""}; la Coordinadora los puede consultar.</p>
+      <p class="hint">${coord ? "El caso lo llevará el perfil al que lo refiera; usted podrá consultarlo. Después solo ese perfil lo modifica." : "El asunto, el estatus, las fechas y las notas se guardan cifrados. Solo usted podrá leerlos; la Coordinadora los puede consultar."}</p>
       <div class="grid" id="f">
         ${fija ? `<div class="field span-2"><label>Usuaria</label><input value="${esc(fija.nombre)}" disabled><input type="hidden" data-campo="usuariaId" value="${esc(fija.id)}"></div>`
           : `<div class="field span-2"><label for="n-buscar">Usuaria</label>
               <input type="search" id="n-buscar" placeholder="Escriba para buscar por nombre o CURP" autocomplete="off">
               <select id="n-usuaria" data-campo="usuariaId" size="5" aria-label="Usuarias encontradas"></select></div>`}
+        ${coord ? `<div class="field span-2"><label for="n-destino">Referir a</label>
+          <select id="n-destino" data-campo="destinoId">${destinos.map(p => `<option value="${esc(p.id)}" ${exp.puedeLeer(p.id) ? "" : "disabled"}>${esc(p.nombre)} · ${esc(p.rol)}${exp.puedeLeer(p.id) ? "" : " (debe ingresar una vez con su PIN)"}</option>`).join("")}</select></div>` : ""}
         <div class="field span-2"><label for="n-asunto">Asunto del caso</label><input id="n-asunto" data-campo="asunto" autocomplete="off" placeholder="Por ejemplo: Atención psicológica individual"></div>
         <div class="field"><label for="n-estatus">Estatus</label><select id="n-estatus" data-campo="estatus">${c.ESTATUS.map(([v, t]) => `<option value="${v}">${t}</option>`).join("")}</select></div>
         <div class="field"><label for="n-proximo">Próximo seguimiento (opcional)</label><input id="n-proximo" type="date" data-campo="proximo" min="${hoy()}"></div>
         <div class="field"><label for="n-hora">Hora (opcional)</label><input id="n-hora" type="time" data-campo="hora"></div>
+        ${coord ? `<div class="field span-2"><label for="n-nota">Nota de primer contacto (opcional)</label><textarea id="n-nota" class="notas" rows="4" placeholder="Motivo de la referencia y lo observado en el primer contacto."></textarea></div>` : ""}
       </div>
       <div id="err"></div>
-      <div class="actions"><button class="btn primary" id="guardar">Abrir caso</button><a class="btn" href="#/casos">Cancelar</a></div>
+      <div class="actions"><button class="btn primary" id="guardar">${coord ? "Abrir y referir caso" : "Abrir caso"}</button><a class="btn" href="#/casos">Cancelar</a></div>
     </section>`, { atras: fija ? `#/usuarias/${fija.id}` : "#/casos" });
 
   if (!fija) {
@@ -142,12 +149,14 @@ async function nuevo(ctx, usuariaId) {
     const e = [];
     if (!d.usuariaId) e.push("Seleccione a la usuaria.");
     if (!d.asunto) e.push("Ingrese el asunto del caso.");
+    const destino = coord ? destinos.find(p => p.id === d.destinoId && exp.puedeLeer(p.id)) : yo;
+    if (!destino) e.push("Seleccione el perfil al que se referirá el caso (debe haber ingresado con su PIN al menos una vez).");
     if (d.hora && !d.proximo) e.push("Para indicar una hora, seleccione también la fecha del seguimiento.");
     if (d.proximo && d.proximo < hoy()) e.push("La fecha del seguimiento no puede ser anterior a hoy.");
     errores($("#err", cuerpo), e);
     if (e.length) return;
-    const caso = await c.crearCaso(yo, d.usuariaId, d);
-    aviso("Caso abierto");
+    const caso = await c.crearCaso(yo, d.usuariaId, d, destino, coord ? $("#n-nota", cuerpo).value : "");
+    aviso(coord ? `Caso referido a ${destino.nombre.split(" ")[0]}` : "Caso abierto");
     ir(`#/casos/${caso.id}`);
   });
 }
@@ -184,6 +193,7 @@ async function detalle(ctx, id) {
         <div><dt>Asunto</dt><dd>${esc(d.asunto || "—")}</dd></div>
         <div><dt>Usuaria</dt><dd>${usuaria ? `<a href="#/usuarias/${esc(usuaria.id)}">${esc(usuaria.nombre)}</a>` : "—"}</dd></div>
         <div><dt>Lleva el caso</dt><dd>${esc(perfil?.nombre || "—")} · ${esc(perfil?.rol || "")}</dd></div>
+        ${d.referidoPor ? `<div><dt>Referido por</dt><dd>${esc(d.referidoPor)}</dd></div>` : ""}
         <div><dt>Próximo seguimiento</dt><dd>${seguimiento ? esc(seguimiento) : "—"}</dd></div>
       </dl>
       ${vigente ? `<p class="hint">El evento del calendario no incluye el nombre de la usuaria ni el asunto, para proteger su privacidad.</p>` : ""}
@@ -214,7 +224,7 @@ async function detalle(ctx, id) {
       </div>` : ""}
       ${notas.length ? `<div class="list">${notas.map(n => `
         <div class="row nota" data-id="${esc(n.id)}">
-          <span class="body"><span class="name">${n.d ? esc(fechaLarga(n.d.fecha)) : "Nota no disponible"}</span>
+          <span class="body"><span class="name">${n.d ? `${esc(fechaLarga(n.d.fecha))}${n.d.autora ? ` · ${esc(n.d.autora)}` : ""}` : "Nota no disponible"}</span>
             ${n.d ? `<p class="nota-texto">${esc(n.d.texto)}</p>` : `<span class="meta"><span>No se pudo abrir esta nota con la clave actual.</span></span>`}</span>
           ${edita && n.d ? `<span class="end actions">${botonIcono("editar", "Editar", { clase: "quieto", extra: 'data-accion="editarNota"' })}${botonIcono("eliminar", "Eliminar", { clase: "danger", extra: 'data-accion="borrarNota"' })}</span>` : ""}
         </div>`).join("")}</div>` : `<p class="hint">Aún no hay notas.</p>`}
@@ -233,7 +243,7 @@ async function detalle(ctx, id) {
     if (e.length) return;
     // Al cerrar un caso se retira el seguimiento pendiente
     if (nuevoD.estatus === "cerrado") { nuevoD.proximo = ""; nuevoD.hora = ""; }
-    await c.guardarCaso(caso, nuevoD);
+    await c.guardarCaso(caso, { ...d, ...nuevoD });
     aviso("Caso actualizado");
     ctx.recargar();
   });
