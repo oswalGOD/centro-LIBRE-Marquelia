@@ -558,3 +558,9 @@ body.con-camara { overflow: hidden; }
 .buscar-fila [hidden] { display: none; }
 .elegida .body { gap: 0; }
 .elegida .edad { color: var(--muted); }
+/* Constancias: casilla, número, nombre y «Solo ésta» en una sola línea */
+.row.elegir-fila { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; cursor: pointer; }
+.row.elegir-fila .body { flex: 1 1 160px; min-width: 0; }
+.row.elegir-fila .num { min-width: 1.5ch; }
+.row.elegir-fila [data-sola] { flex: none; white-space: nowrap; }
+.row.elegir-fila input[type="checkbox"] { flex: none; width: 22px; height: 22px; accent-color: var(--accent); }

@@ -52,12 +52,12 @@ export async function constancias({ yo, pintar, ir }, id) {
       <p class="hint"><b>${esc(act.nombre)}</b> · ${esc(act.horas)} h · ${fechaLarga(act.fecha)}. Se emite una constancia a cada persona registrada en el curso. Seleccione a quiénes desea emitirla.</p>
       ${coordinadora ? "" : `<p class="chip warn">No hay una Coordinadora activa en Perfiles; la firma quedará sin nombre.</p>`}
     </section>
-    ${asis.length ? `<div class="toolbar"><button class="btn" id="todas">Seleccionar todas</button><button class="btn" id="ninguna">Quitar selección</button></div>
+    ${asis.length ? `<div class="toolbar">${botonIcono("activar", "Todas", { id: "todas", titulo: "Seleccionar todas" })}${botonIcono("salir", "Ninguna", { id: "ninguna", titulo: "Quitar la selección" })}</div>
     <div class="list" id="elegir">${todas.map(({ x, numero }) => `
-      <label class="row person"><input type="checkbox" data-id="${esc(x.id)}" checked aria-label="Emitir constancia a ${esc(x.datos.nombre)}">
+      <label class="row person elegir-fila"><input type="checkbox" data-id="${esc(x.id)}" checked aria-label="Emitir constancia a ${esc(x.datos.nombre)}">
         <span class="num">${numero}</span>
         <span class="body"><span class="name">${esc(x.datos.nombre)}</span><span class="meta"><span class="mono">${esc(x.datos.curp || "Sin CURP")}</span>${x.firma || x.sinFirma ? "" : `<span class="chip warn">Falta firma</span>`}</span></span>
-        <button type="button" class="btn" data-sola="${esc(x.id)}">Solo esta</button></label>`).join("")}</div>
+        <button type="button" class="btn small" data-sola="${esc(x.id)}">Solo ésta</button></label>`).join("")}</div>
     <div id="vista"></div>`
     : `<div class="empty"><b>Aún no hay asistentes.</b><p>Registre a las asistentes del curso para poder emitir sus constancias.</p></div>`}
   `, { atras: `#/actividad/${id}`, ancho: true });

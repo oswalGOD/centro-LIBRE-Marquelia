@@ -3,6 +3,7 @@
 import * as db from "../core/db.js";
 import { tarjetas } from "../core/resumen.js";
 import { botonIcono, menuMas, conectarMenus } from "../core/iconos.js";
+import { estadoVacio } from "../core/componentes.js";
 import { aMayusculas, aCapital, GRUPOS, SEXOS, leerCurp, limpiarCurp, edad, hoy, etiquetaGrupo, etiquetaSexo, fechaLarga, normalizar } from "../core/catalogos.js";
 import { esCoordinadora } from "../core/auth.js";
 import { puedeVer, puedeCrearCaso, puedeUsarCasos } from "../core/permisos.js";
@@ -133,7 +134,7 @@ async function ficha({ yo, pintar, ir }, id) {
       <h2>Historial de asistencia</h2>
       ${visibles.length ? `<div class="list">${visibles.map(a => `<a class="row" href="#/actividad/${esc(a.id)}"><span class="body"><span class="name">${esc(a.nombre)}</span><span class="meta"><span>${fechaLarga(a.fecha)}</span><span class="mono">${esc(a.folio)}</span><span>${esc(a.tipo)}</span></span></span></a>`).join("")}</div>` : ""}
       ${ocultas ? `<p class="hint">Además asistió a ${plural(ocultas, "actividad", "actividades")} de otras facilitadoras.</p>` : ""}
-      ${!acts.length ? `<p class="hint">Aún no registra asistencia a ninguna actividad.</p>` : ""}
+      ${!acts.length ? estadoVacio("Aún no registra asistencia.", "Aparecerá aquí cuando se le registre en una actividad.") : ""}
     </section>
   `, { atras: "#/usuarias" });
   conectarMenus(c);
