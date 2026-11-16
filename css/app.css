@@ -546,3 +546,8 @@ body.con-camara { overflow: hidden; }
 .elegida .meta { display: flex; gap: 10px; flex-wrap: wrap; }
 #usuaria { min-width: 0; } .elegida .mono { font-size: .85rem; }
 .elegida-cab { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
+.buscar-fila { display: flex; align-items: center; gap: 8px; }
+.buscar-fila input { flex: 1; min-width: 0; }
+.buscar-fila [hidden] { display: none; }
+.elegida .body { gap: 0; }
+.elegida .edad { color: var(--muted); }

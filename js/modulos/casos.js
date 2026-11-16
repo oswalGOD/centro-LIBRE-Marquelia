@@ -133,37 +133,39 @@ async function nuevo(ctx, usuariaId) {
     </section>
     <div class="barra-fija"><button class="btn primary" id="guardar">${coord ? "Abrir y referir caso" : "Abrir caso"}</button></div>`, { atras: fija ? `#/usuarias/${fija.id}` : "#/casos" });
 
-  // Selector de usuaria: no muestra a nadie hasta escribir; al elegir queda una tarjeta con «Cambiar»
+  // Selector de usuaria: arriba el buscador con «Cambiar» al lado; debajo, los resultados o la tarjeta de la elegida (3 líneas).
+  // No muestra a nadie hasta escribir 2 letras. Si se entra desde la ficha de la usuaria, solo se ve la tarjeta.
   const caja = $("#usuaria", cuerpo);
-  const tarjetaElegida = u => `<div class="elegida-cab"><label>Usuaria</label>${fija ? "" : botonIcono("editar", "Cambiar", { id: "cambiar", clase: "quieto" })}</div>
-    <div class="elegida"><span class="avatar grande" aria-hidden="true">${esc(iniciales(u))}</span>
-      <span class="body"><span class="name">${esc(u.nombre)}</span><span class="meta"><span class="mono">${esc(u.curp || "Sin CURP")}</span><span>${esc(edadDe(u))}</span></span></span></div>`;
-  const pintarBusqueda = () => {
-    caja.innerHTML = `<label for="n-buscar">Usuaria</label>
-      <input type="search" id="n-buscar" placeholder="Escriba al menos 2 letras del nombre o la CURP" autocomplete="off">
-      <div class="list" id="n-res"></div><p class="hint" id="n-aviso">Aún no se muestra ninguna usuaria.</p>`;
-    const entrada = $("#n-buscar", caja), res = $("#n-res", caja), aviso1 = $("#n-aviso", caja);
-    entrada.addEventListener("input", () => {
-      const texto = normalizar(entrada.value).trim();
-      const q = texto.split(/\s+/).filter(Boolean);
-      if (texto.length < 2) { res.innerHTML = ""; aviso1.textContent = "Aún no se muestra ninguna usuaria."; return; }
-      const hallados = usuarias.filter(u => q.every(w => normalizar(`${u.nombre} ${u.curp || ""}`).includes(w)));
-      res.innerHTML = hallados.slice(0, 5).map(u => `<a class="row" href="#" data-id="${esc(u.id)}"><span class="body"><span class="name">${esc(u.nombre)}</span><span class="meta"><span class="mono">${esc(u.curp || "Sin CURP")}</span><span>${esc(edadDe(u))}</span><span>${esc(etiquetaSexo(u.sexo))}</span></span></span></a>`).join("");
-      aviso1.textContent = !hallados.length ? "No hay coincidencias." : hallados.length > 5 ? `Mostrando 5 de ${hallados.length}; siga escribiendo para acotar.` : hallados.length === 1 ? "1 coincidencia. Tóquela para elegirla." : `${hallados.length} coincidencias. Toque una para elegirla.`;
-    });
-    res.addEventListener("click", ev => {
+  caja.innerHTML = `<label${fija ? "" : ' for="n-buscar"'}>Usuaria</label>
+    ${fija ? "" : `<div class="buscar-fila"><input type="search" id="n-buscar" placeholder="Buscar por nombre o CURP" autocomplete="off">${botonIcono("editar", "Cambiar", { id: "cambiar", clase: "quieto", extra: "hidden" })}</div>`}
+    <div id="n-zona"></div>`;
+  const zona = $("#n-zona", caja), entrada = $("#n-buscar", caja), cambiar = $("#cambiar", caja);
+  const pintarElegida = () => {
+    zona.innerHTML = `<div class="elegida"><span class="avatar grande" aria-hidden="true">${esc(iniciales(elegida))}</span>
+      <span class="body"><span class="name">${esc(elegida.nombre)}</span><span class="mono">${esc(elegida.curp || "Sin CURP")}</span><span class="edad">${esc(edadDe(elegida) || "Edad no registrada")}</span></span></div>`;
+    if (cambiar) cambiar.hidden = false;
+  };
+  const sugerir = () => {
+    const texto = normalizar(entrada.value).trim();
+    if (texto.length < 2) { zona.innerHTML = `<p class="hint">Aún no se muestra ninguna usuaria.</p>`; return; }
+    const q = texto.split(/\s+/);
+    const hallados = usuarias.filter(u => q.every(w => normalizar(`${u.nombre} ${u.curp || ""}`).includes(w)));
+    zona.innerHTML = `<div class="list">${hallados.slice(0, 5).map(u => `<a class="row" href="#" data-id="${esc(u.id)}"><span class="body"><span class="name">${esc(u.nombre)}</span><span class="meta"><span class="mono">${esc(u.curp || "Sin CURP")}</span><span>${esc(edadDe(u))}</span><span>${esc(etiquetaSexo(u.sexo))}</span></span></span></a>`).join("")}</div>
+      <p class="hint">${!hallados.length ? "No hay coincidencias." : hallados.length > 5 ? `Mostrando 5 de ${hallados.length}; siga escribiendo para acotar.` : hallados.length === 1 ? "1 coincidencia. Tóquela para elegirla." : `${hallados.length} coincidencias. Toque una para elegirla.`}</p>`;
+  };
+  if (entrada) {
+    entrada.addEventListener("input", () => { elegida = null; cambiar.hidden = true; sugerir(); });
+    zona.addEventListener("click", ev => {
       const fila = ev.target.closest("[data-id]");
       if (!fila) return;
       ev.preventDefault();
       elegida = usuarias.find(u => u.id === fila.dataset.id);
+      entrada.value = "";
       pintarElegida();
     });
-  };
-  const pintarElegida = () => {
-    caja.innerHTML = tarjetaElegida(elegida);
-    $("#cambiar", caja)?.addEventListener("click", () => { elegida = null; pintarBusqueda(); $("#n-buscar", caja).focus(); });
-  };
-  if (elegida) pintarElegida(); else pintarBusqueda();
+    cambiar.addEventListener("click", () => { elegida = null; entrada.value = ""; cambiar.hidden = true; sugerir(); entrada.focus(); });
+  }
+  if (elegida) pintarElegida(); else sugerir();
 
   $("#guardar", cuerpo).onclick = unaVez(async () => {
     const d = Object.fromEntries($$("[data-campo]", cuerpo).map(el => [el.dataset.campo, el.value.trim()]));
