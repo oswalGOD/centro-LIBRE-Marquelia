@@ -10,7 +10,7 @@ import { botonIcono } from "../core/iconos.js";
 import { esperaPin, pinFallido, pinCorrecto, verificarPin, esCoordinadora } from "../core/auth.js";
 import { puedeCrearCaso, puedeEditarCaso, puedeUsarCasos } from "../core/permisos.js";
 import { agregarAlCalendario } from "../core/calendario.js";
-import { hoy, fechaLarga, normalizar } from "../core/catalogos.js";
+import { hoy, fechaLarga, normalizar, edad, etiquetaSexo } from "../core/catalogos.js";
 import { $, $$, esc, aviso, errores, dobleToque, plural, unaVez } from "../core/ui.js";
 
 const CHIP = { abierto: "ok", en_proceso: "prog", cerrado: "" };
@@ -112,14 +112,15 @@ async function nuevo(ctx, usuariaId) {
   const coord = esCoordinadora(yo);
   const destinos = coord ? (await db.todos("perfiles")).filter(p => p.activa && (p.rol === "Psicóloga" || p.rol === "Abogada")).sort((a, b) => a.nombre.localeCompare(b.nombre, "es")) : [];
 
+  let elegida = fija || null;
+  const iniciales = u => u.nombre.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("");
+  const edadDe = u => (u.fnac ? `${edad(u.fnac)} años` : "");
+
   const cuerpo = pintar(coord ? "Nuevo caso (referido)" : "Nuevo caso", `
     <section class="panel stack">
       <p class="hint">${coord ? "El caso lo llevará el perfil al que lo refiera; usted podrá consultarlo. Después solo ese perfil lo modifica." : "El asunto, el estatus, las fechas y las notas se guardan cifrados. Solo usted podrá leerlos; la Coordinadora los puede consultar."}</p>
+      <div class="field" id="usuaria"></div>
       <div class="grid" id="f">
-        ${fija ? `<div class="field span-2"><label>Usuaria</label><input value="${esc(fija.nombre)}" disabled><input type="hidden" data-campo="usuariaId" value="${esc(fija.id)}"></div>`
-          : `<div class="field span-2"><label for="n-buscar">Usuaria</label>
-              <input type="search" id="n-buscar" placeholder="Escriba para buscar por nombre o CURP" autocomplete="off">
-              <select id="n-usuaria" data-campo="usuariaId" size="5" aria-label="Usuarias encontradas"></select></div>`}
         ${coord ? `<div class="field span-2"><label for="n-destino">Referir a</label>
           <select id="n-destino" data-campo="destinoId">${destinos.map(p => `<option value="${esc(p.id)}" ${exp.puedeLeer(p.id) ? "" : "disabled"}>${esc(p.nombre)} · ${esc(p.rol)}${exp.puedeLeer(p.id) ? "" : " (debe ingresar una vez con su PIN)"}</option>`).join("")}</select></div>` : ""}
         <div class="field span-2"><label for="n-asunto">Asunto del caso</label><input id="n-asunto" data-campo="asunto" autocomplete="off" placeholder="Por ejemplo: Atención psicológica individual"></div>
@@ -129,23 +130,45 @@ async function nuevo(ctx, usuariaId) {
         ${coord ? `<div class="field span-2"><label for="n-nota">Nota de primer contacto (opcional)</label><textarea id="n-nota" class="notas" rows="4" placeholder="Motivo de la referencia y lo observado en el primer contacto."></textarea></div>` : ""}
       </div>
       <div id="err"></div>
-      <div class="actions"><button class="btn primary" id="guardar">${coord ? "Abrir y referir caso" : "Abrir caso"}</button><a class="btn" href="#/casos">Cancelar</a></div>
-    </section>`, { atras: fija ? `#/usuarias/${fija.id}` : "#/casos" });
+    </section>
+    <div class="barra-fija"><button class="btn primary" id="guardar">${coord ? "Abrir y referir caso" : "Abrir caso"}</button></div>`, { atras: fija ? `#/usuarias/${fija.id}` : "#/casos" });
 
-  if (!fija) {
-    const sel = $("#n-usuaria", cuerpo);
-    const pintarOpciones = () => {
-      const q = normalizar($("#n-buscar", cuerpo).value).trim().split(/\s+/).filter(Boolean);
-      const hallados = usuarias.filter(u => q.every(w => normalizar(`${u.nombre} ${u.curp || ""}`).includes(w))).slice(0, 40);
-      sel.innerHTML = hallados.map(u => `<option value="${esc(u.id)}">${esc(u.nombre)}${u.curp ? ` · ${esc(u.curp)}` : ""}</option>`).join("");
-      if (hallados.length === 1) sel.value = hallados[0].id;
-    };
-    $("#n-buscar", cuerpo).addEventListener("input", pintarOpciones);
-    pintarOpciones();
-  }
+  // Selector de usuaria: no muestra a nadie hasta escribir; al elegir queda una tarjeta con «Cambiar»
+  const caja = $("#usuaria", cuerpo);
+  const tarjetaElegida = u => `<label>Usuaria</label>
+    <div class="elegida"><span class="avatar grande" aria-hidden="true">${esc(iniciales(u))}</span>
+      <span class="body"><span class="name">${esc(u.nombre)}</span><span class="meta"><span class="mono">${esc(u.curp || "Sin CURP")}</span><span>${esc(edadDe(u))}</span></span></span>
+      ${fija ? "" : botonIcono("editar", "Cambiar", { id: "cambiar", clase: "quieto" })}</div>`;
+  const pintarBusqueda = () => {
+    caja.innerHTML = `<label for="n-buscar">Usuaria</label>
+      <input type="search" id="n-buscar" placeholder="Escriba al menos 2 letras del nombre o la CURP" autocomplete="off">
+      <div class="list" id="n-res"></div><p class="hint" id="n-aviso">Aún no se muestra ninguna usuaria.</p>`;
+    const entrada = $("#n-buscar", caja), res = $("#n-res", caja), aviso1 = $("#n-aviso", caja);
+    entrada.addEventListener("input", () => {
+      const texto = normalizar(entrada.value).trim();
+      const q = texto.split(/\s+/).filter(Boolean);
+      if (texto.length < 2) { res.innerHTML = ""; aviso1.textContent = "Aún no se muestra ninguna usuaria."; return; }
+      const hallados = usuarias.filter(u => q.every(w => normalizar(`${u.nombre} ${u.curp || ""}`).includes(w)));
+      res.innerHTML = hallados.slice(0, 5).map(u => `<a class="row" href="#" data-id="${esc(u.id)}"><span class="body"><span class="name">${esc(u.nombre)}</span><span class="meta"><span class="mono">${esc(u.curp || "Sin CURP")}</span><span>${esc(edadDe(u))}</span><span>${esc(etiquetaSexo(u.sexo))}</span></span></span></a>`).join("");
+      aviso1.textContent = !hallados.length ? "No hay coincidencias." : hallados.length > 5 ? `Mostrando 5 de ${hallados.length}; siga escribiendo para acotar.` : hallados.length === 1 ? "1 coincidencia. Tóquela para elegirla." : `${hallados.length} coincidencias. Toque una para elegirla.`;
+    });
+    res.addEventListener("click", ev => {
+      const fila = ev.target.closest("[data-id]");
+      if (!fila) return;
+      ev.preventDefault();
+      elegida = usuarias.find(u => u.id === fila.dataset.id);
+      pintarElegida();
+    });
+  };
+  const pintarElegida = () => {
+    caja.innerHTML = tarjetaElegida(elegida);
+    $("#cambiar", caja)?.addEventListener("click", () => { elegida = null; pintarBusqueda(); $("#n-buscar", caja).focus(); });
+  };
+  if (elegida) pintarElegida(); else pintarBusqueda();
 
   $("#guardar", cuerpo).onclick = unaVez(async () => {
     const d = Object.fromEntries($$("[data-campo]", cuerpo).map(el => [el.dataset.campo, el.value.trim()]));
+    d.usuariaId = elegida?.id || "";
     const e = [];
     if (!d.usuariaId) e.push("Seleccione a la usuaria.");
     if (!d.asunto) e.push("Ingrese el asunto del caso.");
