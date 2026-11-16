@@ -12,6 +12,7 @@ import * as evidencias from "../core/evidencias.js";
 import * as kiosko from "../core/kiosko.js";
 import { icono, botonIcono, menuMas, conectarMenus } from "../core/iconos.js";
 import { esProximo, sinRealizar, estadoDe, cuandoEs, ordenarCursos } from "../core/cursos.js";
+import { agregarAlCalendario } from "../core/calendario.js";
 import { tarjetas } from "../core/resumen.js";
 import { seccionActividad, tomarFotos, agregarDeGaleria } from "./evidencias.js";
 
@@ -221,6 +222,7 @@ async function detallePrevio({ yo, pintar, ir }, a) {
       <div class="card-head">
         ${chipEstado(a)}
         <span class="icon-row">
+          ${cancelado || vencido ? "" : botonIcono("calendario", "Calendario", { id: "calendario", clase: "quieto", extra: `aria-label="Agregar al calendario" title="Agregar al calendario"` })}
           ${editable && !cancelado ? botonIcono("editar", "Editar", { href: `#/actividad/${a.id}/editar`, clase: "quieto" }) : ""}
           ${menuMas(opcionesMas)}
         </span>
@@ -246,6 +248,17 @@ async function detallePrevio({ yo, pintar, ir }, a) {
   `, { atras: listaDe(a) });
   conectarMenus(c);
   const actual = () => db.uno("actividades", a.id);
+  // Se entrega en su propio toque: iOS exige que compartir ocurra directamente tras un toque del usuario.
+  $("#calendario", c)?.addEventListener("click", async () => {
+    try {
+      const r = await agregarAlCalendario(a);
+      if (r === "descargado") aviso("Archivo de calendario descargado. Ábralo para agregar el evento con sus recordatorios");
+      else if (r === "compartido") aviso("Elija «Calendario» para agregar el evento con sus recordatorios");
+    } catch (e) {
+      console.error(e);
+      aviso("No se pudo generar el archivo de calendario.");
+    }
+  });
   const iniciar = $("#iniciar", c);
   if (iniciar) dobleToque(iniciar, a.fecha > hoy() ? "Se registrará con la fecha de hoy. Toque nuevamente para iniciar" : `Toque nuevamente para iniciar ${sust.el}`, async () => {
     const { programado, cancelado: _c, ...resto } = await actual();
