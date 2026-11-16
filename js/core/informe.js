@@ -1,4 +1,4 @@
-// Informe para financiadores y autoridades: cálculo de los datos agregados de un periodo.
+// Informe de actividades: cálculo de los datos agregados de un periodo.
 // Solo se obtienen totales y conteos: nunca nombres, CURP, teléfonos ni firmas de las usuarias.
 // Se calcula con los datos guardados en el dispositivo, por lo que funciona sin conexión.
 
