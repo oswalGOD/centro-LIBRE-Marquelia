@@ -223,13 +223,13 @@ async function detallePrevio({ yo, pintar, ir }, a) {
         </span>
       </div>
       ${cancelado ? "" : `<p class="hint">${vencido ? `La fecha programada ya pasó (${esc(fechaLarga(a.fecha))}). Inicie ${sust.el}, o edite la fecha si se reprograma.` : `Se realizará ${esc(cuandoEs(a.fecha))}.`}</p>`}
-      <dl class="facts">
+      <dl class="facts dos al-final">
         <div><dt>Folio</dt><dd class="mono">${esc(a.folio)}</dd></div>
         <div><dt>Fecha programada</dt><dd>${fechaLarga(a.fecha)}</dd></div>
         <div><dt>Lugar</dt><dd>${esc(a.lugar)}</dd></div>
-        ${a.horaInicio ? `<div><dt>Horario</dt><dd>${esc(a.horaInicio)}${a.horaFin ? ` a ${esc(a.horaFin)}` : ""}</dd></div>` : ""}
-        <div><dt>Facilitadora</dt><dd>${esc(a.facilitadora)} · ${esc(a.puesto)}</dd></div>
-        ${curso ? `<div><dt>Instructora</dt><dd>${esc(a.instructora)}</dd></div>
+        ${a.horaInicio ? `<div class="largo"><dt>Horario</dt><dd>${esc(a.horaInicio)}${a.horaFin ? ` a ${esc(a.horaFin)}` : ""}</dd></div>` : ""}
+        <div class="largo"><dt>Facilitadora</dt><dd>${esc(a.facilitadora)} · ${esc(a.puesto)}</dd></div>
+        ${curso ? `<div class="largo"><dt>Instructora</dt><dd>${esc(a.instructora)}</dd></div>
         <div><dt>Duración</dt><dd>${esc(a.horas)} ${a.horas === 1 ? "hora" : "horas"}</dd></div>` : `<div><dt>Tipo</dt><dd>${esc(a.tipo)}</dd></div>`}
       </dl>
     </section>
@@ -318,13 +318,13 @@ async function detalle({ yo, pintar, ir }, id) {
           ${menuMas(opcionesMas)}
         </span>
       </div>
-      <dl class="facts">
+      <dl class="facts dos al-final">
         <div><dt>Folio</dt><dd class="mono">${esc(a.folio)}</dd></div>
         <div><dt>Fecha</dt><dd>${fechaLarga(a.fecha)}</dd></div>
         <div><dt>Lugar</dt><dd>${esc(a.lugar)}</dd></div>
-        ${a.horaInicio ? `<div><dt>Horario</dt><dd>${esc(a.horaInicio)} a ${esc(a.horaFin)} · ${duracion(minutosEntre(a.horaInicio, a.horaFin))}</dd></div>` : ""}
-        <div><dt>Facilitadora</dt><dd>${esc(a.facilitadora)} · ${esc(a.puesto)}</dd></div>
-        ${curso ? `<div><dt>Instructora</dt><dd>${esc(a.instructora)}</dd></div><div><dt>Duración</dt><dd>${esc(a.horas)} ${a.horas === 1 ? "hora" : "horas"}</dd></div>` : `<div><dt>Tipo</dt><dd>${esc(a.tipo)}</dd></div>`}
+        ${a.horaInicio ? `<div class="largo"><dt>Horario</dt><dd>${esc(a.horaInicio)} a ${esc(a.horaFin)} · ${duracion(minutosEntre(a.horaInicio, a.horaFin))}</dd></div>` : ""}
+        <div class="largo"><dt>Facilitadora</dt><dd>${esc(a.facilitadora)} · ${esc(a.puesto)}</dd></div>
+        ${curso ? `<div class="largo"><dt>Instructora</dt><dd>${esc(a.instructora)}</dd></div><div><dt>Duración</dt><dd>${esc(a.horas)} ${a.horas === 1 ? "hora" : "horas"}</dd></div>` : `<div><dt>Tipo</dt><dd>${esc(a.tipo)}</dd></div>`}
       </dl>
     </section>
     <div class="actions-bar">

@@ -102,7 +102,7 @@ async function ficha({ yo, pintar, ir }, id) {
   const puedeEliminar = esCoordinadora(yo) && !asis.length && !hayCasos;
   const opcionesMas = puedeEliminar ? [{ id: "eliminar", icono: "eliminar", texto: "Eliminar usuaria", clase: "danger" }] : [];
   const iniciales = p.nombre.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("");
-  const dato = (t, v, mono) => `<div><dt>${t}</dt><dd${mono ? ' class="mono"' : ""}>${v ? esc(v) : "—"}</dd></div>`;
+  const dato = (t, v, mono, largo) => `<div${largo ? ' class="largo"' : ""}><dt>${t}</dt><dd${mono ? ' class="mono"' : ""}>${v ? esc(v) : "—"}</dd></div>`;
 
   const c = pintar(p.nombre, `
     <section class="panel stack ficha-usuaria">
@@ -114,9 +114,9 @@ async function ficha({ yo, pintar, ir }, id) {
           ${menuMas(opcionesMas)}
         </span>
       </div>
-      <dl class="facts">
-        ${dato("CURP", p.curp, true)}
-        ${dato("Fecha de nacimiento", p.fnac ? `${fechaLarga(p.fnac)} (${edad(p.fnac)} años)` : "")}
+      <dl class="facts dos">
+        ${dato("CURP", p.curp, true, true)}
+        ${dato("Fecha de nacimiento", p.fnac ? `${fechaLarga(p.fnac)} (${edad(p.fnac)} años)` : "", false, true)}
         ${dato("Lugar de nacimiento", p.lugar)}
         ${dato("Sexo", etiquetaSexo(p.sexo))}
         ${dato("Grupo", p.grupo ? `${p.grupo}) ${etiquetaGrupo(p.grupo)}` : "")}
@@ -127,7 +127,7 @@ async function ficha({ yo, pintar, ir }, id) {
     </section>
     ${puedeUsarCasos(yo) ? `<section class="panel stack">
       <div class="section-head"><h2 class="h3">Seguimiento de casos</h2><p class="hint">${nCasos ? `${plural(nCasos, "caso registrado", "casos registrados")}${esCoordinadora(yo) ? "" : " por usted"}. ` : "Sin casos registrados. "}El contenido es confidencial y se abre con su PIN.</p></div>
-      <div class="actions">${nCasos ? `<a class="btn" href="#/casos/usuaria/${esc(p.id)}">Ver casos</a>` : ""}${puedeCrearCaso(yo) ? `<a class="btn primary" href="#/casos/nuevo/${esc(p.id)}">Nuevo caso</a>` : ""}</div>
+      <div class="icon-row">${nCasos ? botonIcono("casos", "Ver casos", { href: `#/casos/usuaria/${esc(p.id)}` }) : ""}${puedeCrearCaso(yo) ? botonIcono("mas2", "Nuevo caso", { href: `#/casos/nuevo/${esc(p.id)}`, clase: "primary" }) : ""}</div>
     </section>` : ""}
     <section class="stack">
       <h2>Historial de asistencia</h2>
