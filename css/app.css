@@ -545,3 +545,4 @@ body.con-camara { overflow: hidden; }
 .elegida .name { font-weight: 700; overflow-wrap: anywhere; }
 .elegida .meta { display: flex; gap: 10px; flex-wrap: wrap; }
 #usuaria { min-width: 0; } .elegida .mono { font-size: .85rem; }
+.elegida-cab { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }

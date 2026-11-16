@@ -135,10 +135,9 @@ async function nuevo(ctx, usuariaId) {
 
   // Selector de usuaria: no muestra a nadie hasta escribir; al elegir queda una tarjeta con «Cambiar»
   const caja = $("#usuaria", cuerpo);
-  const tarjetaElegida = u => `<label>Usuaria</label>
+  const tarjetaElegida = u => `<div class="elegida-cab"><label>Usuaria</label>${fija ? "" : botonIcono("editar", "Cambiar", { id: "cambiar", clase: "quieto" })}</div>
     <div class="elegida"><span class="avatar grande" aria-hidden="true">${esc(iniciales(u))}</span>
-      <span class="body"><span class="name">${esc(u.nombre)}</span><span class="meta"><span class="mono">${esc(u.curp || "Sin CURP")}</span><span>${esc(edadDe(u))}</span></span></span>
-      ${fija ? "" : botonIcono("editar", "Cambiar", { id: "cambiar", clase: "quieto" })}</div>`;
+      <span class="body"><span class="name">${esc(u.nombre)}</span><span class="meta"><span class="mono">${esc(u.curp || "Sin CURP")}</span><span>${esc(edadDe(u))}</span></span></span></div>`;
   const pintarBusqueda = () => {
     caja.innerHTML = `<label for="n-buscar">Usuaria</label>
       <input type="search" id="n-buscar" placeholder="Escriba al menos 2 letras del nombre o la CURP" autocomplete="off">
