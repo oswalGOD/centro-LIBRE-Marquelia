@@ -5,7 +5,7 @@
 import { prefijoFolio } from "./catalogos.js";
 
 const NOMBRE = "centro-libre-marquelia";
-const VERSION = 6;
+const VERSION = 7;
 
 let conexion;
 
@@ -28,7 +28,7 @@ export function convertirV1(datos) {
 }
 
 /** Versión 3: índice por fecha de cambio, para que la sincronización lea solo lo que cambió y no toda la base. */
-const CON_INDICE_CAMBIO = ["perfiles", "usuarias", "actividades", "asistencias", "evidencias", "casos", "notasCaso", "instituciones", "canalizaciones"];
+const CON_INDICE_CAMBIO = ["perfiles", "usuarias", "actividades", "asistencias", "evidencias", "casos", "notasCaso", "instituciones", "canalizaciones", "citas"];
 function agregarIndiceCambio(t) {
   for (const a of CON_INDICE_CAMBIO) {
     const s = t.objectStore(a);
@@ -67,6 +67,17 @@ function crearCanalizaciones(d) {
   d.createObjectStore("canalizaciones", { keyPath: "id" }).createIndex("usuariaId", "usuariaId");
 }
 
+/**
+ * Versión 7: agenda de citas individuales. Fecha, hora, estado y a quién corresponde van en claro (la agenda necesita
+ * ordenarlas y los informes solo cuentan); el motivo y el lugar viajan cifrados en `sobre`.
+ */
+function crearCitas(d) {
+  if (d.objectStoreNames.contains("citas")) return;
+  const s = d.createObjectStore("citas", { keyPath: "id" });
+  s.createIndex("usuariaId", "usuariaId");
+  s.createIndex("fecha", "fecha");
+}
+
 function migrarV1(d, t, despues) {
   const leer = nombre => new Promise(ok => { t.objectStore(nombre).getAll().onsuccess = e => ok(e.target.result); });
   Promise.all(["usuarias", "personas", "asistencias"].map(leer)).then(([usuarias, personas, asistencias]) => {
@@ -92,11 +103,12 @@ export function abrir() {
     const r = indexedDB.open(NOMBRE, VERSION);
     r.onupgradeneeded = e => {
       const d = r.result, t = r.transaction;
-      if (e.oldVersion === 1) return migrarV1(d, t, () => { crearEvidencias(d); crearCasos(d); crearCanalizaciones(d); agregarIndiceCambio(t); });
+      if (e.oldVersion === 1) return migrarV1(d, t, () => { crearEvidencias(d); crearCasos(d); crearCanalizaciones(d); crearCitas(d); agregarIndiceCambio(t); });
       if (e.oldVersion >= 2) {
         crearEvidencias(d);
         crearCasos(d);
         crearCanalizaciones(d);
+        crearCitas(d);
         return agregarIndiceCambio(t);
       }
       d.createObjectStore("perfiles", { keyPath: "id" });
@@ -110,6 +122,7 @@ export function abrir() {
       crearEvidencias(d);
       crearCasos(d);
       crearCanalizaciones(d);
+      crearCitas(d);
       agregarIndiceCambio(t);
     };
     r.onsuccess = () => renombrarMeta(r.result).then(() => resolve(r.result), reject);
@@ -146,7 +159,7 @@ export async function eliminarTodo() {
   });
 }
 
-export const ALMACENES = ["perfiles", "usuarias", "actividades", "asistencias", "evidencias", "casos", "notasCaso", "instituciones", "canalizaciones", "meta"];
+export const ALMACENES = ["perfiles", "usuarias", "actividades", "asistencias", "evidencias", "casos", "notasCaso", "instituciones", "canalizaciones", "citas", "meta"];
 
 const pedir = r => new Promise((resolve, reject) => { r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error); });
 const terminar = t => new Promise((resolve, reject) => { t.oncomplete = resolve; t.onerror = t.onabort = () => reject(t.error); });
@@ -175,6 +188,7 @@ export function registroValido(almacen, r) {
     case "instituciones": return texto(r.nombre);
     case "canalizaciones": return texto(r.perfilId) && texto(r.usuariaId) && texto(r.sobre?.datos) && texto(r.sobre?.iv) && texto(r.sobre?.kid);
     case "notasCaso": return texto(r.casoId) && texto(r.perfilId) && texto(r.sobre?.datos) && texto(r.sobre?.iv) && texto(r.sobre?.kid);
+    case "citas": return texto(r.perfilId) && texto(r.usuariaId) && /^\d{4}-\d{2}-\d{2}$/.test(r.fecha) && /^\d{2}:\d{2}$/.test(r.hora) && texto(r.estado) && texto(r.sobre?.datos) && texto(r.sobre?.iv) && texto(r.sobre?.kid);
     case "asistencias": return texto(r.actividadId) && texto(r.usuariaId) && !!r.datos && typeof r.datos === "object" && (!r.firma || /^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(r.firma));
     default: return true;
   }

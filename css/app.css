@@ -564,3 +564,6 @@ body.con-camara { overflow: hidden; }
 .row.elegir-fila .num { min-width: 1.5ch; }
 .row.elegir-fila [data-sola] { flex: none; white-space: nowrap; }
 .row.elegir-fila input[type="checkbox"] { flex: none; width: 22px; height: 22px; accent-color: var(--accent); }
+
+/* Agenda de citas: navegación por día o semana */
+.nav-etiqueta { flex: 1 1 auto; text-align: center; min-width: 0; }
