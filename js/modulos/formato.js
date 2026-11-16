@@ -2,6 +2,7 @@
 // 10 personas por hoja; cada hoja lleva su propio resumen por grupo, rango de edad y sexo.
 
 import * as db from "../core/db.js";
+import { botonIcono } from "../core/iconos.js";
 import { GRUPOS, RANGOS, edad, rangoDe, fechaCorta } from "../core/catalogos.js";
 import { puedeVer } from "../core/permisos.js";
 import { $, $$, esc, plural, aviso } from "../core/ui.js";
@@ -135,7 +136,7 @@ export async function formato({ yo, pintar, ir }, id) {
     <div class="toolbar no-print">
       <button class="btn primary" id="exportarPDF" disabled>Preparando PDF…</button>
       <a id="bajarPDF" hidden></a>
-      <button class="btn" id="imprimir">Imprimir</button>
+      ${botonIcono("formato", "Imprimir", { id: "imprimir" })}
       <p class="hint">${plural(hojas, "hoja", "hojas")} · ${plural(asis.length, "asistente", "asistentes")} · carta horizontal${act.notas ? " · incluye la hoja de notas" : ""}${sinFirma ? ` · <span class="chip warn">${sinFirma} sin firma</span>` : ""}</p>
     </div>
     <details class="ayuda no-print"><summary>Cómo exportar o imprimir</summary>

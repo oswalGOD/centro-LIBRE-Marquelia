@@ -2,6 +2,7 @@
 // Se emiten a quienes quedaron registradas en el curso (curso de una sola sesión); se puede exportar una sola o todas en un PDF.
 
 import * as db from "../core/db.js";
+import { botonIcono } from "../core/iconos.js";
 import { puedeVer } from "../core/permisos.js";
 import { $, $$, esc, plural } from "../core/ui.js";
 import { ajustarHojas, conectarExportacion } from "./formato.js";
@@ -71,7 +72,7 @@ export async function constancias({ yo, pintar, ir }, id) {
       <div class="toolbar no-print">
         <button class="btn primary" id="exportarPDF" disabled>Preparando PDF…</button>
         <a id="bajarPDF" hidden></a>
-        <button class="btn" id="imprimir">Imprimir</button>
+        ${botonIcono("formato", "Imprimir", { id: "imprimir" })}
         <p class="hint">${plural(sel.length, "constancia", "constancias")} · carta horizontal</p>
       </div>
       <div class="sheets" id="hojas">${constanciasHTML(act, sel, coordinadora)}</div>`;

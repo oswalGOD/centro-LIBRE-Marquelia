@@ -358,7 +358,7 @@ async function vistaPDF({ yo, pintar, ir }) {
     <div class="toolbar no-print">
       <button class="btn primary" id="exportarPDF" disabled>Preparando PDF…</button>
       <a id="bajarPDF" hidden></a>
-      <button class="btn" id="imprimir">Imprimir</button>
+      ${botonIcono("formato", "Imprimir", { id: "imprimir" })}
       ${botonIcono("descargar", "Excel", { id: "excel", titulo: "Descargar informe en Excel (.xlsx)" })}
       <p class="hint">${plural(hojas, "hoja", "hojas")} · carta horizontal${fotos.length ? ` · ${plural(fotos.length, "fotografía", "fotografías")}` : ""}${faltan ? ` · <span class="chip warn">${plural(faltan, "foto sin descargar", "fotos sin descargar")}</span>` : ""}</p>
     </div>
