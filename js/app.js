@@ -9,6 +9,7 @@ import { crearPerfil, iniciarSesion, cerrarSesion, sesionActual, sesionVigente, 
 import { $, $$, esc, aviso, errores, leerCampos } from "./core/ui.js";
 import * as nube from "./core/sync.js";
 import * as kiosko from "./core/kiosko.js";
+import * as expedientes from "./core/expedientes.js";
 import { captura } from "./modulos/captura.js";
 import actividades from "./modulos/actividades.js";
 import usuarias from "./modulos/usuarias.js";
@@ -19,8 +20,9 @@ import desarrollo from "./modulos/desarrollo.js";
 import inicio from "./modulos/inicio.js";
 import evidencias from "./modulos/evidencias.js";
 import constancias from "./modulos/constancias.js";
+import casos from "./modulos/casos.js";
 
-const MODULOS = [inicio, actividades, constancias, evidencias, usuarias, estadisticas, perfiles, ajustes, desarrollo];
+const MODULOS = [inicio, actividades, constancias, evidencias, casos, usuarias, estadisticas, perfiles, ajustes, desarrollo];
 
 const raiz = document.getElementById("app");
 let yo = null;
@@ -101,6 +103,7 @@ async function pedirPinSalida() {
     if (espera) return errores($("#errS"), [`Demasiados intentos. Espere ${espera > 90000 ? `${Math.ceil(espera / 60000)} minutos` : `${Math.ceil(espera / 1000)} segundos`}.`]);
     if (await verificarPin(perfil, $("#pinS").value)) {
       pinCorrecto();
+      await expedientes.desbloquear(perfil, $("#pinS").value);
       kiosko.desactivar();
       iniciarSesion(perfil);
       m.remove();
@@ -159,7 +162,7 @@ async function router() {
     const modo = kiosko.estado();
     if (modo) return await modoCaptura(modo);
     yo = await sesionActual();
-    if (!yo) return entrar(lista.filter(u => u.activa));
+    if (!yo) { expedientes.bloquear(); return entrar(lista.filter(u => u.activa)); }
     const ruta = location.hash || "#/";
     for (const m of MODULOS) {
       for (const [patron, vista, opciones] of m.rutas) {
@@ -260,6 +263,7 @@ async function primerUso() {
     errores($("#err"), e);
     if (e.length) return;
     const u = await crearPerfil({ nombre: d.nombre, rol: "Coordinadora", pin: d.pin });
+    await expedientes.desbloquear(u, d.pin);
     iniciarSesion(u);
     aviso("Perfil creado");
     location.hash = "#/";
@@ -299,6 +303,7 @@ function entrar(lista) {
     if (espera) return errores($("#err"), [`Demasiados intentos. Espere ${espera > 90000 ? `${Math.ceil(espera / 60000)} minutos` : `${Math.ceil(espera / 1000)} segundos`}.`]);
     if (await verificarPin(elegida, $("#pin").value)) {
       pinCorrecto();
+      await expedientes.desbloquear(elegida, $("#pin").value);
       iniciarSesion(elegida);
       router();
     } else {

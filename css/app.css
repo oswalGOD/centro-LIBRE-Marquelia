@@ -504,3 +504,7 @@ body.con-camara { overflow: hidden; }
 .ficha-id { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .ficha-id .meta { display: flex; gap: 6px; flex-wrap: wrap; min-width: 0; }
 .ficha-usuaria .facts { padding-top: 14px; border-top: 1px solid var(--line); }
+
+/* Seguimiento de casos */
+.nota-texto { white-space: pre-wrap; margin: 6px 0 0; overflow-wrap: anywhere; }
+.row.nota .body { gap: 2px; }

@@ -51,7 +51,7 @@ export function terminoDe(a) {
 export function crearICS(a, ahora = new Date()) {
   const curso = Boolean(a.curso);
   const tipo = curso ? "Curso" : "Actividad";
-  const descripcion = [
+  const descripcion = a.descripcion ?? [
     `${tipo} programad${curso ? "o" : "a"} del Centro LIBRE Marquelia.`,
     `Folio: ${a.folio}`,
     curso ? `Instructora: ${a.instructora || ""}` : `Tipo: ${a.tipo || ""}`,

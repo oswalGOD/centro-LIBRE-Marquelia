@@ -4,7 +4,7 @@ import * as db from "../core/db.js";
 import { tarjetas } from "../core/resumen.js";
 import { botonIcono } from "../core/iconos.js";
 import { ROLES } from "../core/catalogos.js";
-import { crearPerfil, cambiarPin, pinValido } from "../core/auth.js";
+import { crearPerfil, cambiarPin, pinValido, esCoordinadora } from "../core/auth.js";
 import { $, $$, esc, aviso, errores, leerCampos, unaVez } from "../core/ui.js";
 
 async function vista(ctx) {
@@ -50,7 +50,26 @@ async function vista(ctx) {
       if (accion === "guardarPin") {
         const pin = $("input", fila).value;
         if (!pinValido(pin)) return aviso("El PIN debe tener de 4 a 6 dígitos");
-        await cambiarPin(u, pin);
+        try {
+          await cambiarPin(u, pin);
+        } catch (e) {
+          if (e.codigo !== "BLOQUEADOS") throw e;
+          // Los expedientes cifrados de esta persona no están abiertos: con el PIN nuevo no podría leerlos.
+          const aviso1 = esCoordinadora(u)
+            ? "Para conservar el acceso de la Coordinadora a los expedientes, abra primero «Seguimiento de casos» con su PIN actual y vuelva a intentar. Si no recuerda el PIN, puede continuar: los expedientes de los demás perfiles se vuelven a compartir con ella cuando cada perfil ingrese de nuevo."
+            : "Esta persona tiene expedientes cifrados que usted aún no puede abrir (ella debe ingresar al menos una vez tras la actualización, o usted abrir «Seguimiento de casos» con su PIN). Si continúa, sus expedientes anteriores dejarán de ser legibles.";
+          const caja = $(".pin-form", fila);
+          let aviso2 = $(".forzar", caja);
+          if (!aviso2) caja.insertAdjacentHTML("beforeend", `<div class="issues forzar span-all" role="alert"><b>No se cambió el PIN.</b><p>${esc(aviso1)}</p><button class="btn small danger" data-accion="forzarPin">Cambiar de todos modos</button></div>`);
+          return;
+        }
+        aviso(`PIN de ${u.nombre.split(" ")[0]} actualizado`);
+        vista(ctx);
+      }
+      if (accion === "forzarPin") {
+        const pin = $("input", fila).value;
+        if (!pinValido(pin)) return aviso("El PIN debe tener de 4 a 6 dígitos");
+        await cambiarPin(u, pin, { forzar: true });
         aviso(`PIN de ${u.nombre.split(" ")[0]} actualizado`);
         vista(ctx);
       }

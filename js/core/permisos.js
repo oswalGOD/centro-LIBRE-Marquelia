@@ -20,3 +20,10 @@ export const puedeCapturar = (yo, actividad) =>
 
 /** Crear, programar y administrar cursos y capacitaciones. */
 export const puedeAdministrarCursos = yo => esCoordinadora(yo);
+
+// Seguimiento de casos confidenciales: cada perfil con casos (Psicóloga, Abogada) ve y edita solo los suyos;
+// la Coordinadora los ve todos, solo para lectura.
+export const llevaCasos = yo => yo?.rol === "Psicóloga" || yo?.rol === "Abogada";
+export const puedeVerCaso = (yo, caso) => esCoordinadora(yo) || caso.perfilId === yo.id;
+export const puedeEditarCaso = (yo, caso) => llevaCasos(yo) && caso.perfilId === yo.id;
+export const puedeUsarCasos = yo => llevaCasos(yo) || esCoordinadora(yo);
