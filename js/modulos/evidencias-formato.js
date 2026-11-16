@@ -11,7 +11,7 @@ import { encabezado, ajustarHojas, conectarExportacion } from "./formato.js";
 export const FOTOS_POR_HOJA = 6;
 
 /** Reduce la foto a 640 × 480 (el doble de su tamaño en la hoja) para que la hoja y el PDF no pesen de más. */
-async function miniatura(blob) {
+export async function miniatura(blob) {
   const imagen = await createImageBitmap(blob);
   const lienzo = Object.assign(document.createElement("canvas"), { width: 640, height: 480 });
   lienzo.getContext("2d").drawImage(imagen, 0, 0, 640, 480);
