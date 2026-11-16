@@ -253,8 +253,8 @@ async function pantalla({ yo, pintar }) {
       : `<div class="field"><label for="i-desde">Desde</label><input id="i-desde" type="date" data-filtro="desde" value="${filtros.desde}"></div>
          <div class="field"><label for="i-hasta">Hasta</label><input id="i-hasta" type="date" data-filtro="hasta" value="${filtros.hasta}"></div>`;
 
-  const c = pintar("Informes para financiadores", `
-    <p class="hint">Informe con datos agregados del periodo, listo para entregar a financiadores o autoridades. No incluye nombres, CURP, teléfonos ni firmas de las usuarias.${coord ? "" : " Solo contiene sus actividades."}</p>
+  const c = pintar("Informes", `
+    <p class="hint">Informe con datos agregados del periodo, listo para entregar. No incluye nombres, CURP, teléfonos ni firmas de las usuarias.${coord ? "" : " Solo contiene sus actividades."}</p>
     <div class="filters" id="filtros">
       <div class="field"><span class="legend">Periodo</span><div class="segmented" role="radiogroup" aria-label="Tipo de periodo">
         ${[["mes", "Mensual"], ["trimestre", "Trimestral"], ["rango", "Por fechas"]].map(([v, x]) => `<button type="button" role="radio" aria-checked="${v === filtros.modo}" data-modo="${v}">${x}</button>`).join("")}</div></div>
