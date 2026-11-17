@@ -3,6 +3,8 @@
 // Las horas son «flotantes» (sin zona horaria): el evento queda a la hora local indicada en cualquier dispositivo.
 // El identificador (UID) es estable: al importar de nuevo una actividad reprogramada se actualiza el mismo evento.
 
+import { puedeCompartir } from "./ui.js";
+
 /** Recordatorios: un día antes y una hora antes. */
 const RECORDATORIOS = [
   { disparo: "-P1D", texto: "Mañana" },
@@ -94,7 +96,7 @@ export const nombreICS = a => `${a.folio || "evento"}.ics`;
  */
 export async function agregarAlCalendario(a) {
   const archivo = new File([crearICS(a)], nombreICS(a), { type: "text/calendar" });
-  if (navigator.canShare?.({ files: [archivo] })) {
+  if (puedeCompartir(archivo)) {
     try { await navigator.share({ files: [archivo], title: a.nombre }); return "compartido"; }
     catch (e) { if (e?.name === "AbortError") return "cancelado"; }
   }

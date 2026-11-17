@@ -11,7 +11,7 @@ import { calcularInforme, cruzar, evidenciasDelPeriodo, periodo, MESES, SEXOS_IN
 import { ESTATUS as ESTATUS_CANAL } from "../core/canalizaciones.js";
 import { libroXlsx } from "../core/xlsx.js";
 import { botonIcono } from "../core/iconos.js";
-import { $, $$, esc, aviso, plural, descargar } from "../core/ui.js";
+import { $, $$, esc, aviso, plural, descargar, puedeCompartir } from "../core/ui.js";
 import { ajustarHojas, conectarExportacion } from "./formato.js";
 import { miniatura } from "./evidencias-formato.js";
 
@@ -145,7 +145,7 @@ export function libroDeInforme(inf, per) {
 /** Comparte el archivo con el menú del dispositivo (iPad, iPhone, Android) o lo descarga (computadora). */
 async function entregar(blob, nombre) {
   const archivo = new File([blob], nombre, { type: blob.type });
-  if (navigator.canShare?.({ files: [archivo] })) {
+  if (puedeCompartir(archivo)) {
     try { await navigator.share({ files: [archivo] }); return; }
     catch (e) { if (e?.name === "AbortError") return; }
   }
