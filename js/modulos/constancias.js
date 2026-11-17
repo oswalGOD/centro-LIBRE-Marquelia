@@ -63,7 +63,7 @@ export async function constancias({ yo, pintar, ir }, id) {
   const nombreArchivo = sel => sinSimbolos(sel.length === 1 ? `Constancia ${folioConstancia(act, sel[0].numero)} ${sel[0].x.datos.nombre}.pdf` : `Constancias ${act.folio}.pdf`);
 
   const c = pintar("Constancias", `
-    <section class="panel stack">
+    <section class="panel stack no-print">
       <p class="hint"><b>${esc(act.nombre)}</b> · ${esc(act.horas)} h · ${fechaLarga(act.fecha)}. Se emite una constancia a cada persona registrada en el curso. Seleccione a quiénes desea emitirla.</p>
       ${coordinadora ? "" : `<p class="chip warn">No hay una Coordinadora activa en Perfiles; la firma quedará sin nombre.</p>`}
       <h2 class="h3">Firmas de la constancia</h2>
@@ -79,8 +79,8 @@ export async function constancias({ yo, pintar, ir }, id) {
       </div>
       <p class="hint">Si falta una firma, la línea queda en blanco para firmar a mano. ${esCoord ? "" : "La firma de la Coordinadora la registra ella misma. "}La firma de la instructora se guarda solo en este curso.</p>
     </section>
-    ${asis.length ? `<div class="toolbar">${botonIcono("activar", "Todas", { id: "todas", titulo: "Seleccionar todas" })}${botonIcono("salir", "Ninguna", { id: "ninguna", titulo: "Quitar la selección" })}</div>
-    <div class="list" id="elegir">${todas.map(({ x, numero }) => `
+    ${asis.length ? `<div class="toolbar no-print">${botonIcono("activar", "Todas", { id: "todas", titulo: "Seleccionar todas" })}${botonIcono("salir", "Ninguna", { id: "ninguna", titulo: "Quitar la selección" })}</div>
+    <div class="list no-print" id="elegir">${todas.map(({ x, numero }) => `
       <label class="row person elegir-fila"><input type="checkbox" data-id="${esc(x.id)}" checked aria-label="Emitir constancia a ${esc(x.datos.nombre)}">
         <span class="num">${numero}</span>
         <span class="body"><span class="name">${esc(x.datos.nombre)}</span><span class="meta"><span class="mono">${esc(x.datos.curp || "Sin CURP")}</span>${x.firma || x.sinFirma ? "" : `<span class="chip warn">Falta firma</span>`}</span></span>
