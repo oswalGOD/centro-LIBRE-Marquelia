@@ -47,7 +47,7 @@ export function hojasHTML(act, asistencias) {
       const p = x.datos;
       return `<tr><td>${h * POR_HOJA + i + 1}</td><td class="curp">${p.curp ? esc(p.curp) : "SIN CURP"}</td><td class="l">${mayus(p.nombre)}</td>
         <td>${fechaCorta(p.fnac)}</td><td>${esc(p.sexo)}</td><td>${mayus(p.lugar)}</td><td>${esc(p.grupo)}</td><td>${rangoDe(edad(p.fnac, act.fecha)) || ""}</td>
-        <td>${mayus(p.ocupacion)}</td><td>${esc(p.telefono)}</td><td>${x.firma ? `<img src="${esc(x.firma)}" alt="">` : x.sinFirma ? `<span class="sinfirma">${esc(x.sinFirma)}</span>` : ""}</td></tr>`;
+        <td>${mayus(p.ocupacion)}</td><td>${esc(p.telefono || "")}</td><td>${x.firma ? `<img src="${esc(x.firma)}" alt="">` : x.sinFirma ? `<span class="sinfirma">${esc(x.sinFirma)}</span>` : ""}</td></tr>`;
     }).join("");
     html += `<div class="sheet-wrap"><article class="sheet" aria-label="Hoja ${h + 1} de ${hojas}">${encabezado(act)}
       <div class="lead">Su información es muy importante para nosotras/os, favor de escribir todos sus datos completos, sin abreviaturas y con letra legible de molde. No dejar espacios en blanco</div>
@@ -120,8 +120,12 @@ export function conectarExportacion(c, hojasEl, nombrePDF, tituloImpresion) {
   $("#imprimir", c).onclick = () => {
     const titulo = document.title;
     document.title = tituloImpresion; // nombre sugerido del PDF
+    // Refuerza la orientación horizontal (carta) en Edge/Chrome, además de la regla @page de la hoja de estilos
+    const estilo = document.createElement("style");
+    estilo.textContent = "@page { size: 11in 8.5in; margin: 0; }";
+    document.head.append(estilo);
     window.print();
-    setTimeout(() => (document.title = titulo), 1000);
+    setTimeout(() => { document.title = titulo; estilo.remove(); }, 1000);
   };
 }
 

@@ -69,7 +69,7 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
         <div class="field"><label for="fnac">Fecha de nacimiento</label><input id="fnac" type="date" data-c="fnac"><span class="note ok" id="edadNota"></span></div>
         <div class="field"><label for="lugar">Lugar de nacimiento</label><input id="lugar" data-c="lugar" data-formato="capital" autocomplete="off"></div>
         <div class="field"><label for="ocupacion">Ocupación</label><input id="ocupacion" data-c="ocupacion" autocomplete="off"></div>
-        <div class="field"><label for="telefono">Teléfono</label><input id="telefono" type="tel" inputmode="tel" data-c="telefono" autocomplete="off" placeholder="10 dígitos"></div>
+        <div class="field"><label for="telefono">Teléfono (opcional)</label><input id="telefono" type="tel" inputmode="tel" data-c="telefono" autocomplete="off" placeholder="10 dígitos (opcional)"></div>
       </div>
       <div class="field"><span class="legend">Sexo</span><div class="choices" data-elegir="sexo">${SEXOS.map(([v, t]) => `<button type="button" class="choice" data-v="${v}">${t}</button>`).join("")}</div></div>
       <div class="field"><span class="legend">Grupo</span><div class="choices" data-elegir="grupo">${GRUPOS.map(([v, t]) => `<button type="button" class="choice" data-v="${v}"><b>${v})</b> ${t}</button>`).join("")}</div></div>
@@ -118,7 +118,7 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
     if (!d.lugar.trim()) f.push(["lugar", "#lugar", "Lugar de nacimiento"]);
     if (!d.grupo) f.push(["grupo", "[data-elegir=grupo]", "Grupo"]);
     if (!d.ocupacion.trim()) f.push(["ocupacion", "#ocupacion", "Ocupación"]);
-    if (d.telefono.replace(/\D/g, "").length !== 10) f.push(["telefono", "#telefono", "Teléfono de 10 dígitos"]);
+    if (d.telefono.trim() && d.telefono.replace(/\D/g, "").length !== 10) f.push(["telefono", "#telefono", "Teléfono de 10 dígitos (o déjelo vacío)"]);
     return f;
   }
   function pintarFaltantes() {
@@ -294,7 +294,7 @@ export async function captura({ yo, pintar, ir, kiosko = false }, actividadId, a
     if (!d.grupo) e.push("Grupo");
     if (!d.ocupacion.trim()) e.push("Ocupación");
     const tel = d.telefono.replace(/\D/g, "");
-    if (tel.length !== 10) e.push("Teléfono de 10 dígitos");
+    if (d.telefono.trim() && tel.length !== 10) e.push("Teléfono de 10 dígitos (o déjelo vacío)");
     const imagenFirma = firma;
     if (!imagenFirma && omitir && !sinFirma) e.push("Motivo por el que se omite la firma (o capture la firma)");
 

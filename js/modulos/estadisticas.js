@@ -169,7 +169,7 @@ async function vista(ctx) {
         ["Fecha", "Folio", "Actividad", "Tipo", "CURP", "Nombre completo", "Fecha de nacimiento", "Edad", "Rango de edad", "Sexo", "Lugar de nacimiento", "Grupo", "Ocupación", "Teléfono", "Firma omitida (motivo)"],
         ...r.registros.map(x => [fechaCorta(x.actividad.fecha), x.actividad.folio, x.actividad.nombre, x.actividad.tipo, x.curp || "SIN CURP", x.nombre,
           fechaCorta(x.fnac), edad(x.fnac, x.actividad.fecha), `${x.rango}) ${etiquetaRango(x.rango)}`, SEXOS.find(s => s[0] === x.sexo)?.[1] || x.sexo,
-          x.lugar, `${x.grupo}) ${etiquetaGrupo(x.grupo)}`, x.ocupacion, x.telefono, x.sinFirma]),
+          x.lugar, `${x.grupo}) ${etiquetaGrupo(x.grupo)}`, x.ocupacion, x.telefono || "", x.sinFirma]),
       ]), "text/csv");
     });
   }
