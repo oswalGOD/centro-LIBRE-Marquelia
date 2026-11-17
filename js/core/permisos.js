@@ -2,8 +2,9 @@
 // - Coordinadora: ve y administra todo (crear, editar, programar, cancelar, eliminar).
 // - Asesora Psicoemocional (rol interno «Psicóloga») y Asesora Jurídica (rol interno «Abogada»): ven las actividades que crearon o que facilitan (al compartir una actividad cada perfil recibe su propia copia), y administran esas actividades.
 // - Cursos y capacitaciones (curso: true): los ven todos los perfiles, pero solo la Coordinadora los
-//   administra. Los demás perfiles únicamente consultan, y pueden usar el modo captura de datos y
-//   capturar evidencias fotográficas mientras el curso esté abierto.
+//   administra (programar, crear, editar, cancelar, cerrar, eliminar y emitir constancias). Los demás perfiles
+//   pueden registrar usuarias (a mano o con el modo captura de datos) y capturar evidencias fotográficas
+//   mientras el curso esté abierto.
 
 import { esCoordinadora } from "./auth.js";
 
@@ -17,7 +18,7 @@ export const puedeCompartir = (yo, actividad) => !actividad.curso && !actividad.
 export const puedeEditar = (yo, actividad) =>
   actividad.estado !== "cerrada" && (esCoordinadora(yo) || (!actividad.curso && puedeVer(yo, actividad)));
 
-/** Modo captura de datos y evidencias fotográficas: además de quien edita, cualquier perfil en un curso abierto. */
+/** Registrar asistentes (a mano o con el modo captura de datos) y evidencias fotográficas: además de quien edita, cualquier perfil en un curso abierto. */
 export const puedeCapturar = (yo, actividad) =>
   actividad.estado !== "cerrada" && (puedeEditar(yo, actividad) || (Boolean(actividad.curso) && puedeVer(yo, actividad)));
 
