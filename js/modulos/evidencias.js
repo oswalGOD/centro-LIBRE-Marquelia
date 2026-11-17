@@ -3,7 +3,7 @@
 
 import * as db from "../core/db.js";
 import * as ev from "../core/evidencias.js";
-import { descargarFoto } from "../core/sync.js";
+import { descargarFoto, motivoFoto } from "../core/sync.js";
 import { formatoEvidencias } from "./evidencias-formato.js";
 import { abrirCamara, desdeArchivo } from "../core/camara.js";
 import { fechaLarga, mesCorto, normalizar } from "../core/catalogos.js";
@@ -51,6 +51,21 @@ export function agregarDeGaleria(yo, actividad) {
   });
 }
 
+/** Descarga en segundo plano las miniaturas tomadas en otro dispositivo (antes solo se bajaban al abrir la carpeta). */
+export async function descargarMiniaturas(c, actividadId) {
+  const huecos = $$(".evid-mini .evid-falta[data-foto]", c);
+  if (!huecos.length) return;
+  const fotos = new Map((await ev.de(actividadId)).map(f => [f.id, f]));
+  for (const h of huecos) {
+    const f = fotos.get(h.dataset.foto);
+    if (!f) continue;
+    if (await descargarFoto(f)) {
+      const url = await ev.urlDe(f.id);
+      if (url && h.isConnected) h.outerHTML = `<img src="${url}" alt="">`;
+    } else if (h.isConnected) { h.textContent = "Sin descargar"; h.title = motivoFoto; }
+  }
+}
+
 /** Sección que se muestra dentro de una actividad abierta: botón para tomar fotos y vista previa de la carpeta. */
 export async function seccionActividad(yo, a) {
   const fotos = await ev.de(a.id);
@@ -61,7 +76,7 @@ export async function seccionActividad(yo, a) {
       <div class="card-head"><div><h2 class="h3">Evidencias fotográficas</h2>
         <div class="stats"><span><b>${fotos.length}</b> ${fotos.length === 1 ? "fotografía" : "fotografías"}</span></div></div>
         ${editable ? `<span class="icon-row">${botonIcono("camara", "Cámara", { id: "tomarFotos" })}${botonIcono("galeria", "Galería", { id: "desdeGaleria" })}</span>` : ""}</div>
-      ${mini.length ? `<a class="evid-mini" href="#/actividad/${esc(a.id)}/evidencias" aria-label="Abrir la carpeta de evidencias">${mini.map(m => m.url ? `<img src="${m.url}" alt="">` : `<span class="evid-falta" aria-hidden="true"></span>`).join("")}</a>` : `<p class="hint">Aún no hay fotografías en esta actividad.${editable ? "" : " La actividad está cerrada."}</p>`}
+      ${mini.length ? `<a class="evid-mini" href="#/actividad/${esc(a.id)}/evidencias" aria-label="Abrir la carpeta de evidencias">${mini.map(m => m.url ? `<img src="${m.url}" alt="">` : `<span class="evid-falta" data-foto="${esc(m.f.id)}">${navigator.onLine ? "Descargando…" : "Sin descargar"}</span>`).join("")}</a>` : `<p class="hint">Aún no hay fotografías en esta actividad.${editable ? "" : " La actividad está cerrada."}</p>`}
     </section>`;
 }
 
@@ -130,9 +145,13 @@ async function carpeta({ yo, pintar, ir }, id, ordenando = false) {
   // Las fotos tomadas en otros dispositivos se descargan al abrir la carpeta, una por una
   (async () => {
     for (const [i, it] of items.entries()) {
-      if (it.url || !(await descargarFoto(it.f))) continue;
-      it.url = await ev.urlDe(it.f.id);
+      if (it.url) continue;
       const hueco = $(`.evid[data-i="${i}"] .evid-falta`, c);
+      if (!(await descargarFoto(it.f))) {
+        if (hueco?.isConnected) hueco.innerHTML = `Sin descargar<br><small>${esc(motivoFoto)}</small>`;
+        continue;
+      }
+      it.url = await ev.urlDe(it.f.id);
       if (it.url && hueco) hueco.outerHTML = `<img src="${it.url}" alt="">`;
     }
   })();

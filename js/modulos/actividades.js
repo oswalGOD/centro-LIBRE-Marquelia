@@ -15,7 +15,7 @@ import { botonFiltros, conectarFiltros } from "../core/componentes.js";
 import { esProximo, sinRealizar, estadoDe, cuandoEs, ordenarCursos } from "../core/cursos.js";
 import { agregarAlCalendario } from "../core/calendario.js";
 import { tarjetas } from "../core/resumen.js";
-import { seccionActividad, tomarFotos, agregarDeGaleria } from "./evidencias.js";
+import { seccionActividad, descargarMiniaturas, tomarFotos, agregarDeGaleria } from "./evidencias.js";
 
 const ID = "([\\w-]+)";
 const OTRO = "__otro";
@@ -356,6 +356,7 @@ async function detalle({ yo, pintar, ir }, id) {
     ${a.estado !== "cerrada" && editable ? `<div class="barra-fija"><button class="btn" id="cerrar">${icono("cerrar", 20)}Cerrar actividad</button></div>` : ""}
   `, { atras: listaDe(a) });
 
+  descargarMiniaturas(c, id);
   $("#tomarFotos", c)?.addEventListener("click", async () => { if (await tomarFotos(yo, a)) detalle({ yo, pintar, ir }, id); });
   $("#desdeGaleria", c)?.addEventListener("click", async () => { if (await agregarDeGaleria(yo, a)) detalle({ yo, pintar, ir }, id); });
 

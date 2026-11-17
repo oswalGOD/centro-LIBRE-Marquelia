@@ -161,17 +161,25 @@ async function limpiarFotos() {
  * Descarga la imagen de una evidencia tomada en otro dispositivo. Solo se baja cuando alguien abre la carpeta
  * (no al sincronizar), para no llenar el equipo ni gastar los datos del plan gratuito. Devuelve true si quedó guardada.
  */
+export let motivoFoto = ""; // por qué falló la última descarga (para mostrarlo en pantalla)
 export async function descargarFoto(e) {
+  motivoFoto = "";
   if (await db.fotoLocal(e.id)) return true;
-  if (!navigator.onLine || !(await db.leerMeta("nube"))) return false;
+  if (!navigator.onLine) { motivoFoto = "Sin internet: se descargará al abrir con conexión."; return false; }
+  if (!(await db.leerMeta("nube"))) { motivoFoto = "Este equipo no está conectado a la cuenta del Centro (Ajustes)."; return false; }
   try {
     const r = await almacenamiento(`authenticated/evidencias/${e.ruta || `${e.id}.jpg`}`);
-    if (!r.ok) return false; // aún no se ha enviado desde el otro dispositivo
+    if (!r.ok) {
+      motivoFoto = r.status === 400 || r.status === 404
+        ? "La foto aún no se ha enviado desde el dispositivo donde se tomó: abra la app allá con internet y sincronice."
+        : `No fue posible descargarla (${r.status}).`;
+      return false;
+    }
     const blob = await r.blob();
-    if (!blob.size) return false;
+    if (!blob.size) { motivoFoto = "El archivo de la nube está vacío."; return false; }
     await db.guardarFoto(e.id, blob, "ok");
     return true;
-  } catch { return false; }
+  } catch { motivoFoto = "No fue posible descargarla: revise la conexión."; return false; }
 }
 
 /* ---------- Verificación de constancias ----------
