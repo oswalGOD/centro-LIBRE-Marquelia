@@ -587,3 +587,26 @@ body.con-camara { overflow: hidden; }
 .teclado-pin .tecla:active { background: var(--accent-soft); border-color: var(--accent); }
 .teclado-pin .tecla-accion { font-size: 1.1rem; background: var(--accent-soft); }
 body.con-teclado-pin { padding-bottom: 320px; }
+
+/* Anexo 2: Formato Lista de Asistencia de Participantes (cursos) */
+.sheet.anexo2 { padding: 22px 46px 14px; gap: 0; font-size: 12px; }
+.sheet.anexo2 .a2-banner { height: 58px; width: auto; align-self: center; object-fit: contain; }
+.sheet.anexo2 .a2-marca { left: 360px; top: 190px; width: 640px; height: auto; opacity: .55; }
+.sheet.anexo2 .a2-prog { margin: 4px 0 0; text-align: center; font-size: 13px; position: relative; z-index: 1; }
+.sheet.anexo2 .a2-comp { margin: 8px 0 12px; text-align: center; font-weight: 700; font-size: 13px; line-height: 1.3; position: relative; z-index: 1; }
+.sheet.anexo2 .a2-datos { display: grid; grid-template-columns: 47.8% 49.8%; justify-content: space-between; margin-bottom: 14px; position: relative; z-index: 1; }
+.sheet.anexo2 table { background: transparent; }
+.sheet.anexo2 .a2-campos th, .sheet.anexo2 .a2-campos td { height: 31px; font-size: 12px; text-align: left; padding: 1px 6px; line-height: 1.15; }
+.sheet.anexo2 .a2-campos th { font-weight: 700; }
+.sheet.anexo2 .a2-campos td { white-space: nowrap; text-overflow: ellipsis; }
+.sheet.anexo2 .a2-lista { margin-top: 4px; }
+.sheet.anexo2 .a2-lista th { background: #fabf8f; font-weight: 700; font-size: 12.5px; text-align: center; height: 50px; line-height: 1.15; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.sheet.anexo2 .a2-lista td { height: 38px; font-size: 11.5px; text-align: center; padding: 1px 4px; }
+.sheet.anexo2 .a2-lista td.l { text-align: left; }
+.sheet.anexo2 .a2-lista td img { max-height: 31px; max-width: 100%; display: block; margin: 0 auto; }
+.sheet.anexo2 .a2-lista .sinfirma { font-size: 9px; line-height: 1.1; }
+.sheet.anexo2 .a2-pie { margin-top: auto; position: relative; z-index: 1; }
+.sheet.anexo2 .a2-pie p { margin: 0 0 3px; text-align: center; font-weight: 700; font-size: 9.5px; }
+.sheet.anexo2 .a2-pie img { display: block; width: 100%; height: auto; }
+.sheet.anexo2 .a2-pag { position: absolute; right: 0; bottom: 6px; font-size: 13px; }
+@media print { .sheet.anexo2 .a2-lista td img { width: auto; height: auto; max-height: 31px; max-width: 100%; } }

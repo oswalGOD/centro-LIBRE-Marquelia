@@ -21,12 +21,13 @@ import desarrollo from "./modulos/desarrollo.js";
 import inicio from "./modulos/inicio.js";
 import evidencias from "./modulos/evidencias.js";
 import constancias from "./modulos/constancias.js";
+import anexo2 from "./modulos/anexo2.js";
 import casos from "./modulos/casos.js";
 import citas from "./modulos/citas.js";
 import canalizaciones from "./modulos/canalizaciones.js";
 import informes from "./modulos/informes.js";
 
-const MODULOS = [inicio, actividades, constancias, evidencias, casos, citas, canalizaciones, usuarias, estadisticas, informes, perfiles, ajustes, desarrollo];
+const MODULOS = [inicio, actividades, constancias, anexo2, evidencias, casos, citas, canalizaciones, usuarias, estadisticas, informes, perfiles, ajustes, desarrollo];
 
 iniciarTecladoPin();
 const raiz = document.getElementById("app");
