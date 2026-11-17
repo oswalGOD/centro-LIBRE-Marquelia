@@ -381,6 +381,7 @@ table.data tbody tr:hover { background: var(--surface-2); }
   .sheet-wrap:last-child { break-after: auto; page-break-after: auto; }
   .sheet { transform: none !important; width: 11in; height: 8.5in; }
   .sheet * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .sheet .main td img { width: auto; height: auto; max-height: 30px; max-width: 100%; }
 }
 
 /* Escanear la constancia de CURP */
