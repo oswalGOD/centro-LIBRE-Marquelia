@@ -5,6 +5,7 @@ import { tarjetas } from "../core/resumen.js";
 import { botonIcono } from "../core/iconos.js";
 import { ROLES } from "../core/catalogos.js";
 import { crearPerfil, cambiarPin, pinValido, esCoordinadora } from "../core/auth.js";
+import { pedirFirma } from "../core/firma.js";
 import { $, $$, esc, aviso, errores, leerCampos, unaVez } from "../core/ui.js";
 
 async function vista(ctx) {
@@ -18,8 +19,9 @@ async function vista(ctx) {
     <div class="list">${lista.map(u => `
       <div class="row user ${u.activa ? "" : "inactive"}" data-id="${esc(u.id)}">
         <span class="avatar" aria-hidden="true">${esc(u.nombre[0])}</span>
-        <span class="body"><span class="name">${esc(u.nombre)}${u.id === yo.id ? " (usted)" : ""}</span><span class="meta"><span>${esc(u.rol)}</span>${u.activa ? "" : `<span class="chip">Desactivado</span>`}</span></span>
+        <span class="body"><span class="name">${esc(u.nombre)}${u.id === yo.id ? " (usted)" : ""}</span><span class="meta"><span>${esc(u.rol)}</span>${u.firma ? `<span class="chip ok">Con firma</span>` : ""}${u.activa ? "" : `<span class="chip">Desactivado</span>`}</span></span>
         <span class="end actions">
+          ${botonIcono("editar", u.firma ? "Firma ✓" : "Firma", { extra: 'data-accion="firma"', titulo: u.firma ? "Cambiar la firma" : "Registrar la firma" })}
           ${botonIcono("llave", "PIN", { extra: 'data-accion="pin"', titulo: "Cambiar PIN" })}
           ${u.activa && !(u.rol === "Coordinadora" && coordinadorasActivas === 1) ? `${botonIcono("apagar", "Desactivar", { clase: "danger", extra: 'data-accion="desactivar"' })}` : ""}
           ${u.activa ? "" : `${botonIcono("activar", "Activar", { extra: 'data-accion="activar"' })}`}
@@ -46,6 +48,13 @@ async function vista(ctx) {
     const u = lista.find(x => x.id === fila.dataset.id);
     fila.addEventListener("click", async ev => {
       const accion = ev.target.closest("[data-accion]")?.dataset.accion;
+      if (accion === "firma") {
+        const f = await pedirFirma({ titulo: `Firma de ${u.nombre}`, existente: u.firma || "" });
+        if (!f) return;
+        await db.guardar("perfiles", { ...u, firma: f });
+        aviso(`Firma de ${u.nombre.split(" ")[0]} guardada`);
+        return vista(ctx);
+      }
       if (accion === "pin") { $(".pin-form", fila).hidden = false; $("input", fila).focus(); }
       if (accion === "guardarPin") {
         const pin = $("input", fila).value;

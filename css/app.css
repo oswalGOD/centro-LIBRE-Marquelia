@@ -356,9 +356,12 @@ table.data tbody tr:hover { background: var(--surface-2); }
 .sheet.constancia .cons-nombre { margin: 8px 0 2px; font-size: 38px; font-weight: 700; line-height: 1.15; border-bottom: 1.5px solid var(--paper-ink); padding: 0 24px 4px; max-width: 100%; overflow-wrap: anywhere; }
 .sheet.constancia .cons-curp { margin: 2px 0 8px; font-size: 14px; letter-spacing: .08em; }
 .sheet.constancia .cons-curso { margin: 6px 0; font-size: 28px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
-.sheet.constancia .cons-firmas { display: flex; justify-content: space-around; gap: 60px; width: 100%; margin-top: 54px; }
+.sheet.constancia .cons-firmas { display: flex; justify-content: space-around; gap: 60px; width: 100%; margin-top: 6px; }
 .sheet.constancia .cons-firmas > div { flex: 1; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
 .sheet.constancia .cons-firmas .linea { border-top: 1.5px solid var(--paper-ink); margin-bottom: 4px; }
+.sheet.constancia .cons-firmas .espacio { height: 48px; display: flex; align-items: flex-end; justify-content: center; }
+.sheet.constancia .cons-firmas .espacio img { max-height: 54px; max-width: 80%; margin-bottom: -6px; position: relative; }
+.firma-mini { height: 40px; max-width: 160px; object-fit: contain; background: #fff; border: 1px solid var(--line, #ddd); border-radius: 6px; padding: 2px 6px; }
 .sheet.constancia .cons-firmas b { font-size: 15px; }
 .sheet.constancia .cons-folio { margin: 22px 0 0; font-size: 11px; align-self: flex-end; }
 
