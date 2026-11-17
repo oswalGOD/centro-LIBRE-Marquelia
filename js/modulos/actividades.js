@@ -3,7 +3,7 @@
 import * as db from "../core/db.js";
 import { TIPOS_ACTIVIDAD, TIPOS_RETIRADOS, hoy, fechaLarga, mesCorto, edad, rangoDe, etiquetaGrupo, normalizar, minutosEntre, duracion } from "../core/catalogos.js";
 import { esCoordinadora } from "../core/auth.js";
-import { puedeVer, puedeEditar, puedeCapturar, puedeAdministrarCursos } from "../core/permisos.js";
+import { puedeVer, puedeEditar, puedeCapturar, puedeAdministrarCursos, puedeCompartir } from "../core/permisos.js";
 import { $, $$, esc, aviso, errores, leerCampos, dobleToque, plural, unaVez } from "../core/ui.js";
 import { captura } from "./captura.js";
 import { formato } from "./formato.js";
@@ -33,6 +33,124 @@ function chipEstado(a) {
     : `<span class="chip ok">${curso ? "Abierto" : "Abierta"}</span>`;
 }
 
+
+const fechaHora = ms => new Date(ms).toLocaleString("es-MX", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+
+/** Envíos pendientes para este perfil: actividades que otro perfil le compartió y que aún no acepta. */
+async function envios(yo) {
+  const r = [];
+  for (const a of await db.todos("actividades")) {
+    for (const e of a.compartidaCon || []) if (e.a === yo.id && e.estado === "pendiente" && !a.curso) r.push({ a, e });
+  }
+  return r.sort((x, y) => x.e.en - y.e.en);
+}
+
+const etiquetaEnvio = e => e.estado === "aceptada" ? `aceptada por ${e.aNombre}` : e.estado === "descartada" ? `descartada por ${e.aNombre}` : `pendiente de aceptar por ${e.aNombre}`;
+
+/**
+ * El perfil que recibe crea la copia en su dispositivo (con su propio folio) y, si lo desea, le cambia el nombre.
+ * Los ids de la copia salen del envío, así que aceptar desde dos dispositivos no la duplica.
+ */
+async function aceptarEnvio(yo, a, e, nombre) {
+  const origen = await db.uno("actividades", a.id);
+  const copiaId = `copia-${e.id}`;
+  const previa = await db.uno("actividades", copiaId);
+  const copia = previa || {
+    id: copiaId, folio: await db.siguienteFolio(origen.fecha), creadaPor: yo.id, estado: "abierta",
+    fecha: origen.fecha, lugar: origen.lugar, tipo: origen.tipo, horaInicio: origen.horaInicio || "", horaFin: origen.horaFin || "",
+    facilitadoraId: yo.id, facilitadora: yo.nombre, puesto: yo.rol,
+  };
+  copia.nombre = nombre;
+  copia.compartidas = [{ de: e.de, deNombre: e.deNombre, a: yo.id, aNombre: yo.nombre, en: e.en, origenId: origen.id, nombreOriginal: origen.nombre, ...(nombre !== origen.nombre ? { nombreAnterior: origen.nombre } : {}) }];
+  await db.guardar("actividades", copia);
+  const existentes = new Set((await db.todos("asistencias", "actividadId", copiaId)).map(x => x.id));
+  for (const x of await db.todos("asistencias", "actividadId", origen.id)) {
+    const id = `${copiaId}-${x.id}`;
+    if (!existentes.has(id)) await db.guardar("asistencias", { ...x, id, actividadId: copiaId, creado: undefined });
+  }
+  const actual = await db.uno("actividades", origen.id);
+  await db.guardar("actividades", { ...actual, compartidaCon: actual.compartidaCon.map(x => x.id === e.id ? { ...x, estado: "aceptada", resueltaEn: Date.now(), copiaId } : x) });
+  return copia;
+}
+
+async function descartarEnvio(a, e) {
+  const actual = await db.uno("actividades", a.id);
+  await db.guardar("actividades", { ...actual, compartidaCon: actual.compartidaCon.map(x => x.id === e.id ? { ...x, estado: "descartada", resueltaEn: Date.now() } : x) });
+}
+
+/** Tarjetas de la lista de Actividades con lo que otros perfiles compartieron con quien ingresó. */
+async function seccionEnvios(yo) {
+  const lista = await envios(yo);
+  if (!lista.length) return "";
+  const asis = await db.todos("asistencias");
+  return `<section class="panel stack" id="envios"><div><h2 class="h3">${lista.length === 1 ? "Actividad compartida con usted" : "Actividades compartidas con usted"}</h2>
+    <p class="hint">Al aceptar se crea su propia copia, con las mismas asistentes y sus firmas, y usted figura como facilitadora. Cambiar el nombre es opcional.</p></div>
+    ${lista.map(({ a, e }, i) => `<div class="stack">
+      <p><b>${esc(e.deNombre)}</b> le compartió «${esc(a.nombre)}» del ${esc(fechaLarga(a.fecha))} · ${esc(plural(asis.filter(x => x.actividadId === a.id).length, "asistente", "asistentes"))}.</p>
+      <div class="field"><label for="e-nombre-${i}">Nombre de su actividad</label><input id="e-nombre-${i}" value="${esc(a.nombre)}" maxlength="150"></div>
+      <div class="actions-bar"><button type="button" class="btn primary" data-aceptar="${i}">Aceptar copia</button><button type="button" class="btn" data-descartar="${i}">Descartar</button></div>
+    </div>`).join("")}</section>`;
+}
+
+async function conectarEnvios(c, yo, recargar) {
+  const lista = await envios(yo);
+  $$("[data-aceptar]", c).forEach(b => {
+    const { a, e } = lista[b.dataset.aceptar];
+    const campo = $(`#e-nombre-${b.dataset.aceptar}`, c);
+    campo.addEventListener("input", () => { b.textContent = campo.value.trim() !== a.nombre ? "Aceptar con nuevo nombre" : "Aceptar copia"; });
+    b.onclick = unaVez(async () => {
+      const nombre = campo.value.trim().replace(/\s+/g, " ");
+      if (!nombre) return aviso("Ingrese el nombre de la actividad.");
+      const copia = await aceptarEnvio(yo, a, e, nombre);
+      aviso(`Copia creada con folio ${copia.folio}`);
+      location.hash = `#/actividad/${copia.id}`;
+    });
+  });
+  $$("[data-descartar]", c).forEach(b => {
+    const { a, e } = lista[b.dataset.descartar];
+    dobleToque(b, "No se creará la copia. Toque nuevamente para descartar", async () => { await descartarEnvio(a, e); aviso("Envío descartado"); recargar(); });
+  });
+}
+
+function historialCompartida(a) {
+  const origen = (a.compartidas || [])[0];
+  const enviados = a.compartidaCon || [];
+  if (!origen && !enviados.length) return "";
+  const items = [
+    ...(origen ? [`${fechaHora(origen.en)}: copia recibida de ${origen.deNombre} (actividad «${origen.nombreOriginal}»)${origen.nombreAnterior ? `; ${origen.aNombre} cambió el nombre a «${a.nombre}»` : ""}.`] : []),
+    ...enviados.map(h => `${fechaHora(h.en)}: compartida con ${h.aNombre}; ${etiquetaEnvio(h)}.`),
+  ];
+  return `<section class="panel stack"><div><h2 class="h3">Historial de la actividad compartida</h2>
+    <p class="hint">Cada perfil lleva su propia copia (las fotografías no se copian).</p></div>
+    <ul class="hint" style="margin:0;padding-left:1.1em">${items.map(t => `<li>${esc(t)}</li>`).join("")}</ul></section>`;
+}
+
+/** Pantalla para compartir una actividad (lista de asistencia) con otro perfil. */
+async function compartir({ yo, pintar, ir }, id) {
+  const a = await db.uno("actividades", id);
+  if (!a || !puedeCompartir(yo, a)) return ir(id ? `#/actividad/${id}` : "#/asistencia");
+  const perfiles = (await db.todos("perfiles")).filter(u => u.activa && u.id !== yo.id);
+  const asis = (await db.todos("asistencias", "actividadId", id)).length;
+  const volver = `#/actividad/${id}`;
+  const c = pintar("Compartir actividad", `
+    <section class="panel stack">
+      <div class="card-head"><p class="hint">El perfil elegido verá un aviso en Actividades. Al aceptarlo se creará en su dispositivo una copia de «${esc(a.nombre)}» (${esc(a.folio)}) con ${plural(asis, "asistente", "asistentes")} y sus firmas, sin fotografías, con su propio folio. Podrá cambiarle el nombre si lo desea. Su actividad no cambia.</p>
+        <span class="icon-row">${botonIcono("salir", "Cancelar", { href: volver, clase: "quieto" })}</span></div>
+      ${perfiles.length ? `<div class="field"><label for="c-perfil">Compartir con</label>
+        <select id="c-perfil"><option value="">Seleccione un perfil</option>${perfiles.map(u => `<option value="${esc(u.id)}">${esc(u.nombre)} · ${esc(u.rol)}</option>`).join("")}</select></div>` : `<div class="empty"><b>No hay otros perfiles activos.</b><p>Cree o active otro perfil en Perfiles.</p></div>`}
+      <div id="err"></div>
+    </section>
+    ${perfiles.length ? `<div class="barra-fija"><button class="btn primary" id="enviar">Compartir actividad</button></div>` : ""}`, { atras: volver });
+  $("#enviar", c)?.addEventListener("click", unaVez(async () => {
+    const dest = perfiles.find(u => u.id === $("#c-perfil", c).value);
+    if (!dest) return errores($("#err", c), ["Seleccione el perfil con el que se compartirá la actividad."]);
+    const actual = await db.uno("actividades", id);
+    await db.guardar("actividades", { ...actual, compartidaCon: [...(actual.compartidaCon || []), { id: db.uid(), de: yo.id, deNombre: yo.nombre, a: dest.id, aNombre: dest.nombre, en: Date.now(), estado: "pendiente" }] });
+    aviso(`Se compartió con ${dest.nombre}. Ella aceptará la copia en su dispositivo`);
+    ir(volver);
+  }));
+}
+
 async function lista({ yo, pintar }, curso = false) {
   const N = curso
     ? { titulo: "Cursos y capacitaciones", uno: "curso", varios: "cursos", abierto: "abierto", abiertos: "abiertos", nuevo: "#/curso/nuevo", programar: "#/curso/programar", buscar: "Buscar por nombre, folio, lugar o instructora" }
@@ -58,6 +176,7 @@ async function lista({ yo, pintar }, curso = false) {
   const tipos = [...new Set(acts.map(a => a.tipo))].sort((x, y) => x.localeCompare(y, "es")).map(t => [t, t]);
   const facilitadoras = [...new Map(acts.map(a => [a.facilitadoraId, a.facilitadora]))].sort((x, y) => x[1].localeCompare(y[1], "es"));
 
+  const avisoEnvios = curso ? "" : await seccionEnvios(yo);
   const c = pintar(N.titulo, `
     ${tarjetas(resumen, { etiqueta: `Resumen de ${N.varios}` })}
     <div class="toolbar">
@@ -68,6 +187,7 @@ async function lista({ yo, pintar }, curso = false) {
       <p class="hint" id="cuenta">${plural(acts.length, N.uno, N.varios)} · ${plural(abiertas, N.abierto, N.abiertos)}${proximos.length ? ` · ${curso ? plural(proximos.length, "programado", "programados") : plural(proximos.length, "programada", "programadas")}` : ""}</p>
       ${!administra ? `<p class="hint">Consulta de cursos y capacitaciones. La Coordinadora los administra; usted puede capturar datos y evidencias en un curso abierto.</p>` : ""}
     </div>
+    ${avisoEnvios}
     ${proximos.length ? `<div class="aviso-proximo" role="status"><b>${curso ? "Próximo curso" : "Próxima actividad"} ${esc(cuandoEs(proximos[0].fecha))}:</b> ${esc(proximos[0].nombre)}, ${esc(fechaLarga(proximos[0].fecha))}${proximos[0].horaInicio ? ` a las ${esc(proximos[0].horaInicio)}` : ""}.</div>` : ""}
     ${muchas ? `<div class="filters" id="filtros" hidden>
       <div class="field"><label for="f-mes">Mes</label><select id="f-mes" data-filtro="mes"><option value="">Todos</option>${opciones(meses, filtros.mes)}</select></div>
@@ -80,7 +200,7 @@ async function lista({ yo, pintar }, curso = false) {
         data-mes="${a.fecha.slice(0, 7)}" data-tipo="${esc(a.tipo)}" data-facilitadora-id="${esc(a.facilitadoraId)}" data-estado="${estadoDe(a)}">
         <span class="date"><b>${Number(a.fecha.slice(8, 10))}</b><small>${mesCorto(a.fecha)}</small></span>
         <span class="body"><span class="name">${esc(a.nombre)}</span>
-          <span class="meta"><span>${esc(a.folio)}</span><span>${esc(curso ? `${a.horas} h` : a.tipo)}</span>${a.programado && a.horaInicio ? `<span>${esc(a.horaInicio)}</span>` : ""}<span>${esc(a.lugar)}</span>${esCoordinadora(yo) ? `<span>${esc(a.facilitadora)}</span>` : ""}</span></span>
+          <span class="meta"><span>${esc(a.folio)}</span><span>${esc(curso ? `${a.horas} h` : a.tipo)}</span>${a.programado && a.horaInicio ? `<span>${esc(a.horaInicio)}</span>` : ""}<span>${esc(a.lugar)}</span>${esCoordinadora(yo) ? `<span>${esc(a.facilitadora)}</span>` : ""}${a.compartidas?.length ? `<span class="chip">Recibida</span>` : ""}</span></span>
         <span class="end"><span class="big">${cuenta(a.id)}</span><small>asistentes</small>
           ${chipEstado(a)}</span>
       </a>`).join("")}</div>`
@@ -102,6 +222,7 @@ async function lista({ yo, pintar }, curso = false) {
     $("#sinResultados", c).hidden = n > 0;
     panelFiltros?.contar(Object.values(filtros).filter(Boolean).length);
   }
+  if (!curso) await conectarEnvios(c, yo, () => lista({ yo, pintar }, curso));
   const panelFiltros = conectarFiltros(c);
   if (muchas) $("#lista", c).insertAdjacentHTML("afterend", `<div class="empty" id="sinResultados" hidden><b>Ninguna actividad coincide.</b><p>Modifique la búsqueda o los filtros.</p></div>`);
   buscar?.addEventListener("input", filtrar);
@@ -210,6 +331,7 @@ async function detallePrevio({ yo, pintar, ir }, a) {
   const editable = puedeEditar(yo, a);
   const vencido = !cancelado && a.fecha < hoy();
   const opcionesMas = [
+    ...(puedeCompartir(yo, a) ? [{ id: "compartir", icono: "compartir", texto: "Compartir copia con otro perfil" }] : []),
     ...(!cancelado && editable ? [{ id: "cancelar", icono: "salir", texto: sust.Cancelar, clase: "danger" }] : []),
     ...(coord ? [{ id: "eliminar", icono: "eliminar", texto: sust.Eliminar, clase: "danger" }] : []),
   ];
@@ -243,6 +365,7 @@ async function detallePrevio({ yo, pintar, ir }, a) {
       : `<button type="button" class="btn primary" id="iniciar">${icono("activar")}Iniciar ${curso ? "curso" : "actividad"}</button>`}</div>` : ""}
   `, { atras: listaDe(a) });
   conectarMenus(c);
+  $("#compartir", c)?.addEventListener("click", () => ir(`#/actividad/${a.id}/compartir`));
   const actual = () => db.uno("actividades", a.id);
   // Se entrega en su propio toque: iOS exige que compartir ocurra directamente tras un toque del usuario.
   $("#calendario", c)?.addEventListener("click", async () => {
@@ -306,6 +429,7 @@ async function detalle({ yo, pintar, ir }, id) {
   const capturable = puedeCapturar(yo, a);
   const administra = !curso || puedeAdministrarCursos(yo); // en los cursos solo la Coordinadora administra
   const opcionesMas = [
+    ...(puedeCompartir(yo, a) ? [{ id: "compartir", icono: "compartir", texto: "Compartir copia con otro perfil" }] : []),
     ...(a.estado === "cerrada" && coord ? [{ id: "reabrir", icono: "reabrir", texto: "Reabrir actividad" }] : []),
     ...(coord ? [{ id: "eliminar", icono: "eliminar", texto: "Eliminar actividad", clase: "danger" }] : []),
   ];
@@ -347,6 +471,7 @@ async function detalle({ yo, pintar, ir }, id) {
       }).join("")}</div>` : `<div class="empty"><b>Aún no hay asistentes.</b><p>${editable ? "Seleccione “Registrar asistente” para capturar a la primera persona. Si ya asistió antes, al ingresar su CURP se completarán sus datos." : capturable ? "Los asistentes se registran con el modo captura; la Coordinadora también puede registrarlos manualmente." : "Esta actividad está cerrada."}</p></div>`}
     </section>
     ${await seccionActividad(yo, a)}
+    ${historialCompartida(a)}
     <section class="panel stack">
       <div><h2 class="h3">Notas de la actividad</h2>
         <p class="hint">Temas tratados, acuerdos y observaciones. Se guardan solas al salir del cuadro y se imprimen en una hoja aparte, a continuación de la lista.</p></div>
@@ -378,6 +503,7 @@ async function detalle({ yo, pintar, ir }, id) {
   });
   campoNotas.addEventListener("input", () => { $("#estadoNotas", c).textContent = ""; });
   conectarMenus(c);
+  $("#compartir", c)?.addEventListener("click", () => ir(`#/actividad/${a.id}/compartir`));
 
   const cerrar = $("#cerrar", c);
   if (cerrar) dobleToque(cerrar, sinFirma ? `Hay ${sinFirma} sin firma. Toque nuevamente para cerrar` : "Toque nuevamente para cerrar", async () => {
@@ -413,6 +539,7 @@ export default {
     [new RegExp(`^#/actividad/${ID}/repetir$`), (ctx, origenId) => formulario(ctx, null, origenId)],
     [new RegExp(`^#/actividad/${ID}/registrar(?:/${ID})?$`), captura],
     [new RegExp(`^#/actividad/${ID}/formato$`), formato],
+    [new RegExp(`^#/actividad/${ID}/compartir$`), compartir],
     [new RegExp(`^#/actividad/${ID}$`), detalle],
   ],
 };
