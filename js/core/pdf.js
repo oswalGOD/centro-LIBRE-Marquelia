@@ -89,7 +89,11 @@ export async function hojasAPDF(contenedor, { escala = 2, calidad = 0.92 } = {})
     const k = hoja.getBoundingClientRect().width / hoja.offsetWidth || 1, r0 = hoja.getBoundingClientRect();
     const pendientes = [];
     for (let i = 0; i < origenes.length; i++) {
-      const o = origenes[i], r = o.getBoundingClientRect(), cs = getComputedStyle(o);
+      const o = origenes[i];
+      // Logotipos y fondo (archivos de la app) siguen dentro del SVG: así conservan su capa detrás del contenido.
+      // Solo firmas, QR y fotos (datos incrustados) se pintan aparte, siempre por encima.
+      if (!/^(data|blob):/.test(o.getAttribute("src") || "")) continue;
+      const r = o.getBoundingClientRect(), cs = getComputedStyle(o);
       const bi = parseFloat(cs.borderLeftWidth) + parseFloat(cs.paddingLeft), bd = parseFloat(cs.borderRightWidth) + parseFloat(cs.paddingRight);
       const bs = parseFloat(cs.borderTopWidth) + parseFloat(cs.paddingTop), bb = parseFloat(cs.borderBottomWidth) + parseFloat(cs.paddingBottom);
       const caja = { x: (r.left - r0.left) / k + bi, y: (r.top - r0.top) / k + bs, w: r.width / k - bi - bd, h: r.height / k - bs - bb };
