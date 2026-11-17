@@ -169,7 +169,7 @@ export const cambios = new EventTarget();
 const avisarCambio = almacen => cambios.dispatchEvent(new CustomEvent("cambio", { detail: { almacen } }));
 
 /** Claves de `meta` que pertenecen a este dispositivo y no viajan en respaldos. */
-export const META_LOCAL = ["uuidDispositivo", "configuradoEn", "idDispositivo", "nube", "ultimoEnvio", "ultimaRecepcion", "ultimaSincronizacion", "avisoIdRepetido", "ultimoRespaldo", "desfaseReloj", "constanciasRegistradas"];
+export const META_LOCAL = ["uuidDispositivo", "configuradoEn", "idDispositivo", "nube", "ultimoEnvio", "ultimaRecepcion", "ultimaSincronizacion", "avisoIdRepetido", "ultimoRespaldo", "desfaseReloj", "constanciasRegistradas", "depuracionDuplicados"];
 
 /**
  * Revisa que un registro que llega de la nube o de un respaldo tenga lo mínimo para que la app no falle al mostrarlo.

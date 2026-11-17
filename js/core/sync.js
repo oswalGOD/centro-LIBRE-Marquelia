@@ -5,12 +5,14 @@
 //   2. Recibe lo que otros dispositivos enviaron desde la última recepción.
 // Si dos dispositivos cambiaron el mismo registro, gana el cambio más reciente.
 // Si dos dispositivos dieron de alta a la misma usuaria (misma CURP), se fusionan
-// en una sola y sus asistencias pasan a la que queda.
+// en una sola y sus asistencias pasan a la que queda. Después de recibir, duplicados.js deja
+// una sola asistencia por persona en cada actividad y renumera la lista sin empates.
 
 import * as db from "./db.js";
 import { SUPABASE_URL, SUPABASE_ANON, VERSION_APP } from "./config.js";
 import { anotar, leer as leerErrores } from "./bitacora.js";
 import { pendientesDeRegistro, marcarRegistradas } from "./verificacion.js";
+import { reconciliar } from "./duplicados.js";
 
 const SINCRONIZADOS = ["perfiles", "usuarias", "actividades", "asistencias", "evidencias", "casos", "notasCaso", "instituciones", "canalizaciones", "citas"];
 const LOTE = 200;
@@ -371,7 +373,14 @@ export function sincronizar() {
       if (!navigator.onLine) throw new Error("Sin conexión a internet. Los cambios se enviarán cuando se restablezca la conexión.");
       await enviar();
       const r = await recibir();
-      if (r.fusiones) await enviar(); // las fusiones generan cambios que los demás deben recibir
+      // Asistencias repetidas de la misma persona y números de línea repetidos: se corrigen igual en todos los equipos.
+      // Se revisa cuando llegó algo de otros dispositivos y una vez tras instalar esta versión.
+      let corregidos = 0;
+      if (r.recibidos || !(await db.leerMeta("depuracionDuplicados"))) {
+        corregidos = await reconciliar();
+        await db.escribirMeta("depuracionDuplicados", VERSION_APP);
+      }
+      if (r.fusiones || corregidos) await enviar(); // las fusiones generan cambios que los demás deben recibir
       await db.escribirMeta("ultimaSincronizacion", Date.now());
       // Las fotografías van aparte: si falla (p. ej. falta el SQL de evidencias), lo demás ya quedó sincronizado
       try {
