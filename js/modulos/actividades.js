@@ -467,6 +467,7 @@ async function detalle({ yo, pintar, ir }, id) {
       ${capturable ? `<a class="btn primary" href="#/actividad/${esc(a.id)}/registrar">${icono("mas2")}Registrar asistente</a>` : ""}
       ${botonIcono("formato", "Formato", { href: `#/actividad/${a.id}/formato` })}
       ${curso ? botonIcono("constancia", "Constancias", { href: `#/actividad/${a.id}/constancias` }) : ""}
+      ${curso ? botonIcono("formato", "Anexo 2", { href: `#/actividad/${a.id}/anexo2`, titulo: "Anexo 2: lista de asistencia de participantes" }) : ""}
       ${capturable ? botonIcono("captura", "Modo captura", { id: "modoCaptura" }) : ""}
     </div>
     <section class="stack">
