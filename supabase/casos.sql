@@ -3,7 +3,7 @@
 -- Requisito: haber ejecutado antes supabase/esquema.sql y supabase/blindaje.sql.
 --
 -- IMPORTANTE: todos los dispositivos entran a Supabase con la MISMA cuenta del Centro, así que el servidor
--- no puede distinguir a la Psicóloga de la Abogada ni de la Coordinadora. Por eso la privacidad por perfil
+-- no puede distinguir a la Asesora Psicoemocional de la Asesora Jurídica ni de la Coordinadora. Por eso la privacidad por perfil
 -- no depende de reglas del servidor, sino de cifrado en el propio dispositivo: el contenido de cada caso y
 -- de cada nota se cifra con una clave propia de cada perfil (protegida con su PIN) y solo se guarda cifrado.
 -- Este script agrega una barrera adicional en el servidor: rechaza cualquier registro de casos o de notas

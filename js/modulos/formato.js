@@ -3,7 +3,7 @@
 
 import * as db from "../core/db.js";
 import { botonIcono } from "../core/iconos.js";
-import { GRUPOS, RANGOS, edad, rangoDe, fechaCorta } from "../core/catalogos.js";
+import { GRUPOS, RANGOS, edad, rangoDe, fechaCorta, nombreRol } from "../core/catalogos.js";
 import { puedeVer } from "../core/permisos.js";
 import { $, $$, esc, plural, aviso, puedeCompartir } from "../core/ui.js";
 import { hojasAPDF } from "../core/pdf.js";
@@ -32,7 +32,7 @@ export const encabezado = (act, titulo = "LISTA DE ASISTENCIA") => `
       <table class="hdr"><colgroup><col style="width:48%"><col style="width:12.5%"><col style="width:26%"><col style="width:13.5%"></colgroup>
         <tr class="h-title"><td>CENTRO LIBRE MARQUELIA</td><td colspan="3">${esc(titulo)}</td></tr>
         <tr class="h-row"><td>Nombre de la actividad: <b>${esc(act.nombre)}</b></td><td>Fecha: <b>${fechaCorta(act.fecha)}</b></td><td colspan="2">Lugar de desarrollo: <b>${esc(act.lugar)}</b></td></tr>
-        <tr class="h-row"><td>Facilitadora: <b>${esc(act.facilitadora)}</b></td><td colspan="3">Puesto: <b>${esc(act.puesto)}</b></td></tr>
+        <tr class="h-row"><td>Facilitadora: <b>${esc(act.facilitadora)}</b></td><td colspan="3">Puesto: <b>${esc(nombreRol(act.puesto))}</b></td></tr>
         <tr class="h-row"><td colspan="3">Tipo de actividad: <b>${esc(act.tipo)}</b></td><td>Folio: <b>${esc(act.folio)}</b></td></tr>
       </table>`;
 

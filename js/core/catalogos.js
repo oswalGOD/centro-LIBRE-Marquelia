@@ -1,6 +1,15 @@
 // Catálogos del formato oficial y utilidades de CURP, edades y fechas.
 
+// Los valores de ROLES son identificadores internos guardados en la base: NO se cambian.
 export const ROLES = ["Coordinadora", "Psicóloga", "Abogada"];
+
+// Nombre visible de cada rol (solo presentación). También cubre textos guardados antes del cambio de nombre.
+const NOMBRES_ROL = {
+  "Coordinadora": "Coordinadora",
+  "Psicóloga": "Asesora Psicoemocional",
+  "Abogada": "Asesora Jurídica",
+};
+export const nombreRol = rol => NOMBRES_ROL[rol] || rol || "";
 
 export const GRUPOS = [
   ["A", "Sin categoría"],

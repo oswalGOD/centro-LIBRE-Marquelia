@@ -1,6 +1,6 @@
 // Agenda de citas individuales (asesoría psicológica o jurídica).
 //
-// Cada cita es un registro con una usuaria y el perfil responsable (Psicóloga o Abogada). En claro solo viaja lo
+// Cada cita es un registro con una usuaria y el perfil responsable (Asesora Psicoemocional o Asesora Jurídica). En claro solo viaja lo
 // que la agenda necesita para ordenar y contar (perfil, usuaria, fecha, hora, duración y estado); el motivo breve
 // y el lugar o modalidad viajan cifrados con la clave de casos del perfil (ver expedientes.js). Las notas de la
 // sesión no van aquí: pertenecen al seguimiento de casos. Funciona sin conexión y se sincroniza como lo demás.
@@ -92,7 +92,7 @@ export function validar(d, existentes = [], ignorar = "") {
 
 /**
  * Agenda una cita. La responsable es `destino` (por defecto, quien la agenda). La Coordinadora puede agendar para
- * la Psicóloga o la Abogada (necesita que ese perfil ya haya ingresado con su PIN para poder cifrar el contenido).
+ * la Asesora Psicoemocional o la Asesora Jurídica (necesita que ese perfil ya haya ingresado con su PIN para poder cifrar el contenido).
  */
 export async function crearCita(yo, destino, d) {
   const id = db.uid();

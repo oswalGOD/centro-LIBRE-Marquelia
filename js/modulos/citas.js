@@ -12,7 +12,7 @@ import { selectorUsuaria, botonFiltros, conectarFiltros, estadoVacio } from "../
 import { esCoordinadora } from "../core/auth.js";
 import { puedeAgendarCita, puedeGestionarCita, puedeUsarCitas, puedeVerCita } from "../core/permisos.js";
 import { agregarAlCalendario } from "../core/calendario.js";
-import { hoy, fechaLarga, normalizar, duracion } from "../core/catalogos.js";
+import { hoy, fechaLarga, normalizar, duracion, nombreRol } from "../core/catalogos.js";
 import { $, $$, esc, aviso, errores, dobleToque, plural, unaVez } from "../core/ui.js";
 import { puerta } from "./casos.js";
 
@@ -63,7 +63,7 @@ async function agenda(ctx, usuariaId) {
       ${puedeAgendarCita(yo) ? botonIcono("mas2", "Nueva cita", { href: filtrada ? `#/citas/nueva/${esc(filtrada.id)}` : "#/citas/nueva", clase: "quieto" }) : ""}
     </div>
     <div class="filters" id="filtros" hidden>
-      ${coord ? `<div class="field"><label for="f-perfil">Perfil</label><select id="f-perfil"><option value="">Todos los perfiles</option>${[...perfiles.values()].filter(p => p.rol === "Psicóloga" || p.rol === "Abogada").map(p => `<option value="${esc(p.id)}" ${vista.perfil === p.id ? "selected" : ""}>${esc(p.nombre)} · ${esc(p.rol)}</option>`).join("")}</select></div>` : ""}
+      ${coord ? `<div class="field"><label for="f-perfil">Perfil</label><select id="f-perfil"><option value="">Todos los perfiles</option>${[...perfiles.values()].filter(p => p.rol === "Psicóloga" || p.rol === "Abogada").map(p => `<option value="${esc(p.id)}" ${vista.perfil === p.id ? "selected" : ""}>${esc(p.nombre)} · ${esc(nombreRol(p.rol))}</option>`).join("")}</select></div>` : ""}
       <div class="field"><label for="f-estado">Estado</label><select id="f-estado"><option value="">Todos los estados</option>${k.ESTADOS.map(([v, t]) => `<option value="${v}" ${vista.estado === v ? "selected" : ""}>${t}</option>`).join("")}<option value="por_registrar" ${vista.estado === "por_registrar" ? "selected" : ""}>Por registrar asistencia</option></select></div>
     </div>
     ${sinSabrir ? `<div class="issues" role="alert"><b>${plural(sinSabrir, "cita tiene su motivo protegido", "citas tienen su motivo protegido")}.</b><p>${coord ? "La persona responsable debe ingresar con su PIN para dejar su copia a la Coordinadora; mientras tanto se ven fecha, hora y estado." : "Avise a la Coordinadora si el problema continúa."}</p></div>` : ""}
@@ -82,7 +82,7 @@ async function agenda(ctx, usuariaId) {
   const fila = (c, conFecha) => `
     <a class="row" href="#/citas/${esc(c.id)}">
       <span class="body"><span class="name">${conFecha ? `${esc(fechaLarga(c.fecha))} · ` : ""}${esc(c.hora)} · ${esc(c.usuaria?.nombre || "Usuaria eliminada")}</span>
-        <span class="meta"><span>${esc(duracion(c.duracion))}</span><span>${esc(c.legible ? c.d.motivo || "Sin motivo" : "Motivo protegido")}</span>${c.d.lugar ? `<span>${esc(c.d.lugar)}</span>` : ""}${coord ? `<span>${esc(c.perfil?.nombre || "")} · ${esc(c.perfil?.rol || "")}</span>` : ""}</span></span>
+        <span class="meta"><span>${esc(duracion(c.duracion))}</span><span>${esc(c.legible ? c.d.motivo || "Sin motivo" : "Motivo protegido")}</span>${c.d.lugar ? `<span>${esc(c.d.lugar)}</span>` : ""}${coord ? `<span>${esc(c.perfil?.nombre || "")} · ${esc(nombreRol(c.perfil?.rol))}</span>` : ""}</span></span>
       <span class="end">${chip(c)}</span>
     </a>`;
   const ordenar = lista => [...lista].sort((a, b) => a.fecha.localeCompare(b.fecha) || a.hora.localeCompare(b.hora));
@@ -156,7 +156,7 @@ async function nueva(ctx, usuariaId) {
       <div class="field" id="usuaria"></div>
       <div class="grid" id="f">
         ${coord ? `<div class="field span-2"><label for="n-perfil">Perfil responsable</label>
-          <select id="n-perfil" data-campo="perfilId">${destinos.map(p => `<option value="${esc(p.id)}" ${exp.puedeLeer(p.id) ? "" : "disabled"}>${esc(p.nombre)} · ${esc(p.rol)}${exp.puedeLeer(p.id) ? "" : " (debe ingresar una vez con su PIN)"}</option>`).join("")}</select></div>` : ""}
+          <select id="n-perfil" data-campo="perfilId">${destinos.map(p => `<option value="${esc(p.id)}" ${exp.puedeLeer(p.id) ? "" : "disabled"}>${esc(p.nombre)} · ${esc(nombreRol(p.rol))}${exp.puedeLeer(p.id) ? "" : " (debe ingresar una vez con su PIN)"}</option>`).join("")}</select></div>` : ""}
         ${campos({ duracion: 60 }, { prefijo: "n" })}
         <div class="field span-2" id="zonaCaso" hidden></div>
       </div>
@@ -230,7 +230,7 @@ async function detalle(ctx, id) {
         <div class="largo"><dt>Usuaria</dt><dd>${usuaria ? `<a href="#/usuarias/${esc(usuaria.id)}">${esc(usuaria.nombre)}</a>` : "—"}</dd></div>
         <div class="largo"><dt>Fecha y hora</dt><dd>${esc(diaSemana(cita.fecha))} ${esc(fechaLarga(cita.fecha))}, ${esc(horario(cita))}</dd></div>
         <div><dt>Duración</dt><dd>${esc(duracion(cita.duracion))}</dd></div>
-        <div><dt>Atiende</dt><dd>${esc(perfil?.nombre || "—")}${perfil ? ` · ${esc(perfil.rol)}` : ""}</dd></div>
+        <div><dt>Atiende</dt><dd>${esc(perfil?.nombre || "—")}${perfil ? ` · ${esc(nombreRol(perfil.rol))}` : ""}</dd></div>
         <div class="largo"><dt>Lugar o modalidad</dt><dd>${esc(cita.d.lugar || "—")}</dd></div>
         <div class="largo"><dt>Motivo</dt><dd>${cita.legible ? esc(cita.d.motivo || "—") : "Protegido: el perfil responsable debe ingresar una vez con su PIN"}</dd></div>
         ${caso ? `<div class="largo"><dt>Caso relacionado</dt><dd>${caso.legible ? `<a href="#/casos/${esc(caso.id)}">${esc(caso.d.asunto || "Ver caso")}</a>` : "Caso protegido"}</dd></div>` : ""}
