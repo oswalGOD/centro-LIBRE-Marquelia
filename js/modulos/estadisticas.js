@@ -3,7 +3,7 @@
 import * as db from "../core/db.js";
 import { botonIcono } from "../core/iconos.js";
 import { botonFiltros, conectarFiltros } from "../core/componentes.js";
-import { GRUPOS, RANGOS, SEXOS, edad, rangoDe, hoy, fechaCorta, fechaLarga, etiquetaGrupo, etiquetaRango, minutosEntre, duracion } from "../core/catalogos.js";
+import { GRUPOS, RANGOS, SEXOS, edad, rangoDe, hoy, fechaCorta, fechaLarga, etiquetaGrupo, etiquetaRango, minutosEntre, duracion, nombreRol } from "../core/catalogos.js";
 import { esCoordinadora } from "../core/auth.js";
 import { puedeVer } from "../core/permisos.js";
 import { $, $$, esc, descargar, plural } from "../core/ui.js";
@@ -158,7 +158,7 @@ async function vista(ctx) {
           ...GRUPOS.map(([g, t]) => `${g}) ${t}`), ...RANGOS.map(([l, t]) => `${l}) ${t}`)],
         ...porAct.map(p => {
           const de = r.registros.filter(x => x.actividad.id === p.a.id);
-          return [fechaCorta(p.a.fecha), p.a.folio, p.a.nombre, p.a.tipo, p.a.lugar, p.a.facilitadora, p.a.puesto,
+          return [fechaCorta(p.a.fecha), p.a.folio, p.a.nombre, p.a.tipo, p.a.lugar, p.a.facilitadora, nombreRol(p.a.puesto),
             p.a.horaInicio || "", p.a.horaFin || "", minutosEntre(p.a.horaInicio, p.a.horaFin) == null ? "" : (minutosEntre(p.a.horaInicio, p.a.horaFin) / 60).toFixed(2), ...p.sexo, p.n,
             ...GRUPOS.map(([g]) => de.filter(x => x.grupo === g).length), ...RANGOS.map(([l]) => de.filter(x => x.rango === l).length)];
         }),

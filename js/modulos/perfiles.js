@@ -3,7 +3,7 @@
 import * as db from "../core/db.js";
 import { tarjetas } from "../core/resumen.js";
 import { botonIcono } from "../core/iconos.js";
-import { ROLES } from "../core/catalogos.js";
+import { ROLES, nombreRol } from "../core/catalogos.js";
 import { crearPerfil, cambiarPin, pinValido, esCoordinadora } from "../core/auth.js";
 import { pedirFirma } from "../core/firma.js";
 import { $, $$, esc, aviso, errores, leerCampos, unaVez } from "../core/ui.js";
@@ -19,7 +19,7 @@ async function vista(ctx) {
     <div class="list">${lista.map(u => `
       <div class="row user ${u.activa ? "" : "inactive"}" data-id="${esc(u.id)}">
         <span class="avatar" aria-hidden="true">${esc(u.nombre[0])}</span>
-        <span class="body"><span class="name">${esc(u.nombre)}${u.id === yo.id ? " (usted)" : ""}</span><span class="meta"><span>${esc(u.rol)}</span>${u.firma ? `<span class="chip ok">Con firma</span>` : ""}${u.activa ? "" : `<span class="chip">Desactivado</span>`}</span></span>
+        <span class="body"><span class="name">${esc(u.nombre)}${u.id === yo.id ? " (usted)" : ""}</span><span class="meta"><span>${esc(nombreRol(u.rol))}</span>${u.firma ? `<span class="chip ok">Con firma</span>` : ""}${u.activa ? "" : `<span class="chip">Desactivado</span>`}</span></span>
         <span class="end actions">
           ${botonIcono("editar", u.firma ? "Firma ✓" : "Firma", { extra: 'data-accion="firma"', titulo: u.firma ? "Cambiar la firma" : "Registrar la firma" })}
           ${botonIcono("llave", "PIN", { extra: 'data-accion="pin"', titulo: "Cambiar PIN" })}
@@ -35,12 +35,12 @@ async function vista(ctx) {
       <h2 class="h3">Agregar perfil</h2>
       <div class="grid" id="f">
         <div class="field span-2"><label for="u-nombre">Nombre completo</label><input id="u-nombre" data-campo="nombre" autocomplete="off"></div>
-        <div class="field"><label for="u-rol">Rol</label><select id="u-rol" data-campo="rol">${ROLES.map(r => `<option ${r === "Psicóloga" ? "selected" : ""}>${r}</option>`).join("")}</select></div>
+        <div class="field"><label for="u-rol">Rol</label><select id="u-rol" data-campo="rol">${ROLES.map(r => `<option value="${r}" ${r === "Psicóloga" ? "selected" : ""}>${nombreRol(r)}</option>`).join("")}</select></div>
         <div class="field"><label for="u-pin">PIN inicial de 4 a 6 dígitos</label><input id="u-pin" data-campo="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password"></div>
       </div>
       <div id="err"></div>
       <div class="actions"><button class="btn primary" id="agregar">Agregar perfil</button></div>
-      <p class="hint">Cada perfil ingresa con su nombre y su PIN. La Psicóloga y la Abogada solo pueden ver las actividades que crean o facilitan; la Coordinadora puede ver todas.</p>
+      <p class="hint">Cada perfil ingresa con su nombre y su PIN. La Asesora Psicoemocional y la Asesora Jurídica solo pueden ver las actividades que crean o facilitan; la Coordinadora puede ver todas.</p>
     </section>
   `);
 

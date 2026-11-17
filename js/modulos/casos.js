@@ -1,5 +1,5 @@
 // Seguimiento de casos confidenciales: expediente por usuaria con notas de sesión, fechas de seguimiento y estatus.
-// Lo usan la Psicóloga y la Abogada (cada una ve solo sus casos); la Coordinadora los ve todos, solo para lectura.
+// Lo usan la Asesora Psicoemocional y la Asesora Jurídica (cada una ve solo sus casos); la Coordinadora los ve todos, solo para lectura.
 // El contenido va cifrado (ver core/expedientes.js): al entrar se pide el PIN si las claves no están abiertas.
 
 import * as db from "../core/db.js";
@@ -11,7 +11,7 @@ import { selectorUsuaria, botonFiltros, conectarFiltros, estadoVacio } from "../
 import { esperaPin, pinFallido, pinCorrecto, verificarPin, esCoordinadora } from "../core/auth.js";
 import { puedeCrearCaso, puedeEditarCaso, puedeUsarCasos } from "../core/permisos.js";
 import { agregarAlCalendario } from "../core/calendario.js";
-import { hoy, fechaLarga, normalizar } from "../core/catalogos.js";
+import { hoy, fechaLarga, normalizar, nombreRol } from "../core/catalogos.js";
 import { $, $$, esc, aviso, errores, dobleToque, plural, unaVez } from "../core/ui.js";
 
 const CHIP = { abierto: "ok", en_proceso: "prog", cerrado: "" };
@@ -89,7 +89,7 @@ async function lista(ctx, usuariaId) {
     ${legibles.length ? `<div class="list" id="lista">${legibles.map(k => `
       <a class="row" href="#/casos/${esc(k.id)}" data-estatus="${esc(k.d.estatus)}" data-buscar="${esc(normalizar(`${k.usuaria?.nombre || ""} ${k.d.asunto}`))}">
         <span class="body"><span class="name">${esc(k.usuaria?.nombre || "Usuaria eliminada")}</span>
-          <span class="meta"><span>${esc(k.d.asunto || "Sin asunto")}</span>${esCoordinadora(yo) ? `<span>${esc(k.perfil?.nombre || "")} · ${esc(k.perfil?.rol || "")}</span>` : ""}${k.d.proximo ? `<span>Seguimiento: ${esc(textoSeguimiento(k.d))}</span>` : ""}</span></span>
+          <span class="meta"><span>${esc(k.d.asunto || "Sin asunto")}</span>${esCoordinadora(yo) ? `<span>${esc(k.perfil?.nombre || "")} · ${esc(nombreRol(k.perfil?.rol))}</span>` : ""}${k.d.proximo ? `<span>Seguimiento: ${esc(textoSeguimiento(k.d))}</span>` : ""}</span></span>
         <span class="end">${chipEstatus(k.d)}${chipSeguimiento(k.d)}</span>
       </a>`).join("")}</div>`
     : `<div class="empty"><b>Aún no hay casos${filtrada ? " de esta usuaria" : ""}.</b>${puedeCrearCaso(yo) ? "<p>Use «Nuevo caso» para abrir un expediente con notas de sesión y fechas de seguimiento.</p>" : ""}</div>`}
@@ -118,7 +118,7 @@ async function nuevo(ctx, usuariaId) {
   await exp.actualizarCopias(yo);
   const usuarias = (await db.todos("usuarias")).sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
   const fija = usuariaId && usuarias.find(u => u.id === usuariaId);
-  // La Coordinadora refiere el caso a la Psicóloga o la Abogada; solo se puede si ese perfil ya ingresó tras la actualización
+  // La Coordinadora refiere el caso a la Asesora Psicoemocional o la Asesora Jurídica; solo se puede si ese perfil ya ingresó tras la actualización
   const coord = esCoordinadora(yo);
   const destinos = coord ? (await db.todos("perfiles")).filter(p => p.activa && (p.rol === "Psicóloga" || p.rol === "Abogada")).sort((a, b) => a.nombre.localeCompare(b.nombre, "es")) : [];
 
@@ -130,7 +130,7 @@ async function nuevo(ctx, usuariaId) {
       <div class="field" id="usuaria"></div>
       <div class="grid" id="f">
         ${coord ? `<div class="field span-2"><label for="n-destino">Referir a</label>
-          <select id="n-destino" data-campo="destinoId">${destinos.map(p => `<option value="${esc(p.id)}" ${exp.puedeLeer(p.id) ? "" : "disabled"}>${esc(p.nombre)} · ${esc(p.rol)}${exp.puedeLeer(p.id) ? "" : " (debe ingresar una vez con su PIN)"}</option>`).join("")}</select></div>` : ""}
+          <select id="n-destino" data-campo="destinoId">${destinos.map(p => `<option value="${esc(p.id)}" ${exp.puedeLeer(p.id) ? "" : "disabled"}>${esc(p.nombre)} · ${esc(nombreRol(p.rol))}${exp.puedeLeer(p.id) ? "" : " (debe ingresar una vez con su PIN)"}</option>`).join("")}</select></div>` : ""}
         <div class="field span-2"><label for="n-asunto">Asunto del caso</label><input id="n-asunto" data-campo="asunto" autocomplete="off" placeholder="Por ejemplo: Atención psicológica individual"></div>
         <div class="field"><label for="n-estatus">Estatus</label><select id="n-estatus" data-campo="estatus">${c.ESTATUS.map(([v, t]) => `<option value="${v}">${t}</option>`).join("")}</select></div>
         <div class="field"><label for="n-proximo">Próximo seguimiento (opcional)</label><input id="n-proximo" type="date" data-campo="proximo" min="${hoy()}"></div>
@@ -193,7 +193,7 @@ async function detalle(ctx, id) {
       <dl class="facts">
         <div><dt>Asunto</dt><dd>${esc(d.asunto || "—")}</dd></div>
         <div><dt>Usuaria</dt><dd>${usuaria ? `<a href="#/usuarias/${esc(usuaria.id)}">${esc(usuaria.nombre)}</a>` : "—"}</dd></div>
-        <div><dt>Lleva el caso</dt><dd>${esc(perfil?.nombre || "—")} · ${esc(perfil?.rol || "")}</dd></div>
+        <div><dt>Lleva el caso</dt><dd>${esc(perfil?.nombre || "—")} · ${esc(nombreRol(perfil?.rol))}</dd></div>
         ${d.referidoPor ? `<div><dt>Referido por</dt><dd>${esc(d.referidoPor)}</dd></div>` : ""}
         <div><dt>Próximo seguimiento</dt><dd>${seguimiento ? esc(seguimiento) : "—"}</dd></div>
       </dl>

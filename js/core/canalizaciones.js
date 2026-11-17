@@ -89,7 +89,7 @@ function normalizar(d, institucion) {
 
 /**
  * Registra una canalización. La lleva `destino` (por defecto, quien la registra). La Coordinadora no tiene clave
- * propia de expedientes: la registra a nombre de la Psicóloga o la Abogada, igual que al referir un caso.
+ * propia de expedientes: la registra a nombre de la Asesora Psicoemocional o la Asesora Jurídica, igual que al referir un caso.
  */
 export async function crearCanalizacion(yo, usuariaId, d, institucion, destino = yo) {
   const id = db.uid();

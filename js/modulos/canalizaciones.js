@@ -13,7 +13,7 @@ import { selectorUsuaria, botonFiltros, conectarFiltros, estadoVacio } from "../
 import { esCoordinadora } from "../core/auth.js";
 import { puedeCrearCaso, puedeEditarCaso, puedeUsarCasos } from "../core/permisos.js";
 import { agregarAlCalendario } from "../core/calendario.js";
-import { hoy, fechaLarga, normalizar } from "../core/catalogos.js";
+import { hoy, fechaLarga, normalizar, nombreRol } from "../core/catalogos.js";
 import { $, $$, esc, aviso, errores, dobleToque, plural, unaVez } from "../core/ui.js";
 import { puerta } from "./casos.js";
 
@@ -79,7 +79,7 @@ async function lista(ctx, usuariaId) {
     ${legibles.length ? `<div class="list" id="lista">${legibles.map(c => `
       <a class="row" href="#/canalizaciones/${esc(c.id)}" data-estatus="${esc(c.d.estatus)}" data-inst="${esc(c.d.nombre)}" data-buscar="${esc(normalizar(`${c.usuaria?.nombre || ""} ${c.d.nombre}`))}">
         <span class="body"><span class="name">${esc(c.usuaria?.nombre || "Usuaria eliminada")}</span>
-          <span class="meta"><span>${esc(c.d.nombre)}</span><span>${esc(fechaLarga(c.d.fecha))}</span>${coord ? `<span>${esc(c.perfil?.nombre || "")} · ${esc(c.perfil?.rol || "")}</span>` : ""}</span></span>
+          <span class="meta"><span>${esc(c.d.nombre)}</span><span>${esc(fechaLarga(c.d.fecha))}</span>${coord ? `<span>${esc(c.perfil?.nombre || "")} · ${esc(nombreRol(c.perfil?.rol))}</span>` : ""}</span></span>
         <span class="end">${chipEstatus(c.d)}${chipSeguimiento(c.d)}</span>
       </a>`).join("")}</div>
       <div class="empty" id="sinResultados" hidden><b>Ninguna canalización coincide.</b><p>Modifique la búsqueda o los filtros.</p></div>`
@@ -136,7 +136,7 @@ async function formulario(ctx, usuariaId, id) {
       <div class="field" id="usuaria"></div>
       <div class="grid" id="f">
         ${coord && !edicion ? `<div class="field span-2"><label for="c-destino">Registrar a nombre de</label>
-          <select id="c-destino" data-campo="destinoId">${destinos.map(p => `<option value="${esc(p.id)}" ${exp.puedeLeer(p.id) ? "" : "disabled"}>${esc(p.nombre)} · ${esc(p.rol)}${exp.puedeLeer(p.id) ? "" : " (debe ingresar una vez con su PIN)"}</option>`).join("")}</select></div>` : ""}
+          <select id="c-destino" data-campo="destinoId">${destinos.map(p => `<option value="${esc(p.id)}" ${exp.puedeLeer(p.id) ? "" : "disabled"}>${esc(p.nombre)} · ${esc(nombreRol(p.rol))}${exp.puedeLeer(p.id) ? "" : " (debe ingresar una vez con su PIN)"}</option>`).join("")}</select></div>` : ""}
         <div class="field span-2"><label for="c-inst">Institución</label>
           <select id="c-inst" data-campo="institucionId">${opciones(instOpc.map(i => [i.id, i.activa === false ? `${i.nombre} (inactiva)` : i.nombre]), d.institucionId, "Seleccione la institución")}</select>
           ${instOpc.length ? "" : `<p class="note">No hay instituciones en el catálogo. La Coordinadora puede agregarlas desde «Instituciones».</p>`}</div>
@@ -226,7 +226,7 @@ async function detalle(ctx, id) {
         ${dato("Usuaria", usuaria ? `<a href="#/usuarias/${esc(usuaria.id)}">${esc(usuaria.nombre)}</a>` : "—")}
         ${dato("Institución", `${esc(d.nombre)}${inst?.contacto ? `<br><small class="hint">${esc(inst.contacto)}</small>` : ""}`)}
         ${dato("Fecha de la canalización", esc(fechaLarga(d.fecha)))}
-        ${dato("Canaliza", `${esc(perfil?.nombre || "—")} · ${esc(perfil?.rol || "")}${d.registradaPor ? `<br><small class="hint">Registrada por ${esc(d.registradaPor)}</small>` : ""}`)}
+        ${dato("Canaliza", `${esc(perfil?.nombre || "—")} · ${esc(nombreRol(perfil?.rol))}${d.registradaPor ? `<br><small class="hint">Registrada por ${esc(d.registradaPor)}</small>` : ""}`)}
         ${dato("Motivo", `<span class="nota-texto">${esc(d.motivo || "—")}</span>`)}
         ${dato("Seguimiento", d.seguimiento ? esc(fechaLarga(d.seguimiento)) : "—")}
         ${dato("Resultado", `<span class="nota-texto">${esc(d.resultado || "Aún sin resultado")}</span>`)}
