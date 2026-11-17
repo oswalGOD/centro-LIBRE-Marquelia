@@ -60,6 +60,16 @@ export function leerCampos(contenedor) {
   return datos;
 }
 
+/**
+ * ¿Se debe usar el menú de compartir del sistema? Solo en iPad, iPhone y Android.
+ * En computadora (Windows, Mac, Linux) navigator.share también existe, pero el usuario espera descargar el archivo.
+ */
+export function puedeCompartir(archivo) {
+  const ua = navigator.userAgent || "";
+  const movil = /iPhone|iPad|iPod|Android/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1); // iPadOS se identifica como Mac
+  return movil && !!navigator.canShare?.({ files: [archivo] });
+}
+
 export function descargar(nombre, contenido, tipo = "application/json") {
   const url = URL.createObjectURL(new Blob([contenido], { type: tipo }));
   const a = Object.assign(document.createElement("a"), { href: url, download: nombre });
