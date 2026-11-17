@@ -5,7 +5,7 @@ import * as db from "../core/db.js";
 import { botonIcono } from "../core/iconos.js";
 import { GRUPOS, RANGOS, edad, rangoDe, fechaCorta } from "../core/catalogos.js";
 import { puedeVer } from "../core/permisos.js";
-import { $, $$, esc, plural, aviso } from "../core/ui.js";
+import { $, $$, esc, plural, aviso, puedeCompartir } from "../core/ui.js";
 import { hojasAPDF } from "../core/pdf.js";
 import { colorearFirma } from "../core/firma.js";
 
@@ -109,7 +109,7 @@ export function conectarExportacion(c, hojasEl, nombrePDF, tituloImpresion) {
   // Se exporta en su propio toque: iOS exige que compartir ocurra directamente tras un toque del usuario.
   // Con menú de compartir (iPad, iPhone, Android) se usa; si no existe (computadora) se descarga el archivo.
   boton.onclick = async () => {
-    if (navigator.canShare?.({ files: [archivo] })) {
+    if (puedeCompartir(archivo)) {
       try { await navigator.share({ files: [archivo] }); return; }
       catch (e) { if (e?.name === "AbortError") return; }
     }
