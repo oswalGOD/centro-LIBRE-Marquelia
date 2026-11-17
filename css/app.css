@@ -40,7 +40,7 @@
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; scrollbar-gutter: stable; overflow-y: scroll; }
 html, body { margin: 0; background: var(--bg); }
 body { color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.5; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
 body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
@@ -185,6 +185,8 @@ a.row:hover { border-color: var(--accent); }
 /* ---------- Sincronización ---------- */
 .sync-pill { display: inline-flex; align-items: center; gap: 6px; font-size: .8rem; font-weight: 700; padding: 4px 10px; border-radius: 999px; text-decoration: none; white-space: nowrap; background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); }
 .sync-pill .sync-text { color: var(--ink); }
+/* Ancho fijo: el texto cambia (Sincronizando…, Sincronizado…) y no debe mover el nombre ni «Salir» */
+@media (min-width: 1181px) { .sync-pill { width: 15rem; justify-content: flex-start; } .sync-pill .sync-text { overflow: hidden; text-overflow: ellipsis; } }
 @media (max-width: 1180px) { .sync-pill .sync-text { display: none; } .sync-pill { padding: 8px; } }
 .sync-pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
 .sync-pill.ok { color: var(--ok); }
