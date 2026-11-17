@@ -88,11 +88,11 @@ export async function hojasAPDF(contenedor, { escala = 3, calidad = 0.92 } = {})
     const origenes = [...hoja.querySelectorAll("img")], clones = [...copia.querySelectorAll("img")];
     const k = hoja.getBoundingClientRect().width / hoja.offsetWidth || 1, r0 = hoja.getBoundingClientRect();
     const pendientes = [];
+    copia.style.background = "transparent"; // el blanco de la hoja se pinta en el lienzo, para poder poner la marca de agua debajo
     for (let i = 0; i < origenes.length; i++) {
       const o = origenes[i];
-      // Logotipos y fondo (archivos de la app) siguen dentro del SVG: así conservan su capa detrás del contenido.
-      // Solo firmas, QR y fotos (datos incrustados) se pintan aparte, siempre por encima.
-      if (!/^(data|blob):/.test(o.getAttribute("src") || "")) continue;
+      // Todas las imágenes (logotipos, marca de agua, firmas, QR, fotos) se pintan en el lienzo: una imagen SVG nunca
+      // carga archivos externos y Safari tampoco dibuja las incrustadas. La marca de agua va debajo del contenido.
       const r = o.getBoundingClientRect(), cs = getComputedStyle(o);
       const bi = parseFloat(cs.borderLeftWidth) + parseFloat(cs.paddingLeft), bd = parseFloat(cs.borderRightWidth) + parseFloat(cs.paddingRight);
       const bs = parseFloat(cs.borderTopWidth) + parseFloat(cs.paddingTop), bb = parseFloat(cs.borderBottomWidth) + parseFloat(cs.paddingBottom);
@@ -105,7 +105,7 @@ export async function hojasAPDF(contenedor, { escala = 3, calidad = 0.92 } = {})
       const src = o.getAttribute("src");
       c.setAttribute("src", VACIA);
       if (!src || caja.w <= 0 || caja.h <= 0) continue;
-      pendientes.push({ caja, ajuste: cs.objectFit, nitida: cs.imageRendering === "pixelated" || cs.imageRendering === "crisp-edges", img: cargarImagen(await incrustar(src)).catch(() => null) });
+      pendientes.push({ caja, debajo: cs.position === "absolute", opacidad: parseFloat(cs.opacity) || 1, ajuste: cs.objectFit, nitida: cs.imageRendering === "pixelated" || cs.imageRendering === "crisp-edges", img: cargarImagen(await incrustar(src)).catch(() => null) });
     }
     const xhtml = new XMLSerializer().serializeToString(copia);
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${ancho}" height="${alto}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="${variables};width:${ancho}px;height:${alto}px"><style>${css.replace(/</g, "\\3c ")}</style>${xhtml}</div></foreignObject></svg>`;
@@ -114,10 +114,9 @@ export async function hojasAPDF(contenedor, { escala = 3, calidad = 0.92 } = {})
     const ctx = lienzo.getContext("2d");
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, 0, lienzo.width, lienzo.height);
-    ctx.drawImage(imagen, 0, 0, lienzo.width, lienzo.height);
-    for (const { caja, ajuste, nitida, img: promesa } of pendientes) {
+    const pintar = async ({ caja, ajuste, nitida, opacidad, img: promesa }) => {
       const im = await promesa;
-      if (!im || !im.naturalWidth) continue;
+      if (!im || !im.naturalWidth) return;
       let { x, y, w, h } = caja, dx = x, dy = y, dw = w, dh = h;
       if (ajuste === "cover" || ajuste === "contain") {
         const f = (ajuste === "cover" ? Math.max : Math.min)(w / im.naturalWidth, h / im.naturalHeight);
@@ -125,11 +124,15 @@ export async function hojasAPDF(contenedor, { escala = 3, calidad = 0.92 } = {})
       }
       ctx.save();
       ctx.beginPath(); ctx.rect(x * escala, y * escala, w * escala, h * escala); ctx.clip();
+      ctx.globalAlpha = opacidad;
       ctx.imageSmoothingEnabled = !nitida;
       ctx.imageSmoothingQuality = "high";
       ctx.drawImage(im, dx * escala, dy * escala, dw * escala, dh * escala);
       ctx.restore();
-    }
+    };
+    for (const p of pendientes.filter(p => p.debajo)) await pintar(p);
+    ctx.drawImage(imagen, 0, 0, lienzo.width, lienzo.height);
+    for (const p of pendientes.filter(p => !p.debajo)) await pintar(p);
     const jpeg = await new Promise(ok => lienzo.toBlob(ok, "image/jpeg", calidad));
     if (!jpeg) throw new Error("No se pudo generar la imagen de la hoja");
     paginas.push({ datos: new Uint8Array(await jpeg.arrayBuffer()), ancho: lienzo.width, alto: lienzo.height });
