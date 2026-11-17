@@ -115,9 +115,21 @@ export function conectarExportacion(c, hojasEl, nombrePDF, tituloImpresion) {
     }
     $("#bajarPDF", c).click();
   };
-  // En la app instalada de iPad/iPhone window.print() no hace nada: allí se imprime desde "Compartir" (opción Imprimir).
-  if (navigator.standalone === true) $("#imprimir", c).hidden = true;
-  $("#imprimir", c).onclick = () => {
+  // iPad y iPhone: Safari imprime la página con su propio motor (omite imágenes de firma, ignora la orientación de @page).
+  // Por eso allí se imprime desde el PDF ya preparado: "Exportar PDF" > Imprimir, que respeta carta horizontal y las firmas.
+  const botonImprimir = $("#imprimir", c);
+  if (esIOS()) {
+    botonImprimir.hidden = true;
+    const aviso = document.createElement("p");
+    aviso.className = "hint no-print";
+    aviso.textContent = "En iPad y iPhone, para imprimir toque “Exportar PDF” y elija Imprimir en el menú; así se conservan las firmas y la hoja carta horizontal.";
+    boton.closest(".toolbar")?.append(aviso);
+    return;
+  }
+  // Se decodifican las imágenes (firmas, logotipos, fotos) desde ahora: al imprimir deben estar listas.
+  const listas = Promise.all([...hojasEl.querySelectorAll("img")].map(i => i.decode?.().catch(() => {})));
+  botonImprimir.onclick = async () => {
+    await listas;
     const titulo = document.title;
     document.title = tituloImpresion; // nombre sugerido del PDF
     // Refuerza la orientación horizontal (carta) en Edge/Chrome, además de la regla @page de la hoja de estilos
@@ -128,6 +140,9 @@ export function conectarExportacion(c, hojasEl, nombrePDF, tituloImpresion) {
     setTimeout(() => { document.title = titulo; estilo.remove(); }, 1000);
   };
 }
+
+/** iPhone, iPad y iPadOS (que se anuncia como Mac con pantalla táctil). */
+export const esIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
 export async function formato({ yo, pintar, ir }, id) {
   const act = await db.uno("actividades", id);
