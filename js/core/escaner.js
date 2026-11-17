@@ -2,6 +2,7 @@
 // el QR ya trae los datos y se decodifica en el dispositivo; nada se envía a ningún lado.
 
 import { limpiarCurp, leerCurp } from "./catalogos.js";
+import { leerPreferida, guardarPreferida, listarTraseras, abrirFlujo, idDelFlujo, pareceNegra, siguiente } from "./camaras.js";
 
 /**
  * El QR de la constancia trae los campos separados por «|»:
@@ -55,6 +56,7 @@ export function escanearCurp() {
         <div class="scan-view"><video playsinline muted aria-label="Vista de la cámara"></video><div class="scan-frame" aria-hidden="true"></div><p class="scan-msg" role="status"></p></div>
         <p class="note warn" id="scanAviso" hidden></p>
         <div class="actions">
+          <button type="button" class="btn" data-accion="lente" hidden>Cambiar cámara</button>
           <label class="btn" for="scanFoto">Usar una fotografía</label><input type="file" id="scanFoto" accept="image/*" capture="environment" class="visually-hidden">
           <button type="button" class="btn ghost push" data-accion="cancelar">Cancelar</button>
         </div>
@@ -107,23 +109,58 @@ export function escanearCurp() {
       };
 
       if (!navigator.mediaDevices?.getUserMedia) { msg.textContent = "Este dispositivo no permite usar la cámara en este contexto. Utilice una fotografía."; return; }
-      msg.textContent = "Abriendo la cámara…";
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false })
-        .then(f => {
-          flujo = f;
-          if (!activo) return f.getTracks().forEach(t => t.stop());
-          video.srcObject = f;
-          return video.play().then(() => {
-            msg.textContent = "";
-            const ciclo = () => {
-              if (!activo) return;
-              if (video.readyState >= 2 && revisar(decodificar(jsQR, video, video.videoWidth, video.videoHeight, lienzo))) return;
-              setTimeout(() => requestAnimationFrame(ciclo), 120);
-            };
-            ciclo();
-          });
-        })
-        .catch(() => { msg.textContent = "No fue posible abrir la cámara. Verifique el permiso de cámara o utilice una fotografía."; });
+      const botonLente = capa.querySelector("[data-accion=lente]");
+      let traseras = [], idActual = leerPreferida(), vuelta = 0;
+
+      // Abre la cámara indicada (o la trasera predeterminada) y empieza a buscar el QR.
+      async function iniciar() {
+        const mio = ++vuelta;
+        flujo?.getTracks().forEach(t => t.stop());
+        flujo = null;
+        video.srcObject = null;
+        msg.textContent = "Abriendo la cámara…";
+        try {
+          const r = await abrirFlujo({ id: idActual, ancho: 1280, alto: 720 });
+          if (!activo || mio !== vuelta) return r.flujo.getTracks().forEach(t => t.stop());
+          flujo = r.flujo;
+          video.srcObject = flujo;
+          await video.play();
+          const usada = idDelFlujo(flujo);
+          if (r.fallo) { idActual = ""; guardarPreferida(""); }
+          else if (usada) idActual = usada;
+          traseras = await listarTraseras();
+          if (!activo || mio !== vuelta) return;
+          const actual = traseras.find(c => c.id === usada);
+          botonLente.hidden = traseras.length < 2;
+          if (actual) botonLente.textContent = `Cámara: ${actual.nombre}`;
+          msg.textContent = r.fallo ? "Esa cámara no respondió; se usa la predeterminada. Pruebe con «Cambiar cámara»." : "";
+          // Imagen negra: lente dañado, tapado o sin señal
+          setTimeout(() => {
+            if (activo && mio === vuelta && pareceNegra(video)) msg.textContent = traseras.length > 1
+              ? "Esta cámara no muestra imagen (puede estar tapada o dañada). Toque «Cambiar cámara» para probar otra."
+              : "La cámara no muestra imagen. Verifique que no esté tapada o utilice una fotografía.";
+          }, 1200);
+          const ciclo = () => {
+            if (!activo || mio !== vuelta) return;
+            if (video.readyState >= 2 && revisar(decodificar(jsQR, video, video.videoWidth, video.videoHeight, lienzo))) return;
+            setTimeout(() => requestAnimationFrame(ciclo), 120);
+          };
+          ciclo();
+        } catch (e) {
+          if (mio !== vuelta) return;
+          msg.textContent = e?.name === "NotAllowedError"
+            ? "No se concedió el permiso de la cámara. Verifique la configuración o utilice una fotografía."
+            : "No fue posible abrir la cámara. Pruebe con «Cambiar cámara», verifique el permiso o utilice una fotografía.";
+        }
+      }
+      botonLente.onclick = () => {
+        const otra = siguiente(traseras, idActual);
+        if (!otra) return;
+        idActual = otra.id;
+        guardarPreferida(idActual);
+        iniciar();
+      };
+      iniciar();
     }).catch(e => { msg.textContent = e.message; });
   });
 }
