@@ -9,6 +9,7 @@ import { crearPerfil, iniciarSesion, cerrarSesion, sesionActual, sesionVigente, 
 import { $, $$, esc, aviso, errores, leerCampos } from "./core/ui.js";
 import * as nube from "./core/sync.js";
 import * as kiosko from "./core/kiosko.js";
+import { iniciarTecladoPin } from "./core/teclado-pin.js";
 import * as expedientes from "./core/expedientes.js";
 import { captura } from "./modulos/captura.js";
 import actividades from "./modulos/actividades.js";
@@ -27,6 +28,7 @@ import informes from "./modulos/informes.js";
 
 const MODULOS = [inicio, actividades, constancias, evidencias, casos, citas, canalizaciones, usuarias, estadisticas, informes, perfiles, ajustes, desarrollo];
 
+iniciarTecladoPin();
 const raiz = document.getElementById("app");
 let yo = null;
 // Se escribió o eligió algo en la pantalla actual: si llegan datos de otro dispositivo no se vuelve a dibujar

@@ -579,3 +579,11 @@ body.con-camara { overflow: hidden; }
 
 /* Agenda de citas: navegación por día o semana */
 .nav-etiqueta { flex: 1 1 auto; text-align: center; min-width: 0; }
+
+/* Teclado numérico propio para el PIN (solo iPad; ver js/core/teclado-pin.js) */
+.teclado-pin { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10000; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 12px max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-bottom)); max-width: 460px; margin: 0 auto; background: var(--surface-2); border: 1px solid var(--line); border-bottom: 0; border-radius: 16px 16px 0 0; box-shadow: 0 -6px 24px rgba(0, 0, 0, .18); }
+.teclado-pin[hidden] { display: none; }
+.teclado-pin .tecla { min-height: 62px; font: 700 1.6rem var(--f-display); color: var(--ink); background: var(--surface); border: 2px solid var(--control-line); border-radius: 12px; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.teclado-pin .tecla:active { background: var(--accent-soft); border-color: var(--accent); }
+.teclado-pin .tecla-accion { font-size: 1.1rem; background: var(--accent-soft); }
+body.con-teclado-pin { padding-bottom: 320px; }
