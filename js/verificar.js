@@ -5,7 +5,6 @@ import { SUPABASE_URL, SUPABASE_ANON } from "./core/config.js";
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 const fechaLarga = f => `${Number(f.slice(8, 10))} de ${MESES[Number(f.slice(5, 7)) - 1]} de ${f.slice(0, 4)}`;
 const limpiar = t => String(t || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-const legible = c => c.replace(/(.{4})(?=.)/g, "$1-");
 const el = id => document.getElementById(id);
 
 function dato(rotulo, valor) {
@@ -31,9 +30,7 @@ function mostrar(clase, titulo, texto, datos) {
 
 async function verificar(codigo) {
   const c = limpiar(codigo);
-  if (!/^[A-HJ-NP-Z2-9]{12}$/.test(c)) return mostrar("aviso", "Código incompleto", "El código tiene 12 caracteres (letras y números), por ejemplo ABCD-EFGH-JKLM. Revise que esté completo.");
-  el("codigo").value = legible(c);
-  el("boton").disabled = true;
+  if (!/^[A-HJ-NP-Z2-9]{12}$/.test(c)) return mostrar("aviso", "Código no válido", "El enlace no es válido. Escanee de nuevo el código QR de la constancia.");
   mostrar("espera", "Consultando…", "");
   try {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verificar_constancia`, {
@@ -55,11 +52,9 @@ async function verificar(codigo) {
     ]);
   } catch {
     mostrar("aviso", "No fue posible consultar", "Revise su conexión a internet e intente de nuevo.");
-  } finally {
-    el("boton").disabled = false;
   }
 }
 
-el("forma").addEventListener("submit", e => { e.preventDefault(); verificar(el("codigo").value); });
-const inicial = new URLSearchParams(location.search).get("c");
-if (inicial) { el("codigo").value = inicial; verificar(inicial); }
+const codigo = new URLSearchParams(location.search).get("c");
+if (codigo) verificar(codigo);
+else mostrar("aviso", "Escanee el código QR", "Esta página solo se abre al escanear el código QR impreso en la constancia.");
