@@ -36,46 +36,89 @@ function chipEstado(a) {
 
 const fechaHora = ms => new Date(ms).toLocaleString("es-MX", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
-/** Aviso para el perfil que recibió la actividad: nombre opcionalmente editable, solo mientras no lo resuelva. */
-function avisoRecibida(a, yo) {
-  const h = (a.compartidas || []).at(-1);
-  if (!h || h.a !== yo.id || h.visto || a.facilitadoraId !== yo.id) return "";
-  return `<section class="panel stack" id="recibida">
-    <div><h2 class="h3">Copia recibida de ${esc(h.deNombre)}</h2>
-      <p class="hint">Usted figura como facilitadora y ya cuenta con la lista de asistentes y sus firmas. Si lo desea, puede cambiarle el nombre a la actividad; es opcional.</p></div>
-    <div class="field"><label for="r-nombre">Nombre de la actividad</label><input id="r-nombre" value="${esc(a.nombre)}" maxlength="150"></div>
-    <div id="err-r"></div>
-    <div class="actions-bar">
-      <button type="button" class="btn primary" id="r-guardar">Conservar el nombre</button>
-    </div></section>`;
+/** Envíos pendientes para este perfil: actividades que otro perfil le compartió y que aún no acepta. */
+async function envios(yo) {
+  const r = [];
+  for (const a of await db.todos("actividades")) {
+    for (const e of a.compartidaCon || []) if (e.a === yo.id && e.estado === "pendiente" && !a.curso) r.push({ a, e });
+  }
+  return r.sort((x, y) => x.e.en - y.e.en);
 }
 
-function conectarAvisoRecibida(c, a, yo, recargar) {
-  const campo = $("#r-nombre", c), boton = $("#r-guardar", c);
-  if (!campo) return;
-  const etiqueta = () => { boton.textContent = campo.value.trim() && campo.value.trim() !== a.nombre ? "Guardar nuevo nombre" : "Conservar el nombre"; };
-  campo.addEventListener("input", etiqueta);
-  boton.onclick = unaVez(async () => {
-    const nombre = campo.value.trim().replace(/\s+/g, " ");
-    if (!nombre) return errores($("#err-r", c), ["Ingrese el nombre de la actividad o conserve el actual."]);
-    const actual = await db.uno("actividades", a.id);
-    const compartidas = [...actual.compartidas];
-    const h = { ...compartidas.at(-1), visto: true, vistoEn: Date.now() };
-    if (nombre !== actual.nombre) h.nombreAnterior = actual.nombre;
-    compartidas[compartidas.length - 1] = h;
-    await db.guardar("actividades", { ...actual, nombre, compartidas });
-    aviso(nombre !== actual.nombre ? "Nombre actualizado" : "Se conservó el nombre de la actividad");
-    recargar();
+const etiquetaEnvio = e => e.estado === "aceptada" ? `aceptada por ${e.aNombre}` : e.estado === "descartada" ? `descartada por ${e.aNombre}` : `pendiente de aceptar por ${e.aNombre}`;
+
+/**
+ * El perfil que recibe crea la copia en su dispositivo (con su propio folio) y, si lo desea, le cambia el nombre.
+ * Los ids de la copia salen del envío, así que aceptar desde dos dispositivos no la duplica.
+ */
+async function aceptarEnvio(yo, a, e, nombre) {
+  const origen = await db.uno("actividades", a.id);
+  const copiaId = `copia-${e.id}`;
+  const previa = await db.uno("actividades", copiaId);
+  const copia = previa || {
+    id: copiaId, folio: await db.siguienteFolio(origen.fecha), creadaPor: yo.id, estado: "abierta",
+    fecha: origen.fecha, lugar: origen.lugar, tipo: origen.tipo, horaInicio: origen.horaInicio || "", horaFin: origen.horaFin || "",
+    facilitadoraId: yo.id, facilitadora: yo.nombre, puesto: yo.rol,
+  };
+  copia.nombre = nombre;
+  copia.compartidas = [{ de: e.de, deNombre: e.deNombre, a: yo.id, aNombre: yo.nombre, en: e.en, origenId: origen.id, nombreOriginal: origen.nombre, ...(nombre !== origen.nombre ? { nombreAnterior: origen.nombre } : {}) }];
+  await db.guardar("actividades", copia);
+  const existentes = new Set((await db.todos("asistencias", "actividadId", copiaId)).map(x => x.id));
+  for (const x of await db.todos("asistencias", "actividadId", origen.id)) {
+    const id = `${copiaId}-${x.id}`;
+    if (!existentes.has(id)) await db.guardar("asistencias", { ...x, id, actividadId: copiaId, creado: undefined });
+  }
+  const actual = await db.uno("actividades", origen.id);
+  await db.guardar("actividades", { ...actual, compartidaCon: actual.compartidaCon.map(x => x.id === e.id ? { ...x, estado: "aceptada", resueltaEn: Date.now(), copiaId } : x) });
+  return copia;
+}
+
+async function descartarEnvio(a, e) {
+  const actual = await db.uno("actividades", a.id);
+  await db.guardar("actividades", { ...actual, compartidaCon: actual.compartidaCon.map(x => x.id === e.id ? { ...x, estado: "descartada", resueltaEn: Date.now() } : x) });
+}
+
+/** Tarjetas de la lista de Actividades con lo que otros perfiles compartieron con quien ingresó. */
+async function seccionEnvios(yo) {
+  const lista = await envios(yo);
+  if (!lista.length) return "";
+  const asis = await db.todos("asistencias");
+  return `<section class="panel stack" id="envios"><div><h2 class="h3">${lista.length === 1 ? "Actividad compartida con usted" : "Actividades compartidas con usted"}</h2>
+    <p class="hint">Al aceptar se crea su propia copia, con las mismas asistentes y sus firmas, y usted figura como facilitadora. Cambiar el nombre es opcional.</p></div>
+    ${lista.map(({ a, e }, i) => `<div class="stack">
+      <p><b>${esc(e.deNombre)}</b> le compartió «${esc(a.nombre)}» del ${esc(fechaLarga(a.fecha))} · ${esc(plural(asis.filter(x => x.actividadId === a.id).length, "asistente", "asistentes"))}.</p>
+      <div class="field"><label for="e-nombre-${i}">Nombre de su actividad</label><input id="e-nombre-${i}" value="${esc(a.nombre)}" maxlength="150"></div>
+      <div class="actions-bar"><button type="button" class="btn primary" data-aceptar="${i}">Aceptar copia</button><button type="button" class="btn" data-descartar="${i}">Descartar</button></div>
+    </div>`).join("")}</section>`;
+}
+
+async function conectarEnvios(c, yo, recargar) {
+  const lista = await envios(yo);
+  $$("[data-aceptar]", c).forEach(b => {
+    const { a, e } = lista[b.dataset.aceptar];
+    const campo = $(`#e-nombre-${b.dataset.aceptar}`, c);
+    campo.addEventListener("input", () => { b.textContent = campo.value.trim() !== a.nombre ? "Aceptar con nuevo nombre" : "Aceptar copia"; });
+    b.onclick = unaVez(async () => {
+      const nombre = campo.value.trim().replace(/\s+/g, " ");
+      if (!nombre) return aviso("Ingrese el nombre de la actividad.");
+      const copia = await aceptarEnvio(yo, a, e, nombre);
+      aviso(`Copia creada con folio ${copia.folio}`);
+      location.hash = `#/actividad/${copia.id}`;
+    });
+  });
+  $$("[data-descartar]", c).forEach(b => {
+    const { a, e } = lista[b.dataset.descartar];
+    dobleToque(b, "No se creará la copia. Toque nuevamente para descartar", async () => { await descartarEnvio(a, e); aviso("Envío descartado"); recargar(); });
   });
 }
 
 function historialCompartida(a) {
   const origen = (a.compartidas || [])[0];
-  const envios = a.compartidaCon || [];
-  if (!origen && !envios.length) return "";
+  const enviados = a.compartidaCon || [];
+  if (!origen && !enviados.length) return "";
   const items = [
-    ...(origen ? [`${fechaHora(origen.en)}: copia recibida de ${origen.deNombre}${origen.nombreOriginal ? ` (actividad «${origen.nombreOriginal}»)` : ""}${origen.nombreAnterior ? `; ${origen.aNombre} cambió el nombre a «${a.nombre}»` : ""}.`] : []),
-    ...envios.map(h => `${fechaHora(h.en)}: copia compartida con ${h.aNombre}.`),
+    ...(origen ? [`${fechaHora(origen.en)}: copia recibida de ${origen.deNombre} (actividad «${origen.nombreOriginal}»)${origen.nombreAnterior ? `; ${origen.aNombre} cambió el nombre a «${a.nombre}»` : ""}.`] : []),
+    ...enviados.map(h => `${fechaHora(h.en)}: compartida con ${h.aNombre}; ${etiquetaEnvio(h)}.`),
   ];
   return `<section class="panel stack"><div><h2 class="h3">Historial de la actividad compartida</h2>
     <p class="hint">Cada perfil lleva su propia copia (las fotografías no se copian).</p></div>
@@ -91,7 +134,7 @@ async function compartir({ yo, pintar, ir }, id) {
   const volver = `#/actividad/${id}`;
   const c = pintar("Compartir actividad", `
     <section class="panel stack">
-      <div class="card-head"><p class="hint">Se enviará al perfil elegido una copia de «${esc(a.nombre)}» (${esc(a.folio)}) con ${plural(asis, "asistente", "asistentes")} y sus firmas, sin fotografías. Figurará como facilitadora y podrá cambiarle el nombre si lo desea. Su actividad no cambia.</p>
+      <div class="card-head"><p class="hint">El perfil elegido verá un aviso en Actividades. Al aceptarlo se creará en su dispositivo una copia de «${esc(a.nombre)}» (${esc(a.folio)}) con ${plural(asis, "asistente", "asistentes")} y sus firmas, sin fotografías, con su propio folio. Podrá cambiarle el nombre si lo desea. Su actividad no cambia.</p>
         <span class="icon-row">${botonIcono("salir", "Cancelar", { href: volver, clase: "quieto" })}</span></div>
       ${perfiles.length ? `<div class="field"><label for="c-perfil">Compartir con</label>
         <select id="c-perfil"><option value="">Seleccione un perfil</option>${perfiles.map(u => `<option value="${esc(u.id)}">${esc(u.nombre)} · ${esc(u.rol)}</option>`).join("")}</select></div>` : `<div class="empty"><b>No hay otros perfiles activos.</b><p>Cree o active otro perfil en Perfiles.</p></div>`}
@@ -102,20 +145,8 @@ async function compartir({ yo, pintar, ir }, id) {
     const dest = perfiles.find(u => u.id === $("#c-perfil", c).value);
     if (!dest) return errores($("#err", c), ["Seleccione el perfil con el que se compartirá la actividad."]);
     const actual = await db.uno("actividades", id);
-    const en = Date.now();
-    const copia = {
-      id: db.uid(), folio: await db.siguienteFolio(actual.fecha), creadaPor: dest.id, estado: "abierta",
-      nombre: actual.nombre, fecha: actual.fecha, lugar: actual.lugar, tipo: actual.tipo,
-      horaInicio: actual.horaInicio || "", horaFin: actual.horaFin || "",
-      facilitadoraId: dest.id, facilitadora: dest.nombre, puesto: dest.rol,
-      compartidas: [{ de: yo.id, deNombre: yo.nombre, a: dest.id, aNombre: dest.nombre, en, visto: false, origenId: actual.id, nombreOriginal: actual.nombre }],
-    };
-    await db.guardar("actividades", copia);
-    for (const x of await db.todos("asistencias", "actividadId", id)) {
-      await db.guardar("asistencias", { ...x, id: db.uid(), actividadId: copia.id, creado: undefined });
-    }
-    await db.guardar("actividades", { ...actual, compartidaCon: [...(actual.compartidaCon || []), { a: dest.id, aNombre: dest.nombre, en, copiaId: copia.id }] });
-    aviso(`Copia enviada a ${dest.nombre}`);
+    await db.guardar("actividades", { ...actual, compartidaCon: [...(actual.compartidaCon || []), { id: db.uid(), de: yo.id, deNombre: yo.nombre, a: dest.id, aNombre: dest.nombre, en: Date.now(), estado: "pendiente" }] });
+    aviso(`Se compartió con ${dest.nombre}. Ella aceptará la copia en su dispositivo`);
     ir(volver);
   }));
 }
@@ -145,6 +176,7 @@ async function lista({ yo, pintar }, curso = false) {
   const tipos = [...new Set(acts.map(a => a.tipo))].sort((x, y) => x.localeCompare(y, "es")).map(t => [t, t]);
   const facilitadoras = [...new Map(acts.map(a => [a.facilitadoraId, a.facilitadora]))].sort((x, y) => x[1].localeCompare(y[1], "es"));
 
+  const avisoEnvios = curso ? "" : await seccionEnvios(yo);
   const c = pintar(N.titulo, `
     ${tarjetas(resumen, { etiqueta: `Resumen de ${N.varios}` })}
     <div class="toolbar">
@@ -155,6 +187,7 @@ async function lista({ yo, pintar }, curso = false) {
       <p class="hint" id="cuenta">${plural(acts.length, N.uno, N.varios)} · ${plural(abiertas, N.abierto, N.abiertos)}${proximos.length ? ` · ${curso ? plural(proximos.length, "programado", "programados") : plural(proximos.length, "programada", "programadas")}` : ""}</p>
       ${!administra ? `<p class="hint">Consulta de cursos y capacitaciones. La Coordinadora los administra; usted puede capturar datos y evidencias en un curso abierto.</p>` : ""}
     </div>
+    ${avisoEnvios}
     ${proximos.length ? `<div class="aviso-proximo" role="status"><b>${curso ? "Próximo curso" : "Próxima actividad"} ${esc(cuandoEs(proximos[0].fecha))}:</b> ${esc(proximos[0].nombre)}, ${esc(fechaLarga(proximos[0].fecha))}${proximos[0].horaInicio ? ` a las ${esc(proximos[0].horaInicio)}` : ""}.</div>` : ""}
     ${muchas ? `<div class="filters" id="filtros" hidden>
       <div class="field"><label for="f-mes">Mes</label><select id="f-mes" data-filtro="mes"><option value="">Todos</option>${opciones(meses, filtros.mes)}</select></div>
@@ -189,6 +222,7 @@ async function lista({ yo, pintar }, curso = false) {
     $("#sinResultados", c).hidden = n > 0;
     panelFiltros?.contar(Object.values(filtros).filter(Boolean).length);
   }
+  if (!curso) await conectarEnvios(c, yo, () => lista({ yo, pintar }, curso));
   const panelFiltros = conectarFiltros(c);
   if (muchas) $("#lista", c).insertAdjacentHTML("afterend", `<div class="empty" id="sinResultados" hidden><b>Ninguna actividad coincide.</b><p>Modifique la búsqueda o los filtros.</p></div>`);
   buscar?.addEventListener("input", filtrar);
@@ -418,7 +452,6 @@ async function detalle({ yo, pintar, ir }, id) {
         ${curso ? `<div class="largo"><dt>Instructora</dt><dd>${esc(a.instructora)}</dd></div><div><dt>Duración</dt><dd>${esc(a.horas)} ${a.horas === 1 ? "hora" : "horas"}</dd></div>` : `<div><dt>Tipo</dt><dd>${esc(a.tipo)}</dd></div>`}
       </dl>
     </section>
-    ${avisoRecibida(a, yo)}
     <div class="actions-bar">
       ${editable ? `<a class="btn primary" href="#/actividad/${esc(a.id)}/registrar">${icono("mas2")}Registrar asistente</a>` : ""}
       ${botonIcono("formato", "Formato", { href: `#/actividad/${a.id}/formato` })}
@@ -471,7 +504,6 @@ async function detalle({ yo, pintar, ir }, id) {
   campoNotas.addEventListener("input", () => { $("#estadoNotas", c).textContent = ""; });
   conectarMenus(c);
   $("#compartir", c)?.addEventListener("click", () => ir(`#/actividad/${a.id}/compartir`));
-  conectarAvisoRecibida(c, a, yo, () => detalle({ yo, pintar, ir }, id));
 
   const cerrar = $("#cerrar", c);
   if (cerrar) dobleToque(cerrar, sinFirma ? `Hay ${sinFirma} sin firma. Toque nuevamente para cerrar` : "Toque nuevamente para cerrar", async () => {
