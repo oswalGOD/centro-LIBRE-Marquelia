@@ -42,7 +42,7 @@ function avisoRecibida(a, yo) {
   if (!h || h.a !== yo.id || h.visto || a.facilitadoraId !== yo.id) return "";
   return `<section class="panel stack" id="recibida">
     <div><h2 class="h3">Copia recibida de ${esc(h.deNombre)}</h2>
-      <p class="hint">Usted figura como facilitadora y ya cuenta con la lista de asistentes, para que reúna sus propias firmas. Si lo desea, puede cambiarle el nombre a la actividad; es opcional.</p></div>
+      <p class="hint">Usted figura como facilitadora y ya cuenta con la lista de asistentes y sus firmas. Si lo desea, puede cambiarle el nombre a la actividad; es opcional.</p></div>
     <div class="field"><label for="r-nombre">Nombre de la actividad</label><input id="r-nombre" value="${esc(a.nombre)}" maxlength="150"></div>
     <div id="err-r"></div>
     <div class="actions-bar">
@@ -78,7 +78,7 @@ function historialCompartida(a) {
     ...envios.map(h => `${fechaHora(h.en)}: copia compartida con ${h.aNombre}.`),
   ];
   return `<section class="panel stack"><div><h2 class="h3">Historial de la actividad compartida</h2>
-    <p class="hint">Cada perfil lleva su propia copia, con sus firmas y fotografías.</p></div>
+    <p class="hint">Cada perfil lleva su propia copia (las fotografías no se copian).</p></div>
     <ul class="hint" style="margin:0;padding-left:1.1em">${items.map(t => `<li>${esc(t)}</li>`).join("")}</ul></section>`;
 }
 
@@ -91,7 +91,7 @@ async function compartir({ yo, pintar, ir }, id) {
   const volver = `#/actividad/${id}`;
   const c = pintar("Compartir actividad", `
     <section class="panel stack">
-      <div class="card-head"><p class="hint">Se enviará al perfil elegido una copia de «${esc(a.nombre)}» (${esc(a.folio)}) con ${plural(asis, "asistente", "asistentes")}, sin firmas ni fotografías, para que reúna las suyas. Figurará como facilitadora y podrá cambiarle el nombre si lo desea. Su actividad no cambia.</p>
+      <div class="card-head"><p class="hint">Se enviará al perfil elegido una copia de «${esc(a.nombre)}» (${esc(a.folio)}) con ${plural(asis, "asistente", "asistentes")} y sus firmas, sin fotografías. Figurará como facilitadora y podrá cambiarle el nombre si lo desea. Su actividad no cambia.</p>
         <span class="icon-row">${botonIcono("salir", "Cancelar", { href: volver, clase: "quieto" })}</span></div>
       ${perfiles.length ? `<div class="field"><label for="c-perfil">Compartir con</label>
         <select id="c-perfil"><option value="">Seleccione un perfil</option>${perfiles.map(u => `<option value="${esc(u.id)}">${esc(u.nombre)} · ${esc(u.rol)}</option>`).join("")}</select></div>` : `<div class="empty"><b>No hay otros perfiles activos.</b><p>Cree o active otro perfil en Perfiles.</p></div>`}
@@ -112,8 +112,7 @@ async function compartir({ yo, pintar, ir }, id) {
     };
     await db.guardar("actividades", copia);
     for (const x of await db.todos("asistencias", "actividadId", id)) {
-      const { firma, sinFirma, ...resto } = x;
-      await db.guardar("asistencias", { ...resto, id: db.uid(), actividadId: copia.id, creado: undefined });
+      await db.guardar("asistencias", { ...x, id: db.uid(), actividadId: copia.id, creado: undefined });
     }
     await db.guardar("actividades", { ...actual, compartidaCon: [...(actual.compartidaCon || []), { a: dest.id, aNombre: dest.nombre, en, copiaId: copia.id }] });
     aviso(`Copia enviada a ${dest.nombre}`);
