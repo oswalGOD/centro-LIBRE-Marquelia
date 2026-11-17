@@ -459,6 +459,9 @@ body.con-camara { overflow: hidden; }
 .camara-info { position: absolute; top: 8px; left: 8px; right: 8px; display: grid; gap: 4px; justify-items: start; pointer-events: none; }
 .camara-info p { margin: 0; padding: 3px 10px; border-radius: 999px; background: rgba(0, 0, 0, .6); color: #fff; font-size: .85rem; font-weight: 700; }
 .camara-info p:empty { display: none; }
+.camara-lente { pointer-events: auto; margin: 0; padding: 6px 12px; min-height: 36px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, .6); background: rgba(0, 0, 0, .6); color: #fff; font: inherit; font-size: .85rem; font-weight: 700; cursor: pointer; }
+.camara-lente[hidden] { display: none; }
+.camara-lente:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
 .camara-barra { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px max(24px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); background: #000; }
 .camara-icono { width: 56px; height: 56px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, .18); color: #fff; display: grid; place-items: center; cursor: pointer; }
 .camara-icono:focus-visible, .camara-obturador:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }

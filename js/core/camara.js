@@ -4,6 +4,7 @@
 // La vista previa muestra exactamente el encuadre que se guardará.
 
 import { esc } from "./ui.js";
+import { leerPreferida, guardarPreferida, listarTraseras, abrirFlujo, idDelFlujo, pareceNegra, siguiente } from "./camaras.js";
 
 export const ANCHO = 1600;
 export const ALTO = 1200;
@@ -69,20 +70,22 @@ export function abrirCamara(alTomar, titulo = "Tomar fotografías") {
         </div>
         <div class="camara-info">
           <p class="camara-cuenta" aria-live="polite"></p>
+          <button type="button" class="camara-lente" data-lente hidden>Cambiar cámara</button>
           <p class="camara-aviso" role="status">Encuadre 4:3. Se guarda lo que se ve en el recuadro.</p>
         </div>
       </div>
       <div class="camara-barra">
-        <button type="button" class="camara-icono" data-girar aria-label="Cambiar cámara" title="Cambiar cámara">${ICONO_GIRAR}</button>
+        <button type="button" class="camara-icono" data-girar aria-label="Cambiar entre cámara trasera y frontal" title="Cámara trasera o frontal">${ICONO_GIRAR}</button>
         <button type="button" class="camara-obturador" data-tomar aria-label="Tomar foto" title="Tomar foto"><span>${ICONO_FOTO}</span></button>
         <button type="button" class="camara-icono" data-listo aria-label="Listo" title="Listo">${ICONO_LISTO}</button>
       </div>`;
     document.body.append(capa);
     document.body.classList.add("con-camara");
     const q = s => capa.querySelector(s);
-    const video = q("video"), tomar = q("[data-tomar]"), girar = q("[data-girar]"), aviso = q(".camara-aviso"), cuenta = q(".camara-cuenta");
+    const video = q("video"), tomar = q("[data-tomar]"), girar = q("[data-girar]"), lente = q("[data-lente]"), aviso = q(".camara-aviso"), cuenta = q(".camara-cuenta");
     girar.style.visibility = "hidden";
-    let flujo = null, modo = "environment", n = 0, ocupada = false, intento = 0;
+    let flujo = null, modo = "environment", n = 0, ocupada = false, intento = 0, idTrasera = leerPreferida(), traseras = [];
+    const AVISO = aviso.textContent;
 
     // Con el giro automático activo, el orden de los botones sigue a la mano: al girar a la izquierda, el de la izquierda queda abajo
     // En iPhone/iPad (Safari) el signo del ángulo es el contrario al de Android
@@ -102,6 +105,7 @@ export function abrirCamara(alTomar, titulo = "Tomar fotografías") {
       q(".camara-visor").hidden = true;
       tomar.hidden = true;
       girar.hidden = true;
+      lente.hidden = true;
       aviso.textContent = mensaje;
     };
     async function iniciar() {
@@ -109,13 +113,31 @@ export function abrirCamara(alTomar, titulo = "Tomar fotografías") {
       detener();
       if (!navigator.mediaDevices?.getUserMedia) return mostrarError("Este navegador no permite usar la cámara dentro de la aplicación.");
       try {
-        const f = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: modo }, width: { ideal: ANCHO }, height: { ideal: ALTO } } });
+        const r = await abrirFlujo({ id: modo === "environment" ? idTrasera : "", modo, ancho: ANCHO, alto: ALTO });
+        const f = r.flujo;
         if (mio !== intento) { f.getTracks().forEach(t => t.stop()); return; } // llegó otro reinicio (p. ej. al girar el equipo)
         flujo = f;
         video.srcObject = flujo;
         await video.play().catch(() => {});
         const camaras = (await navigator.mediaDevices.enumerateDevices().catch(() => [])).filter(d => d.kind === "videoinput");
         girar.style.visibility = camaras.length < 2 ? "hidden" : "visible";
+        aviso.textContent = AVISO;
+        traseras = modo === "environment" ? await listarTraseras() : [];
+        if (mio !== intento) return;
+        const usada = idDelFlujo(flujo);
+        if (modo === "environment") {
+          if (r.fallo) { idTrasera = ""; guardarPreferida(""); aviso.textContent = "Esa cámara no respondió; se usa la predeterminada. Pruebe con el botón de lente."; }
+          else if (usada) idTrasera = usada;
+        }
+        const actual = traseras.find(c => c.id === usada);
+        lente.hidden = traseras.length < 2;
+        if (actual) lente.textContent = `Lente: ${actual.nombre}`;
+        // Imagen negra: lente dañado, tapado o sin señal
+        setTimeout(() => {
+          if (mio === intento && flujo && pareceNegra(video)) aviso.textContent = traseras.length > 1
+            ? "Este lente no muestra imagen (puede estar tapado o dañado). Toque el botón de lente para probar otro."
+            : "La cámara no muestra imagen. Verifique que no esté tapada.";
+        }, 1200);
       } catch (e) {
         if (mio !== intento) return;
         mostrarError(e?.name === "NotAllowedError"
@@ -147,7 +169,14 @@ export function abrirCamara(alTomar, titulo = "Tomar fotografías") {
       if (!video.videoWidth) throw new Error("La cámara aún no está lista. Espere un momento e intente de nuevo.");
       return recortar43(video, video.videoWidth, video.videoHeight);
     });
-    girar.onclick = () => { modo = modo === "environment" ? "user" : "environment"; iniciar(); };
+    girar.onclick = () => { modo = modo === "environment" ? "user" : "environment"; lente.hidden = true; iniciar(); };
+    lente.onclick = () => {
+      const otra = siguiente(traseras, idTrasera);
+      if (!otra) return;
+      idTrasera = otra.id;
+      guardarPreferida(idTrasera);
+      iniciar();
+    };
 
     const cerrar = () => {
       intento++;
