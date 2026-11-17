@@ -1,14 +1,20 @@
 // Reglas de acceso por perfil.
 // - Coordinadora: ve y administra todo (crear, editar, programar, cancelar, eliminar).
-// - Psicóloga y Abogada: ven las actividades que crearon o que facilitan, y administran esas actividades.
+// - Psicóloga y Abogada: ven las actividades que crearon, que facilitan o que compartieron con otro perfil, y administran esas actividades.
 // - Cursos y capacitaciones (curso: true): los ven todos los perfiles, pero solo la Coordinadora los
 //   administra. Los demás perfiles únicamente consultan, y pueden usar el modo captura de datos y
 //   capturar evidencias fotográficas mientras el curso esté abierto.
 
 import { esCoordinadora } from "./auth.js";
 
+/** Perfiles que compartieron la actividad conservan su acceso (ver y editar), igual que quien la creó. */
+export const compartioActividad = (yo, actividad) => (actividad.compartidas || []).some(h => h.de === yo.id);
+
 export const puedeVer = (yo, actividad) =>
-  esCoordinadora(yo) || Boolean(actividad.curso) || actividad.creadaPor === yo.id || actividad.facilitadoraId === yo.id;
+  esCoordinadora(yo) || Boolean(actividad.curso) || actividad.creadaPor === yo.id || actividad.facilitadoraId === yo.id || compartioActividad(yo, actividad);
+
+/** Compartir una lista de asistencia con otro perfil: quien la ve, salvo cursos (los administra la Coordinadora). */
+export const puedeCompartir = (yo, actividad) => !actividad.curso && !actividad.cancelado && puedeVer(yo, actividad);
 
 /** Editar datos, registrar asistentes a mano, programar, cancelar o cerrar. */
 export const puedeEditar = (yo, actividad) =>

@@ -3,7 +3,7 @@
 import * as db from "../core/db.js";
 import { TIPOS_ACTIVIDAD, TIPOS_RETIRADOS, hoy, fechaLarga, mesCorto, edad, rangoDe, etiquetaGrupo, normalizar, minutosEntre, duracion } from "../core/catalogos.js";
 import { esCoordinadora } from "../core/auth.js";
-import { puedeVer, puedeEditar, puedeCapturar, puedeAdministrarCursos } from "../core/permisos.js";
+import { puedeVer, puedeEditar, puedeCapturar, puedeAdministrarCursos, puedeCompartir } from "../core/permisos.js";
 import { $, $$, esc, aviso, errores, leerCampos, dobleToque, plural, unaVez } from "../core/ui.js";
 import { captura } from "./captura.js";
 import { formato } from "./formato.js";
@@ -31,6 +31,80 @@ function chipEstado(a) {
     : e === "programada" ? `<span class="chip prog">${esProximo(a) ? (curso ? "Programado" : "Programada") : (curso ? "Programado · vencido" : "Programada · vencida")}</span>`
     : e === "cerrada" ? `<span class="chip">${curso ? "Cerrado" : "Cerrada"}</span>`
     : `<span class="chip ok">${curso ? "Abierto" : "Abierta"}</span>`;
+}
+
+
+const fechaHora = ms => new Date(ms).toLocaleString("es-MX", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+
+/** Aviso para el perfil que recibió la actividad: nombre opcionalmente editable, solo mientras no lo resuelva. */
+function avisoRecibida(a, yo) {
+  const h = (a.compartidas || []).at(-1);
+  if (!h || h.a !== yo.id || h.visto || a.facilitadoraId !== yo.id) return "";
+  return `<section class="panel stack" id="recibida">
+    <div><h2 class="h3">Actividad compartida por ${esc(h.deNombre)}</h2>
+      <p class="hint">Usted figura como facilitadora. Si lo desea, puede cambiarle el nombre a la actividad; es opcional.</p></div>
+    <div class="field"><label for="r-nombre">Nombre de la actividad</label><input id="r-nombre" value="${esc(a.nombre)}" maxlength="150"></div>
+    <div id="err-r"></div>
+    <div class="actions-bar">
+      <button type="button" class="btn primary" id="r-guardar">Conservar el nombre</button>
+    </div></section>`;
+}
+
+function conectarAvisoRecibida(c, a, yo, recargar) {
+  const campo = $("#r-nombre", c), boton = $("#r-guardar", c);
+  if (!campo) return;
+  const etiqueta = () => { boton.textContent = campo.value.trim() && campo.value.trim() !== a.nombre ? "Guardar nuevo nombre" : "Conservar el nombre"; };
+  campo.addEventListener("input", etiqueta);
+  boton.onclick = unaVez(async () => {
+    const nombre = campo.value.trim().replace(/\s+/g, " ");
+    if (!nombre) return errores($("#err-r", c), ["Ingrese el nombre de la actividad o conserve el actual."]);
+    const actual = await db.uno("actividades", a.id);
+    const compartidas = [...actual.compartidas];
+    const h = { ...compartidas.at(-1), visto: true, vistoEn: Date.now() };
+    if (nombre !== actual.nombre) h.nombreAnterior = actual.nombre;
+    compartidas[compartidas.length - 1] = h;
+    await db.guardar("actividades", { ...actual, nombre, compartidas });
+    aviso(nombre !== actual.nombre ? "Nombre actualizado" : "Se conservó el nombre de la actividad");
+    recargar();
+  });
+}
+
+function historialCompartida(a) {
+  const hs = a.compartidas || [];
+  if (!hs.length) return "";
+  return `<section class="panel stack"><div><h2 class="h3">Historial de la actividad compartida</h2>
+    <p class="hint">Quien la compartió conserva su acceso.</p></div>
+    <ul class="hint" style="margin:0;padding-left:1.1em">${hs.map(h => `<li>${esc(fechaHora(h.en))}: ${esc(h.deNombre)} la compartió con ${esc(h.aNombre)}${h.nombreAnterior ? `. ${esc(h.aNombre)} cambió el nombre de «${esc(h.nombreAnterior)}» a «${esc(a.nombre)}»` : ""}.</li>`).join("")}</ul></section>`;
+}
+
+/** Pantalla para compartir una actividad (lista de asistencia) con otro perfil. */
+async function compartir({ yo, pintar, ir }, id) {
+  const a = await db.uno("actividades", id);
+  if (!a || !puedeCompartir(yo, a)) return ir(id ? `#/actividad/${id}` : "#/asistencia");
+  const perfiles = (await db.todos("perfiles")).filter(u => u.activa && u.id !== yo.id && u.id !== a.facilitadoraId);
+  const asis = (await db.todos("asistencias", "actividadId", id)).length;
+  const volver = `#/actividad/${id}`;
+  const c = pintar("Compartir actividad", `
+    <section class="panel stack">
+      <div class="card-head"><p class="hint">Se compartirá «${esc(a.nombre)}» (${esc(a.folio)}) con ${plural(asis, "asistente", "asistentes")} y sus firmas. El perfil elegido pasará a figurar como facilitadora y podrá cambiarle el nombre si lo desea. Usted conservará el acceso.</p>
+        <span class="icon-row">${botonIcono("salir", "Cancelar", { href: volver, clase: "quieto" })}</span></div>
+      ${perfiles.length ? `<div class="field"><label for="c-perfil">Compartir con</label>
+        <select id="c-perfil"><option value="">Seleccione un perfil</option>${perfiles.map(u => `<option value="${esc(u.id)}">${esc(u.nombre)} · ${esc(u.rol)}</option>`).join("")}</select></div>` : `<div class="empty"><b>No hay otros perfiles activos.</b><p>Cree o active otro perfil en Perfiles.</p></div>`}
+      <div id="err"></div>
+    </section>
+    ${perfiles.length ? `<div class="barra-fija"><button class="btn primary" id="enviar">Compartir actividad</button></div>` : ""}`, { atras: volver });
+  $("#enviar", c)?.addEventListener("click", unaVez(async () => {
+    const dest = perfiles.find(u => u.id === $("#c-perfil", c).value);
+    if (!dest) return errores($("#err", c), ["Seleccione el perfil con el que se compartirá la actividad."]);
+    const actual = await db.uno("actividades", id);
+    await db.guardar("actividades", {
+      ...actual,
+      facilitadoraId: dest.id, facilitadora: dest.nombre, puesto: dest.rol,
+      compartidas: [...(actual.compartidas || []), { de: yo.id, deNombre: yo.nombre, a: dest.id, aNombre: dest.nombre, en: Date.now(), visto: false }],
+    });
+    aviso(`Actividad compartida con ${dest.nombre}`);
+    ir(volver);
+  }));
 }
 
 async function lista({ yo, pintar }, curso = false) {
@@ -80,7 +154,7 @@ async function lista({ yo, pintar }, curso = false) {
         data-mes="${a.fecha.slice(0, 7)}" data-tipo="${esc(a.tipo)}" data-facilitadora-id="${esc(a.facilitadoraId)}" data-estado="${estadoDe(a)}">
         <span class="date"><b>${Number(a.fecha.slice(8, 10))}</b><small>${mesCorto(a.fecha)}</small></span>
         <span class="body"><span class="name">${esc(a.nombre)}</span>
-          <span class="meta"><span>${esc(a.folio)}</span><span>${esc(curso ? `${a.horas} h` : a.tipo)}</span>${a.programado && a.horaInicio ? `<span>${esc(a.horaInicio)}</span>` : ""}<span>${esc(a.lugar)}</span>${esCoordinadora(yo) ? `<span>${esc(a.facilitadora)}</span>` : ""}</span></span>
+          <span class="meta"><span>${esc(a.folio)}</span><span>${esc(curso ? `${a.horas} h` : a.tipo)}</span>${a.programado && a.horaInicio ? `<span>${esc(a.horaInicio)}</span>` : ""}<span>${esc(a.lugar)}</span>${esCoordinadora(yo) || a.compartidas?.length ? `<span>${esc(a.facilitadora)}</span>` : ""}${a.compartidas?.length ? `<span class="chip">Compartida</span>` : ""}</span></span>
         <span class="end"><span class="big">${cuenta(a.id)}</span><small>asistentes</small>
           ${chipEstado(a)}</span>
       </a>`).join("")}</div>`
@@ -210,6 +284,7 @@ async function detallePrevio({ yo, pintar, ir }, a) {
   const editable = puedeEditar(yo, a);
   const vencido = !cancelado && a.fecha < hoy();
   const opcionesMas = [
+    ...(puedeCompartir(yo, a) ? [{ id: "compartir", icono: "compartir", texto: "Compartir con otro perfil" }] : []),
     ...(!cancelado && editable ? [{ id: "cancelar", icono: "salir", texto: sust.Cancelar, clase: "danger" }] : []),
     ...(coord ? [{ id: "eliminar", icono: "eliminar", texto: sust.Eliminar, clase: "danger" }] : []),
   ];
@@ -243,6 +318,7 @@ async function detallePrevio({ yo, pintar, ir }, a) {
       : `<button type="button" class="btn primary" id="iniciar">${icono("activar")}Iniciar ${curso ? "curso" : "actividad"}</button>`}</div>` : ""}
   `, { atras: listaDe(a) });
   conectarMenus(c);
+  $("#compartir", c)?.addEventListener("click", () => ir(`#/actividad/${a.id}/compartir`));
   const actual = () => db.uno("actividades", a.id);
   // Se entrega en su propio toque: iOS exige que compartir ocurra directamente tras un toque del usuario.
   $("#calendario", c)?.addEventListener("click", async () => {
@@ -306,6 +382,7 @@ async function detalle({ yo, pintar, ir }, id) {
   const capturable = puedeCapturar(yo, a);
   const administra = !curso || puedeAdministrarCursos(yo); // en los cursos solo la Coordinadora administra
   const opcionesMas = [
+    ...(puedeCompartir(yo, a) ? [{ id: "compartir", icono: "compartir", texto: "Compartir con otro perfil" }] : []),
     ...(a.estado === "cerrada" && coord ? [{ id: "reabrir", icono: "reabrir", texto: "Reabrir actividad" }] : []),
     ...(coord ? [{ id: "eliminar", icono: "eliminar", texto: "Eliminar actividad", clase: "danger" }] : []),
   ];
@@ -328,6 +405,7 @@ async function detalle({ yo, pintar, ir }, id) {
         ${curso ? `<div class="largo"><dt>Instructora</dt><dd>${esc(a.instructora)}</dd></div><div><dt>Duración</dt><dd>${esc(a.horas)} ${a.horas === 1 ? "hora" : "horas"}</dd></div>` : `<div><dt>Tipo</dt><dd>${esc(a.tipo)}</dd></div>`}
       </dl>
     </section>
+    ${avisoRecibida(a, yo)}
     <div class="actions-bar">
       ${editable ? `<a class="btn primary" href="#/actividad/${esc(a.id)}/registrar">${icono("mas2")}Registrar asistente</a>` : ""}
       ${botonIcono("formato", "Formato", { href: `#/actividad/${a.id}/formato` })}
@@ -347,6 +425,7 @@ async function detalle({ yo, pintar, ir }, id) {
       }).join("")}</div>` : `<div class="empty"><b>Aún no hay asistentes.</b><p>${editable ? "Seleccione “Registrar asistente” para capturar a la primera persona. Si ya asistió antes, al ingresar su CURP se completarán sus datos." : capturable ? "Los asistentes se registran con el modo captura; la Coordinadora también puede registrarlos manualmente." : "Esta actividad está cerrada."}</p></div>`}
     </section>
     ${await seccionActividad(yo, a)}
+    ${historialCompartida(a)}
     <section class="panel stack">
       <div><h2 class="h3">Notas de la actividad</h2>
         <p class="hint">Temas tratados, acuerdos y observaciones. Se guardan solas al salir del cuadro y se imprimen en una hoja aparte, a continuación de la lista.</p></div>
@@ -378,6 +457,8 @@ async function detalle({ yo, pintar, ir }, id) {
   });
   campoNotas.addEventListener("input", () => { $("#estadoNotas", c).textContent = ""; });
   conectarMenus(c);
+  $("#compartir", c)?.addEventListener("click", () => ir(`#/actividad/${a.id}/compartir`));
+  conectarAvisoRecibida(c, a, yo, () => detalle({ yo, pintar, ir }, id));
 
   const cerrar = $("#cerrar", c);
   if (cerrar) dobleToque(cerrar, sinFirma ? `Hay ${sinFirma} sin firma. Toque nuevamente para cerrar` : "Toque nuevamente para cerrar", async () => {
@@ -413,6 +494,7 @@ export default {
     [new RegExp(`^#/actividad/${ID}/repetir$`), (ctx, origenId) => formulario(ctx, null, origenId)],
     [new RegExp(`^#/actividad/${ID}/registrar(?:/${ID})?$`), captura],
     [new RegExp(`^#/actividad/${ID}/formato$`), formato],
+    [new RegExp(`^#/actividad/${ID}/compartir$`), compartir],
     [new RegExp(`^#/actividad/${ID}$`), detalle],
   ],
 };
