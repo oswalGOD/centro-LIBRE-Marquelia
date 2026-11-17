@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <!-- Página pública: solo consulta una constancia por su código en Supabase. Sin datos sensibles. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src https://rukmlbjtahrsnjvysuru.supabase.co; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Verificar constancia · Centro LIBRE Marquelia</title>
+  <meta name="theme-color" content="#8c1d4f">
+  <link rel="icon" href="icons/favicon-32.png" sizes="32x32">
+  <link rel="stylesheet" href="css/fonts.css">
+  <link rel="stylesheet" href="css/verificar.css">
+</head>
+<body>
+  <main class="v">
+    <img class="logos" src="assets/logos.png" alt="Gobierno de México, Mujeres, PAIBIM, Centro LIBRE para las Mujeres, Gobierno de Guerrero, Secretaría de la Mujer">
+    <h1>Verificación de constancias</h1>
+    <p class="sub">Centro LIBRE Marquelia</p>
+    <form id="forma" class="forma" autocomplete="off">
+      <label for="codigo">Código de verificación</label>
+      <input id="codigo" name="codigo" inputmode="text" autocapitalize="characters" spellcheck="false" maxlength="14" placeholder="ABCD-EFGH-JKLM" aria-describedby="ayuda">
+      <p id="ayuda" class="ayuda">Aparece junto al código QR, al pie de la constancia.</p>
+      <button type="submit" id="boton">Verificar</button>
+    </form>
+    <section id="resultado" class="resultado" aria-live="polite" hidden></section>
+    <p class="pie">Esta página solo confirma el nombre, el curso, la fecha y la duración. No muestra ningún otro dato personal.</p>
+  </main>
+  <noscript>Esta página requiere que JavaScript esté activado.</noscript>
+  <script type="module" src="js/verificar.js"></script>
+</body>
+</html>
