@@ -115,14 +115,16 @@ export function conectarExportacion(c, hojasEl, nombrePDF, tituloImpresion) {
     }
     $("#bajarPDF", c).click();
   };
-  // iPad y iPhone: Safari imprime la página con su propio motor (omite imágenes de firma, ignora la orientación de @page).
-  // Por eso allí se imprime desde el PDF ya preparado: "Exportar PDF" > Imprimir, que respeta carta horizontal y las firmas.
+  // iPad, iPhone y Android: el diálogo de impresión del navegador móvil ignora la orientación de @page (sale en vertical)
+  // y, en iOS, omite además las imágenes de firma. Por eso allí se imprime desde el PDF ya preparado, que siempre es carta
+  // horizontal: "Exportar PDF" > Imprimir.
   const botonImprimir = $("#imprimir", c);
-  if (esIOS()) {
+  if (esMovil()) {
     botonImprimir.hidden = true;
     const aviso = document.createElement("p");
     aviso.className = "hint no-print";
     aviso.textContent = "En iPad y iPhone, para imprimir toque “Exportar PDF” y elija Imprimir en el menú; así se conservan las firmas y la hoja carta horizontal.";
+    if (esAndroid()) aviso.textContent = "En Android, para imprimir toque “Exportar PDF”, abra el archivo y elija Imprimir; así la hoja sale en carta horizontal. (El cuadro de impresión directo de Android no respeta la orientación.)";
     boton.closest(".toolbar")?.append(aviso);
     return;
   }
@@ -140,6 +142,11 @@ export function conectarExportacion(c, hojasEl, nombrePDF, tituloImpresion) {
     setTimeout(() => { document.title = titulo; estilo.remove(); }, 1000);
   };
 }
+
+/** Android (teléfonos y tabletas). */
+export const esAndroid = () => /Android/i.test(navigator.userAgent);
+/** Dispositivo móvil o tableta donde se imprime desde el PDF exportado. */
+export const esMovil = () => esIOS() || esAndroid();
 
 /** iPhone, iPad y iPadOS (que se anuncia como Mac con pantalla táctil). */
 export const esIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
