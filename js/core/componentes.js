@@ -91,3 +91,25 @@ export function conectarFiltros(raiz) {
     },
   };
 }
+
+/**
+ * Calendario de mes (regla 5.2): una cuadrícula de 7 columnas con un punto en los días ocupados.
+ * `opc`: { mes: "AAAA-MM", marcados: Set de "AAAA-MM-DD", elegido, hoy, onElegir(fecha) }.
+ * Los días son botones con etiqueta completa para lectores de pantalla.
+ */
+export function calendarioMes(caja, { mes, marcados, elegido, hoy, onElegir }) {
+  const [a, m] = mes.split("-").map(Number);
+  const f = (d) => `${a}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  const vacios = (new Date(a, m - 1, 1).getDay() + 6) % 7;
+  const dias = new Date(a, m, 0).getDate();
+  const nombre = d => new Date(`${f(d)}T12:00`).toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" });
+  const celdas = [
+    ...Array.from({ length: vacios }, () => `<span class="cal-vacio" aria-hidden="true"></span>`),
+    ...Array.from({ length: dias }, (_, i) => {
+      const fecha = f(i + 1), ocupado = marcados.has(fecha);
+      return `<button type="button" class="cal-dia${fecha === elegido ? " elegido" : ""}${fecha === hoy ? " hoy" : ""}${ocupado ? " ocupado" : ""}" data-fecha="${fecha}" aria-pressed="${fecha === elegido}" aria-label="${esc(nombre(i + 1))}${ocupado ? ", con citas" : ""}">${i + 1}</button>`;
+    }),
+  ];
+  caja.innerHTML = `<div class="cal-mes" role="group" aria-label="Calendario del mes">${["L", "M", "M", "J", "V", "S", "D"].map(d => `<span class="cal-sem" aria-hidden="true">${d}</span>`).join("")}${celdas.join("")}</div>`;
+  caja.querySelectorAll(".cal-dia").forEach(b => b.addEventListener("click", () => onElegir(b.dataset.fecha)));
+}
