@@ -20,7 +20,7 @@ export const folioConstancia = (act, numero) => `${act.folio}-${String(numero).p
 const firmaImg = f => `<span class="espacio">${f ? `<img src="${esc(f)}" alt="Firma">` : ""}</span>`;
 
 const verificacionHTML = x => x.codigoVerif ? `<div class="cons-verif"><img src="${esc(qrPNG(urlVerificacion(x.codigoVerif)))}" alt="Código QR de verificación">
-          <p>Verifique la autenticidad de esta constancia escaneando el código QR o en <b>${esc(new URL("verificar.html", document.baseURI).host)}</b><br>Código: <b class="mono">${esc(codigoLegible(x.codigoVerif))}</b></p></div>` : "";
+          <p>Verifique la autenticidad de esta constancia escaneando el código QR.<br>Código: <b class="mono">${esc(codigoLegible(x.codigoVerif))}</b></p></div>` : "";
 
 /** Una hoja de constancia por cada asistente de `filas` ({ x, numero }; x.codigoVerif activa el QR de verificación). `firmas` = { coordinadora, instructora } (imágenes opcionales; sin firma, la línea queda en blanco). */
 export function constanciasHTML(act, filas, coordinadora, firmas = {}) {
