@@ -102,6 +102,8 @@ assets/                 logotipos, marca de agua y aviso de privacidad del forma
 fonts/                  tipografías incluidas para funcionar sin internet
 ```
 
+Antes de crear o cambiar pantallas, lea las [reglas de diseño y lenguaje](docs/reglas-de-diseno.md).
+
 ### Agregar una función nueva
 
 1. Cree `js/modulos/mi-funcion.js` que exporte `{ menu, rutas }` (siga la estructura de `usuarias.js`).
