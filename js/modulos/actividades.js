@@ -41,8 +41,8 @@ function avisoRecibida(a, yo) {
   const h = (a.compartidas || []).at(-1);
   if (!h || h.a !== yo.id || h.visto || a.facilitadoraId !== yo.id) return "";
   return `<section class="panel stack" id="recibida">
-    <div><h2 class="h3">Actividad compartida por ${esc(h.deNombre)}</h2>
-      <p class="hint">Usted figura como facilitadora. Si lo desea, puede cambiarle el nombre a la actividad; es opcional.</p></div>
+    <div><h2 class="h3">Copia recibida de ${esc(h.deNombre)}</h2>
+      <p class="hint">Usted figura como facilitadora y ya cuenta con la lista de asistentes, para que reúna sus propias firmas. Si lo desea, puede cambiarle el nombre a la actividad; es opcional.</p></div>
     <div class="field"><label for="r-nombre">Nombre de la actividad</label><input id="r-nombre" value="${esc(a.nombre)}" maxlength="150"></div>
     <div id="err-r"></div>
     <div class="actions-bar">
@@ -70,23 +70,28 @@ function conectarAvisoRecibida(c, a, yo, recargar) {
 }
 
 function historialCompartida(a) {
-  const hs = a.compartidas || [];
-  if (!hs.length) return "";
+  const origen = (a.compartidas || [])[0];
+  const envios = a.compartidaCon || [];
+  if (!origen && !envios.length) return "";
+  const items = [
+    ...(origen ? [`${fechaHora(origen.en)}: copia recibida de ${origen.deNombre}${origen.nombreOriginal ? ` (actividad «${origen.nombreOriginal}»)` : ""}${origen.nombreAnterior ? `; ${origen.aNombre} cambió el nombre a «${a.nombre}»` : ""}.`] : []),
+    ...envios.map(h => `${fechaHora(h.en)}: copia compartida con ${h.aNombre}.`),
+  ];
   return `<section class="panel stack"><div><h2 class="h3">Historial de la actividad compartida</h2>
-    <p class="hint">Quien la compartió conserva su acceso.</p></div>
-    <ul class="hint" style="margin:0;padding-left:1.1em">${hs.map(h => `<li>${esc(fechaHora(h.en))}: ${esc(h.deNombre)} la compartió con ${esc(h.aNombre)}${h.nombreAnterior ? `. ${esc(h.aNombre)} cambió el nombre de «${esc(h.nombreAnterior)}» a «${esc(a.nombre)}»` : ""}.</li>`).join("")}</ul></section>`;
+    <p class="hint">Cada perfil lleva su propia copia, con sus firmas y fotografías.</p></div>
+    <ul class="hint" style="margin:0;padding-left:1.1em">${items.map(t => `<li>${esc(t)}</li>`).join("")}</ul></section>`;
 }
 
 /** Pantalla para compartir una actividad (lista de asistencia) con otro perfil. */
 async function compartir({ yo, pintar, ir }, id) {
   const a = await db.uno("actividades", id);
   if (!a || !puedeCompartir(yo, a)) return ir(id ? `#/actividad/${id}` : "#/asistencia");
-  const perfiles = (await db.todos("perfiles")).filter(u => u.activa && u.id !== yo.id && u.id !== a.facilitadoraId);
+  const perfiles = (await db.todos("perfiles")).filter(u => u.activa && u.id !== yo.id);
   const asis = (await db.todos("asistencias", "actividadId", id)).length;
   const volver = `#/actividad/${id}`;
   const c = pintar("Compartir actividad", `
     <section class="panel stack">
-      <div class="card-head"><p class="hint">Se compartirá «${esc(a.nombre)}» (${esc(a.folio)}) con ${plural(asis, "asistente", "asistentes")} y sus firmas. El perfil elegido pasará a figurar como facilitadora y podrá cambiarle el nombre si lo desea. Usted conservará el acceso.</p>
+      <div class="card-head"><p class="hint">Se enviará al perfil elegido una copia de «${esc(a.nombre)}» (${esc(a.folio)}) con ${plural(asis, "asistente", "asistentes")}, sin firmas ni fotografías, para que reúna las suyas. Figurará como facilitadora y podrá cambiarle el nombre si lo desea. Su actividad no cambia.</p>
         <span class="icon-row">${botonIcono("salir", "Cancelar", { href: volver, clase: "quieto" })}</span></div>
       ${perfiles.length ? `<div class="field"><label for="c-perfil">Compartir con</label>
         <select id="c-perfil"><option value="">Seleccione un perfil</option>${perfiles.map(u => `<option value="${esc(u.id)}">${esc(u.nombre)} · ${esc(u.rol)}</option>`).join("")}</select></div>` : `<div class="empty"><b>No hay otros perfiles activos.</b><p>Cree o active otro perfil en Perfiles.</p></div>`}
@@ -97,12 +102,21 @@ async function compartir({ yo, pintar, ir }, id) {
     const dest = perfiles.find(u => u.id === $("#c-perfil", c).value);
     if (!dest) return errores($("#err", c), ["Seleccione el perfil con el que se compartirá la actividad."]);
     const actual = await db.uno("actividades", id);
-    await db.guardar("actividades", {
-      ...actual,
+    const en = Date.now();
+    const copia = {
+      id: db.uid(), folio: await db.siguienteFolio(actual.fecha), creadaPor: dest.id, estado: "abierta",
+      nombre: actual.nombre, fecha: actual.fecha, lugar: actual.lugar, tipo: actual.tipo,
+      horaInicio: actual.horaInicio || "", horaFin: actual.horaFin || "",
       facilitadoraId: dest.id, facilitadora: dest.nombre, puesto: dest.rol,
-      compartidas: [...(actual.compartidas || []), { de: yo.id, deNombre: yo.nombre, a: dest.id, aNombre: dest.nombre, en: Date.now(), visto: false }],
-    });
-    aviso(`Actividad compartida con ${dest.nombre}`);
+      compartidas: [{ de: yo.id, deNombre: yo.nombre, a: dest.id, aNombre: dest.nombre, en, visto: false, origenId: actual.id, nombreOriginal: actual.nombre }],
+    };
+    await db.guardar("actividades", copia);
+    for (const x of await db.todos("asistencias", "actividadId", id)) {
+      const { firma, sinFirma, ...resto } = x;
+      await db.guardar("asistencias", { ...resto, id: db.uid(), actividadId: copia.id, creado: undefined });
+    }
+    await db.guardar("actividades", { ...actual, compartidaCon: [...(actual.compartidaCon || []), { a: dest.id, aNombre: dest.nombre, en, copiaId: copia.id }] });
+    aviso(`Copia enviada a ${dest.nombre}`);
     ir(volver);
   }));
 }
@@ -154,7 +168,7 @@ async function lista({ yo, pintar }, curso = false) {
         data-mes="${a.fecha.slice(0, 7)}" data-tipo="${esc(a.tipo)}" data-facilitadora-id="${esc(a.facilitadoraId)}" data-estado="${estadoDe(a)}">
         <span class="date"><b>${Number(a.fecha.slice(8, 10))}</b><small>${mesCorto(a.fecha)}</small></span>
         <span class="body"><span class="name">${esc(a.nombre)}</span>
-          <span class="meta"><span>${esc(a.folio)}</span><span>${esc(curso ? `${a.horas} h` : a.tipo)}</span>${a.programado && a.horaInicio ? `<span>${esc(a.horaInicio)}</span>` : ""}<span>${esc(a.lugar)}</span>${esCoordinadora(yo) || a.compartidas?.length ? `<span>${esc(a.facilitadora)}</span>` : ""}${a.compartidas?.length ? `<span class="chip">Compartida</span>` : ""}</span></span>
+          <span class="meta"><span>${esc(a.folio)}</span><span>${esc(curso ? `${a.horas} h` : a.tipo)}</span>${a.programado && a.horaInicio ? `<span>${esc(a.horaInicio)}</span>` : ""}<span>${esc(a.lugar)}</span>${esCoordinadora(yo) ? `<span>${esc(a.facilitadora)}</span>` : ""}${a.compartidas?.length ? `<span class="chip">Recibida</span>` : ""}</span></span>
         <span class="end"><span class="big">${cuenta(a.id)}</span><small>asistentes</small>
           ${chipEstado(a)}</span>
       </a>`).join("")}</div>`
@@ -284,7 +298,7 @@ async function detallePrevio({ yo, pintar, ir }, a) {
   const editable = puedeEditar(yo, a);
   const vencido = !cancelado && a.fecha < hoy();
   const opcionesMas = [
-    ...(puedeCompartir(yo, a) ? [{ id: "compartir", icono: "compartir", texto: "Compartir con otro perfil" }] : []),
+    ...(puedeCompartir(yo, a) ? [{ id: "compartir", icono: "compartir", texto: "Compartir copia con otro perfil" }] : []),
     ...(!cancelado && editable ? [{ id: "cancelar", icono: "salir", texto: sust.Cancelar, clase: "danger" }] : []),
     ...(coord ? [{ id: "eliminar", icono: "eliminar", texto: sust.Eliminar, clase: "danger" }] : []),
   ];
@@ -382,7 +396,7 @@ async function detalle({ yo, pintar, ir }, id) {
   const capturable = puedeCapturar(yo, a);
   const administra = !curso || puedeAdministrarCursos(yo); // en los cursos solo la Coordinadora administra
   const opcionesMas = [
-    ...(puedeCompartir(yo, a) ? [{ id: "compartir", icono: "compartir", texto: "Compartir con otro perfil" }] : []),
+    ...(puedeCompartir(yo, a) ? [{ id: "compartir", icono: "compartir", texto: "Compartir copia con otro perfil" }] : []),
     ...(a.estado === "cerrada" && coord ? [{ id: "reabrir", icono: "reabrir", texto: "Reabrir actividad" }] : []),
     ...(coord ? [{ id: "eliminar", icono: "eliminar", texto: "Eliminar actividad", clase: "danger" }] : []),
   ];

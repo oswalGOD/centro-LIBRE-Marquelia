@@ -40,7 +40,7 @@ async function vista(ctx) {
       </div>
       <div id="err"></div>
       <div class="actions"><button class="btn primary" id="agregar">Agregar perfil</button></div>
-      <p class="hint">Cada perfil ingresa con su nombre y su PIN. La Psicóloga y la Abogada solo pueden ver las actividades que crean, facilitan o comparten con otro perfil; la Coordinadora puede ver todas.</p>
+      <p class="hint">Cada perfil ingresa con su nombre y su PIN. La Psicóloga y la Abogada solo pueden ver las actividades que crean o facilitan; la Coordinadora puede ver todas.</p>
     </section>
   `);
 
