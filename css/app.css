@@ -610,3 +610,11 @@ body.con-teclado-pin { padding-bottom: 320px; }
 .sheet.anexo2 .a2-pie img { display: block; width: 100%; height: auto; }
 .sheet.anexo2 .a2-pag { position: absolute; right: 0; bottom: 6px; font-size: 13px; }
 @media print { .sheet.anexo2 .a2-lista td img { width: auto; height: auto; max-height: 31px; max-width: 100%; } }
+
+.sheet.anexo2 .a2-firmas { margin-top: 26px; display: grid; gap: 14px; position: relative; z-index: 1; }
+.sheet.anexo2 .a2-firma { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.sheet.anexo2 .a2-espacio { height: 64px; display: flex; align-items: flex-end; justify-content: center; width: 100%; }
+.sheet.anexo2 .a2-espacio img { max-height: 62px; max-width: 320px; display: block; }
+.sheet.anexo2 .a2-linea { width: 100%; border-top: 2px solid var(--paper-ink); }
+.sheet.anexo2 .a2-rotulo { font-size: 17px; padding-top: 3px; }
+.sheet.anexo2 .a2-firma b { font-size: 12px; min-height: 15px; margin-top: 2px; }
