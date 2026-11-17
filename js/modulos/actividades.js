@@ -51,7 +51,7 @@ const etiquetaEnvio = e => e.estado === "aceptada" ? `aceptada por ${e.aNombre}`
  * El perfil que recibe crea la copia en su dispositivo (con su propio folio) y, si lo desea, le cambia el nombre.
  * Los ids de la copia salen del envío, así que aceptar desde dos dispositivos no la duplica.
  */
-async function aceptarEnvio(yo, a, e, nombre) {
+async function aceptarEnvio(yo, a, e, nombre, tipo) {
   const origen = await db.uno("actividades", a.id);
   const copiaId = `copia-${e.id}`;
   const previa = await db.uno("actividades", copiaId);
@@ -61,7 +61,8 @@ async function aceptarEnvio(yo, a, e, nombre) {
     facilitadoraId: yo.id, facilitadora: yo.nombre, puesto: nombreRol(yo.rol),
   };
   copia.nombre = nombre;
-  copia.compartidas = [{ de: e.de, deNombre: e.deNombre, a: yo.id, aNombre: yo.nombre, en: e.en, origenId: origen.id, nombreOriginal: origen.nombre, ...(nombre !== origen.nombre ? { nombreAnterior: origen.nombre } : {}) }];
+  copia.tipo = tipo;
+  copia.compartidas = [{ de: e.de, deNombre: e.deNombre, a: yo.id, aNombre: yo.nombre, en: e.en, origenId: origen.id, nombreOriginal: origen.nombre, ...(nombre !== origen.nombre ? { nombreAnterior: origen.nombre } : {}), ...(tipo !== origen.tipo ? { tipoAnterior: origen.tipo } : {}) }];
   await db.guardar("actividades", copia);
   const existentes = new Set((await db.todos("asistencias", "actividadId", copiaId)).map(x => x.id));
   for (const x of await db.todos("asistencias", "actividadId", origen.id)) {
@@ -83,11 +84,16 @@ async function seccionEnvios(yo) {
   const lista = await envios(yo);
   if (!lista.length) return "";
   const asis = await db.todos("asistencias");
+  const usados = (await db.todos("actividades")).map(x => x.tipo).filter(t => t && t !== TIPO_CURSO && !TIPOS_RETIRADOS.includes(t));
+  const tiposBase = [...new Set([...TIPOS_ACTIVIDAD, ...usados.sort((x, y) => x.localeCompare(y, "es"))])];
   return `<section class="panel stack" id="envios"><div><h2 class="h3">${lista.length === 1 ? "Actividad compartida con usted" : "Actividades compartidas con usted"}</h2>
-    <p class="hint">Al aceptar se crea su propia copia, con las mismas asistentes y sus firmas, y usted figura como facilitadora. Cambiar el nombre es opcional.</p></div>
+    <p class="hint">Al aceptar se crea su propia copia, con las mismas asistentes y sus firmas, y usted figura como facilitadora. Cambiar el nombre es opcional; confirme o cambie el tipo de actividad.</p></div>
     ${lista.map(({ a, e }, i) => `<div class="stack">
       <p><b>${esc(e.deNombre)}</b> le compartió «${esc(a.nombre)}» del ${esc(fechaLarga(a.fecha))} · ${esc(plural(asis.filter(x => x.actividadId === a.id).length, "asistente", "asistentes"))}.</p>
       <div class="field"><label for="e-nombre-${i}">Nombre de su actividad</label><input id="e-nombre-${i}" value="${esc(a.nombre)}" maxlength="150"></div>
+      <div class="field"><label for="e-tipo-${i}">Tipo de actividad</label>
+        <select id="e-tipo-${i}">${[...new Set([...tiposBase, a.tipo])].map(t => `<option ${t === a.tipo ? "selected" : ""}>${esc(t)}</option>`).join("")}<option value="${OTRO}">Otro tipo…</option></select>
+        <input id="e-tipoOtro-${i}" aria-label="Ingrese el tipo de actividad" placeholder="Ingrese el tipo de actividad" autocomplete="off" hidden></div>
       <div class="actions-bar"><button type="button" class="btn primary" data-aceptar="${i}">Aceptar copia</button><button type="button" class="btn" data-descartar="${i}">Descartar</button></div>
     </div>`).join("")}</section>`;
 }
@@ -96,12 +102,17 @@ async function conectarEnvios(c, yo, recargar) {
   const lista = await envios(yo);
   $$("[data-aceptar]", c).forEach(b => {
     const { a, e } = lista[b.dataset.aceptar];
-    const campo = $(`#e-nombre-${b.dataset.aceptar}`, c);
-    campo.addEventListener("input", () => { b.textContent = campo.value.trim() !== a.nombre ? "Aceptar con nuevo nombre" : "Aceptar copia"; });
+    const i = b.dataset.aceptar;
+    const campo = $(`#e-nombre-${i}`, c), tipo = $(`#e-tipo-${i}`, c), otro = $(`#e-tipoOtro-${i}`, c);
+    const etiqueta = () => { b.textContent = campo.value.trim() !== a.nombre || (tipo.value !== a.tipo && tipo.value !== OTRO) ? "Aceptar con cambios" : "Aceptar copia"; };
+    campo.addEventListener("input", etiqueta);
+    tipo.addEventListener("change", () => { otro.hidden = tipo.value !== OTRO; if (!otro.hidden) otro.focus(); etiqueta(); });
     b.onclick = unaVez(async () => {
       const nombre = campo.value.trim().replace(/\s+/g, " ");
+      const tipoElegido = tipo.value === OTRO ? otro.value.trim().replace(/\s+/g, " ") : tipo.value;
       if (!nombre) return aviso("Ingrese el nombre de la actividad.");
-      const copia = await aceptarEnvio(yo, a, e, nombre);
+      if (!tipoElegido) return aviso("Ingrese el tipo de actividad.");
+      const copia = await aceptarEnvio(yo, a, e, nombre, tipoElegido);
       aviso(`Copia creada con folio ${copia.folio}`);
       location.hash = `#/actividad/${copia.id}`;
     });
@@ -117,7 +128,7 @@ function historialCompartida(a) {
   const enviados = a.compartidaCon || [];
   if (!origen && !enviados.length) return "";
   const items = [
-    ...(origen ? [`${fechaHora(origen.en)}: copia recibida de ${origen.deNombre} (actividad «${origen.nombreOriginal}»)${origen.nombreAnterior ? `; ${origen.aNombre} cambió el nombre a «${a.nombre}»` : ""}.`] : []),
+    ...(origen ? [`${fechaHora(origen.en)}: copia recibida de ${origen.deNombre} (actividad «${origen.nombreOriginal}»)${origen.nombreAnterior ? `; ${origen.aNombre} cambió el nombre a «${a.nombre}»` : ""}${origen.tipoAnterior ? `; cambió el tipo de «${origen.tipoAnterior}» a «${a.tipo}»` : ""}.`] : []),
     ...enviados.map(h => `${fechaHora(h.en)}: compartida con ${h.aNombre}; ${etiquetaEnvio(h)}.`),
   ];
   return `<section class="panel stack"><div><h2 class="h3">Historial de la actividad compartida</h2>
