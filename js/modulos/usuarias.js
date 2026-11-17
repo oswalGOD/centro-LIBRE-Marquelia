@@ -9,9 +9,10 @@ import { esCoordinadora } from "../core/auth.js";
 import { puedeVer, puedeCrearCaso, puedeUsarCasos } from "../core/permisos.js";
 import { contarCasos } from "../core/casos.js";
 import { contarCanalizaciones } from "../core/canalizaciones.js";
+import { buscarDuplicadas } from "../core/duplicados.js";
 import { $, $$, esc, aviso, errores, dobleToque, plural, unaVez } from "../core/ui.js";
 
-async function lista({ pintar }) {
+async function lista({ yo, pintar }) {
   const usuarias = (await db.todos("usuarias")).sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
   const asis = await db.todos("asistencias");
   const visitas = id => asis.filter(x => x.usuariaId === id).length;
@@ -21,8 +22,10 @@ async function lista({ pintar }) {
   const creadaEnMes = p => p.creado && new Date(p.creado - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 7) === mes;
   const resumen = [[usuarias.length, "Registradas"], [usuarias.filter(creadaEnMes).length, "Nuevas", "gold"], [usuarias.filter(p => (veces.get(p.id) || 0) > 1).length, "Frecuentes", "ok"], [usuarias.filter(p => !p.curp).length, "Sin CURP", "warn"]];
 
+  const nDuplicadas = esCoordinadora(yo) ? buscarDuplicadas(usuarias).length : 0;
   const c = pintar("Usuarias", `
     ${tarjetas(resumen, { etiqueta: "Resumen de usuarias" })}
+    ${nDuplicadas ? `<a class="panel row" href="#/usuarias/duplicadas"><span class="body"><span class="name">Posibles duplicadas</span><span class="meta"><span>${plural(nDuplicadas, "pareja por revisar", "parejas por revisar")}</span></span></span><span class="chip warn">Revisar</span></a>` : ""}
     <div class="toolbar">
       <input type="search" id="buscar" class="search" placeholder="Buscar por nombre, CURP o teléfono" aria-label="Buscar usuaria">
       <p class="hint" id="conteo">${plural(usuarias.length, "usuaria", "usuarias")}</p>
