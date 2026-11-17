@@ -123,6 +123,9 @@ export function panelFirma(canvas, existente = "", { girado = () => false, conse
     e.preventDefault();
     if (!trazada && existente) limpiar();
     dibujando = trazada = true;
+    ctx.lineWidth = GROSOR; // el trazo anterior termina con la punta fina: se restablece el grosor completo
+    ctx.lineCap = ctx.lineJoin = "round";
+    ctx.strokeStyle = ctx.fillStyle = COLOR_FIRMA;
     ultimo = crudo = filtrado = medio = punto(e);
     lista = [ultimo];
     base = copiar();
@@ -158,6 +161,7 @@ export function panelFirma(canvas, existente = "", { girado = () => false, conse
       ctx.drawImage(base, 0, 0);
       ctx.restore();
       trazoConPuntas(ctx, lista, GROSOR, SUAVIZADO);
+      ctx.lineWidth = GROSOR;
     }
     filtrado = medio = crudo = base = null;
     lista = [];
