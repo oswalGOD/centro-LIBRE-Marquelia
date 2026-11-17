@@ -1,7 +1,7 @@
 // Service worker: guarda la app en el dispositivo para que abra y funcione sin internet.
 // Al publicar cambios, sube el número de VERSION para que los dispositivos se actualicen.
 
-const VERSION = "clm-v0.39.0";
+const VERSION = "clm-v0.40.0";
 const ARCHIVOS = [
   "./",
   "index.html",
@@ -54,6 +54,9 @@ const ARCHIVOS = [
   "js/modulos/desarrollo.js",
   "js/vendor/jsQR.min.js",
   "js/core/ine.js",
+  "js/core/qr.js",
+  "js/core/verificacion.js",
+  "js/vendor/qrcode.js",
   "js/vendor/tesseract/tesseract.min.js",
   "js/vendor/tesseract/worker.min.js",
   "js/vendor/tesseract/tesseract-core-simd-lstm.wasm.js",

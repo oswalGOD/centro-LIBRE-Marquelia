@@ -7,6 +7,8 @@ import { puedeVer } from "../core/permisos.js";
 import { pedirFirma, colorearFirma } from "../core/firma.js";
 import { $, $$, esc, plural, aviso } from "../core/ui.js";
 import { ajustarHojas, conectarExportacion } from "./formato.js";
+import { qrPNG } from "../core/qr.js";
+import { asegurarCodigos, codigoLegible, urlVerificacion, contarRegistradas } from "../core/verificacion.js";
 
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 const fechaLarga = f => `${Number(f.slice(8, 10))} de ${MESES[Number(f.slice(5, 7)) - 1]} de ${f.slice(0, 4)}`;
@@ -17,7 +19,10 @@ export const folioConstancia = (act, numero) => `${act.folio}-${String(numero).p
 
 const firmaImg = f => `<span class="espacio">${f ? `<img src="${esc(f)}" alt="Firma">` : ""}</span>`;
 
-/** Una hoja de constancia por cada asistente de `filas` ({ x, numero }). `firmas` = { coordinadora, instructora } (imágenes opcionales; sin firma, la línea queda en blanco). */
+const verificacionHTML = x => x.codigoVerif ? `<div class="cons-verif"><img src="${esc(qrPNG(urlVerificacion(x.codigoVerif)))}" alt="Código QR de verificación">
+          <p>Verifique la autenticidad de esta constancia escaneando el código QR o en <b>${esc(new URL("verificar.html", document.baseURI).host)}</b><br>Código: <b class="mono">${esc(codigoLegible(x.codigoVerif))}</b></p></div>` : "";
+
+/** Una hoja de constancia por cada asistente de `filas` ({ x, numero }; x.codigoVerif activa el QR de verificación). `firmas` = { coordinadora, instructora } (imágenes opcionales; sin firma, la línea queda en blanco). */
 export function constanciasHTML(act, filas, coordinadora, firmas = {}) {
   const horas = `${act.horas} ${Number(act.horas) === 1 ? "hora" : "horas"}`;
   return filas.map(({ x, numero }) => `<div class="sheet-wrap"><article class="sheet constancia" aria-label="Constancia de ${esc(x.datos.nombre)}">
@@ -36,6 +41,7 @@ export function constanciasHTML(act, filas, coordinadora, firmas = {}) {
           <div>${firmaImg(firmas.coordinadora)}<span class="linea"></span><b>${mayus(coordinadora)}</b><span>Coordinadora del Centro LIBRE Marquelia</span></div>
           <div>${firmaImg(firmas.instructora)}<span class="linea"></span><b>${mayus(act.instructora)}</b><span>Instructora</span></div>
         </div>
+        ${verificacionHTML(x)}
         <p class="cons-folio">Folio: ${esc(folioConstancia(act, numero))}</p>
       </div>
     </article></div>`).join("");
@@ -106,11 +112,17 @@ export async function constancias({ yo, pintar, ir }, id) {
   });
   if (!asis.length) return;
 
-  function vista() {
-    const sel = todas.filter(f => elegidas.has(f.x.id));
+  let version = 0;
+  async function vista() {
+    const mia = ++version;
     const cont = $("#vista", c);
     $$("[data-id]", c).forEach(k => (k.checked = elegidas.has(k.dataset.id)));
+    let sel = todas.filter(f => elegidas.has(f.x.id));
     if (!sel.length) { cont.innerHTML = `<p class="hint">Seleccione al menos una persona.</p>`; return; }
+    sel = await asegurarCodigos(sel); // cada constancia recibe su código de verificación la primera vez que se emite
+    if (mia !== version || !document.contains(cont)) return; // la selección cambió mientras se guardaban los códigos
+    const registradas = await contarRegistradas(sel, act);
+    if (mia !== version || !document.contains(cont)) return;
     cont.innerHTML = `
       <div class="toolbar no-print">
         <button class="btn primary" id="exportarPDF" disabled>Preparando PDF…</button>
@@ -118,6 +130,7 @@ export async function constancias({ yo, pintar, ir }, id) {
         ${botonIcono("formato", "Imprimir", { id: "imprimir" })}
         <p class="hint">${plural(sel.length, "constancia", "constancias")} · carta horizontal</p>
       </div>
+      <p class="hint no-print">${registradas === sel.length ? "Todas las constancias ya se pueden verificar en línea." : `${plural(sel.length - registradas, "constancia", "constancias")} se registrará${sel.length - registradas === 1 ? "" : "n"} para su verificación en línea al sincronizar (requiere conexión a internet). Mientras tanto, el código QR aún no mostrará resultado.`}</p>
       <div class="sheets" id="hojas">${constanciasHTML(act, sel, coordinadora, firmas)}</div>`;
     const hojasEl = $("#hojas", c);
     ajustarHojas(hojasEl);

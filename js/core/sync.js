@@ -10,6 +10,7 @@
 import * as db from "./db.js";
 import { SUPABASE_URL, SUPABASE_ANON, VERSION_APP } from "./config.js";
 import { anotar, leer as leerErrores } from "./bitacora.js";
+import { pendientesDeRegistro, marcarRegistradas } from "./verificacion.js";
 
 const SINCRONIZADOS = ["perfiles", "usuarias", "actividades", "asistencias", "evidencias", "casos", "notasCaso", "instituciones", "canalizaciones", "citas"];
 const LOTE = 200;
@@ -173,6 +174,25 @@ export async function descargarFoto(e) {
   } catch { return false; }
 }
 
+/* ---------- Verificación de constancias ----------
+   Registra (o anula) en la tabla pública las constancias con código. Va aparte de «registros»:
+   si falta supabase/verificacion.sql, lo demás se sincroniza igual y se avisa. */
+const FALTA_VERIFICACION = "Falta crear el registro de verificación de constancias en Supabase (supabase/verificacion.sql).";
+async function registrarConstancias() {
+  const { lista, subidas } = await pendientesDeRegistro();
+  for (let i = 0; i < lista.length; i += 100) {
+    const lote = lista.slice(i, i + 100);
+    try {
+      await api("rpc/publicar_constancias", { method: "POST", body: JSON.stringify({ p_filas: lote }) });
+    } catch (e) {
+      if (/publicar_constancias|schema cache|Falta crear la tabla/i.test(e.message)) throw new Error(FALTA_VERIFICACION);
+      throw e;
+    }
+    await marcarRegistradas(lote, subidas);
+  }
+  return lista.length;
+}
+
 /* ---------- Envío ---------- */
 // Lo que llegó de otro dispositivo se guarda con `_recibido` igual a su `actualizado`: así no se vuelve
 // a enviar (y no aparece como «por enviar»). Si aquí se cambia, `actualizado` cambia y sí se envía.
@@ -325,7 +345,7 @@ export async function actualizarEstado() {
   estado.conectada = !!nube;
   estado.cuenta = nube?.cuenta || "";
   estado.ultima = await db.leerMeta("ultimaSincronizacion");
-  estado.pendientes = nube ? (await porEnviar()).length + (await db.fotosPorEstado("subir")).length + (await db.fotosPorEstado("borrar")).length : 0;
+  estado.pendientes = nube ? (await porEnviar()).length + (await db.fotosPorEstado("subir")).length + (await db.fotosPorEstado("borrar")).length + (await pendientesDeRegistro()).lista.length : 0;
   estado.sinInternet = !navigator.onLine;
   estado.desfase = nube ? (await db.leerMeta("desfaseReloj")) || 0 : 0;
   publicar();
@@ -349,6 +369,7 @@ export function sincronizar() {
       try {
         await subirFotos();
         await limpiarFotos();
+        await registrarConstancias();
       } catch (e) {
         estado.error = e.message;
         if (navigator.onLine) anotar(e.message, "sincronización");
