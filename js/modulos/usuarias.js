@@ -28,7 +28,7 @@ async function lista({ pintar }) {
       <p class="hint" id="conteo">${plural(usuarias.length, "usuaria", "usuarias")}</p>
     </div>
     ${usuarias.length ? `<div class="list" id="lista">${usuarias.map(p => `
-      <a class="row" href="#/usuarias/${esc(p.id)}" data-buscar="${esc(normalizar(`${p.nombre} ${p.curp || ""} ${p.telefono}`))}">
+      <a class="row" href="#/usuarias/${esc(p.id)}" data-buscar="${esc(normalizar(`${p.nombre} ${p.curp || ""} ${p.telefono || ""}`))}">
         <span class="body"><span class="name">${esc(p.nombre)}</span>
           <span class="meta"><span class="mono">${esc(p.curp || "Sin CURP")}</span><span>${edad(p.fnac) ?? "?"} años</span><span>${esc(etiquetaSexo(p.sexo))}</span><span>${esc(etiquetaGrupo(p.grupo))}</span></span></span>
         <span class="end"><span class="big">${visitas(p.id)}</span><small>${visitas(p.id) === 1 ? "actividad" : "actividades"}</small></span>
@@ -60,7 +60,7 @@ async function editar({ yo, pintar, ir }, id) {
         <div class="field"><label for="p-fnac">Fecha de nacimiento</label><input id="p-fnac" type="date" value="${esc(p.fnac)}"></div>
         <div class="field"><label for="p-lugar">Lugar de nacimiento</label><input id="p-lugar" data-formato="capital" value="${esc(p.lugar)}"></div>
         <div class="field"><label for="p-ocupacion">Ocupación</label><input id="p-ocupacion" value="${esc(p.ocupacion)}"></div>
-        <div class="field"><label for="p-telefono">Teléfono</label><input id="p-telefono" type="tel" inputmode="tel" value="${esc(p.telefono)}"></div>
+        <div class="field"><label for="p-telefono">Teléfono (opcional)</label><input id="p-telefono" type="tel" inputmode="tel" value="${esc(p.telefono || "")}"></div>
         <div class="field"><label for="p-sexo">Sexo</label><select id="p-sexo">${SEXOS.map(([v, t]) => `<option value="${v}" ${p.sexo === v ? "selected" : ""}>${t}</option>`).join("")}</select></div>
         <div class="field"><label for="p-grupo">Grupo</label><select id="p-grupo">${GRUPOS.map(([v, t]) => `<option value="${v}" ${p.grupo === v ? "selected" : ""}>${v}) ${t}</option>`).join("")}</select></div>
       </div>
@@ -78,7 +78,7 @@ async function editar({ yo, pintar, ir }, id) {
     if (otra && otra.id !== p.id) e.push(`Esa CURP ya está registrada a nombre de ${otra.nombre}.`);
     if (v("nombre").split(/\s+/).length < 2) e.push("Ingrese el nombre completo con apellidos.");
     if (!v("fnac")) e.push("Falta la fecha de nacimiento.");
-    if (v("telefono").replace(/\D/g, "").length !== 10) e.push("El teléfono debe tener 10 dígitos.");
+    if (v("telefono").trim() && v("telefono").replace(/\D/g, "").length !== 10) e.push("El teléfono debe tener 10 dígitos o dejarse vacío.");
     errores($("#err", c), e);
     if (e.length) return;
     const nuevo = { ...p, nombre: aMayusculas(v("nombre")).trim(), fnac: v("fnac"), lugar: aCapital(v("lugar")).trim(), ocupacion: v("ocupacion"), telefono: v("telefono").replace(/\D/g, ""), sexo: v("sexo"), grupo: v("grupo") };
