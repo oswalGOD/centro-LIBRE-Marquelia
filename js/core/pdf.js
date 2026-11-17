@@ -70,7 +70,7 @@ function cargarImagen(src) {
 }
 
 /** Convierte cada .sheet de un contenedor en un PDF carta horizontal. Devuelve un Blob. */
-export async function hojasAPDF(contenedor, { escala = 2, calidad = 0.92 } = {}) {
+export async function hojasAPDF(contenedor, { escala = 3, calidad = 0.92 } = {}) {
   const hojas = [...contenedor.querySelectorAll(".sheet")];
   if (!hojas.length) throw new Error("No hay hojas para convertir");
   if (document.fonts?.ready) await document.fonts.ready;
@@ -126,6 +126,7 @@ export async function hojasAPDF(contenedor, { escala = 2, calidad = 0.92 } = {})
       ctx.save();
       ctx.beginPath(); ctx.rect(x * escala, y * escala, w * escala, h * escala); ctx.clip();
       ctx.imageSmoothingEnabled = !nitida;
+      ctx.imageSmoothingQuality = "high";
       ctx.drawImage(im, dx * escala, dy * escala, dw * escala, dh * escala);
       ctx.restore();
     }
