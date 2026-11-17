@@ -4,7 +4,8 @@
 import * as db from "../core/db.js";
 import { botonIcono } from "../core/iconos.js";
 import { puedeVer } from "../core/permisos.js";
-import { $, $$, esc, plural } from "../core/ui.js";
+import { pedirFirma, colorearFirma } from "../core/firma.js";
+import { $, $$, esc, plural, aviso } from "../core/ui.js";
 import { ajustarHojas, conectarExportacion } from "./formato.js";
 
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
@@ -14,8 +15,10 @@ const sinSimbolos = s => String(s).replace(/[\\/:*?"<>|]+/g, "-");
 
 export const folioConstancia = (act, numero) => `${act.folio}-${String(numero).padStart(2, "0")}`;
 
-/** Una hoja de constancia por cada asistente de `filas` ({ x, numero }). */
-export function constanciasHTML(act, filas, coordinadora) {
+const firmaImg = f => `<span class="espacio">${f ? `<img src="${esc(f)}" alt="Firma">` : ""}</span>`;
+
+/** Una hoja de constancia por cada asistente de `filas` ({ x, numero }). `firmas` = { coordinadora, instructora } (imágenes opcionales; sin firma, la línea queda en blanco). */
+export function constanciasHTML(act, filas, coordinadora, firmas = {}) {
   const horas = `${act.horas} ${Number(act.horas) === 1 ? "hora" : "horas"}`;
   return filas.map(({ x, numero }) => `<div class="sheet-wrap"><article class="sheet constancia" aria-label="Constancia de ${esc(x.datos.nombre)}">
       <img class="logos" src="assets/logos.png" alt="Gobierno de México, Mujeres, PAIBIM, Centro LIBRE para las Mujeres, Gobierno de Guerrero, Secretaría de la Mujer">
@@ -30,8 +33,8 @@ export function constanciasHTML(act, filas, coordinadora) {
         <p class="cons-curso">«${esc(act.nombre)}»</p>
         <p class="cons-texto">con una duración de <b>${esc(horas)}</b>, impartido el ${esc(fechaLarga(act.fecha))} en ${esc(String(act.lugar).replace(/\.+$/, ""))}.</p>
         <div class="cons-firmas">
-          <div><span class="linea"></span><b>${mayus(coordinadora)}</b><span>Coordinadora del Centro LIBRE Marquelia</span></div>
-          <div><span class="linea"></span><b>${mayus(act.instructora)}</b><span>Instructora</span></div>
+          <div>${firmaImg(firmas.coordinadora)}<span class="linea"></span><b>${mayus(coordinadora)}</b><span>Coordinadora del Centro LIBRE Marquelia</span></div>
+          <div>${firmaImg(firmas.instructora)}<span class="linea"></span><b>${mayus(act.instructora)}</b><span>Instructora</span></div>
         </div>
         <p class="cons-folio">Folio: ${esc(folioConstancia(act, numero))}</p>
       </div>
@@ -43,7 +46,13 @@ export async function constancias({ yo, pintar, ir }, id) {
   if (!act || !act.curso || !puedeVer(yo, act)) return ir(act ? `#/actividad/${id}` : "#/cursos");
   const asis = (await db.todos("asistencias", "actividadId", id)).sort((a, b) => a.orden - b.orden);
   const todas = asis.map((x, i) => ({ x, numero: i + 1 }));
-  const coordinadora = (await db.todos("perfiles")).find(u => u.rol === "Coordinadora" && u.activa)?.nombre || "";
+  const perfilCoord = (await db.todos("perfiles")).find(u => u.rol === "Coordinadora" && u.activa);
+  const coordinadora = perfilCoord?.nombre || "";
+  const esCoord = yo.rol === "Coordinadora";
+  const firmas = {
+    coordinadora: perfilCoord?.firma ? await colorearFirma(perfilCoord.firma) : "",
+    instructora: act.firmaInstructora ? await colorearFirma(act.firmaInstructora) : "",
+  };
   const elegidas = new Set(asis.map(x => x.id));
   const nombreArchivo = sel => sinSimbolos(sel.length === 1 ? `Constancia ${folioConstancia(act, sel[0].numero)} ${sel[0].x.datos.nombre}.pdf` : `Constancias ${act.folio}.pdf`);
 
@@ -51,6 +60,18 @@ export async function constancias({ yo, pintar, ir }, id) {
     <section class="panel stack">
       <p class="hint"><b>${esc(act.nombre)}</b> · ${esc(act.horas)} h · ${fechaLarga(act.fecha)}. Se emite una constancia a cada persona registrada en el curso. Seleccione a quiénes desea emitirla.</p>
       ${coordinadora ? "" : `<p class="chip warn">No hay una Coordinadora activa en Perfiles; la firma quedará sin nombre.</p>`}
+      <h2 class="h3">Firmas de la constancia</h2>
+      <div class="list firmas-cons">
+        <div class="row">
+          <span class="body"><span class="name">Coordinadora${coordinadora ? ` · ${esc(coordinadora)}` : ""}</span><span class="meta">${firmas.coordinadora ? `<img class="firma-mini" src="${esc(firmas.coordinadora)}" alt="Firma de la Coordinadora">` : `<span class="chip warn">Sin firma</span>`}</span></span>
+          ${esCoord && perfilCoord ? `<span class="end actions"><button type="button" class="btn small" id="firmaCoord">${firmas.coordinadora ? "Cambiar" : "Registrar firma"}</button></span>` : ""}
+        </div>
+        <div class="row">
+          <span class="body"><span class="name">Instructora · ${esc(act.instructora)}</span><span class="meta">${firmas.instructora ? `<img class="firma-mini" src="${esc(firmas.instructora)}" alt="Firma de la instructora">` : `<span class="chip warn">Sin firma</span>`}</span></span>
+          <span class="end actions"><button type="button" class="btn small" id="firmaInstr">${firmas.instructora ? "Cambiar" : "Registrar firma"}</button>${firmas.instructora ? `<button type="button" class="btn small danger" id="quitarInstr">Quitar</button>` : ""}</span>
+        </div>
+      </div>
+      <p class="hint">Si falta una firma, la línea queda en blanco para firmar a mano. ${esCoord ? "" : "La firma de la Coordinadora la registra ella misma. "}La firma de la instructora se guarda solo en este curso.</p>
     </section>
     ${asis.length ? `<div class="toolbar">${botonIcono("activar", "Todas", { id: "todas", titulo: "Seleccionar todas" })}${botonIcono("salir", "Ninguna", { id: "ninguna", titulo: "Quitar la selección" })}</div>
     <div class="list" id="elegir">${todas.map(({ x, numero }) => `
@@ -61,6 +82,28 @@ export async function constancias({ yo, pintar, ir }, id) {
     <div id="vista"></div>`
     : `<div class="empty"><b>Aún no hay asistentes.</b><p>Registre a las asistentes del curso para poder emitir sus constancias.</p></div>`}
   `, { atras: `#/actividad/${id}`, ancho: true });
+
+  const recargar = () => constancias({ yo, pintar, ir }, id);
+  $("#firmaCoord", c)?.addEventListener("click", async () => {
+    const f = await pedirFirma({ titulo: `Firma de ${coordinadora}`, existente: perfilCoord.firma || "" });
+    if (!f) return;
+    await db.guardar("perfiles", { ...perfilCoord, firma: f });
+    aviso("Firma de la Coordinadora guardada");
+    recargar();
+  });
+  $("#firmaInstr", c).addEventListener("click", async () => {
+    const f = await pedirFirma({ titulo: `Firma de ${act.instructora}`, existente: act.firmaInstructora || "" });
+    if (!f) return;
+    await db.guardar("actividades", { ...act, firmaInstructora: f });
+    aviso("Firma de la instructora guardada");
+    recargar();
+  });
+  $("#quitarInstr", c)?.addEventListener("click", async () => {
+    const { firmaInstructora, ...resto } = act;
+    await db.guardar("actividades", resto);
+    aviso("Firma de la instructora eliminada");
+    recargar();
+  });
   if (!asis.length) return;
 
   function vista() {
@@ -75,7 +118,7 @@ export async function constancias({ yo, pintar, ir }, id) {
         ${botonIcono("formato", "Imprimir", { id: "imprimir" })}
         <p class="hint">${plural(sel.length, "constancia", "constancias")} · carta horizontal</p>
       </div>
-      <div class="sheets" id="hojas">${constanciasHTML(act, sel, coordinadora)}</div>`;
+      <div class="sheets" id="hojas">${constanciasHTML(act, sel, coordinadora, firmas)}</div>`;
     const hojasEl = $("#hojas", c);
     ajustarHojas(hojasEl);
     conectarExportacion(cont, hojasEl, nombreArchivo(sel), nombreArchivo(sel).replace(/\.pdf$/, ""));

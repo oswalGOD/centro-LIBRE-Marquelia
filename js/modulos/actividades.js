@@ -189,6 +189,7 @@ async function formulario({ yo, pintar, ir }, id, origenId, nuevoCurso = false, 
       nombre: d.nombre, fecha: d.fecha, lugar: d.lugar, tipo: d.tipo,
       horaInicio: d.horaInicio || "", horaFin: d.horaFin || "",
       ...(curso ? { curso: true, horas: d.horas, instructora: d.instructora } : {}),
+      ...(curso && act?.firmaInstructora && act.instructora !== d.instructora ? { firmaInstructora: undefined } : {}), // otra instructora: la firma guardada ya no corresponde
       ...(programado ? { programado: true } : {}),
       facilitadoraId: f.id, facilitadora: f.nombre, puesto: f.rol,
       ...(origen ? { anteriorId: origen.id } : {}),
