@@ -2,7 +2,7 @@
 //
 // Todos los dispositivos comparten una sola cuenta de Supabase, así que el servidor no puede separar la
 // información de cada perfil. La privacidad se logra cifrando en el dispositivo:
-//   - Cada perfil con casos (Psicóloga, Abogada) tiene una clave AES-256 propia («clave de casos»).
+//   - Cada perfil con casos (Asesora Psicoemocional, Asesora Jurídica) tiene una clave AES-256 propia («clave de casos»).
 //   - Esa clave se guarda en su perfil protegida con una clave derivada de su PIN (PBKDF2 con otra sal que
 //     la de la huella del PIN, para que la huella sincronizada no sirva para abrirla).
 //   - La Coordinadora tiene un par de claves RSA-OAEP: su clave privada se guarda protegida con su PIN y su

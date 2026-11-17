@@ -1,4 +1,4 @@
-// Seguimiento de casos confidenciales (Psicóloga y Abogada).
+// Seguimiento de casos confidenciales (Asesora Psicoemocional y Asesora Jurídica).
 //
 // Cada caso es un expediente de una usuaria con un perfil; cada nota de sesión es un registro aparte
 // (así dos dispositivos pueden agregar notas a la vez sin pisarse). Lo único que se guarda en claro es la
@@ -37,7 +37,7 @@ export async function contarCasos(yo, usuariaId) {
 
 /**
  * Abre un caso. Lo lleva `destino` (por defecto, quien lo abre). La Coordinadora puede abrirlo y referirlo a la
- * Psicóloga o la Abogada, con una nota opcional de primer contacto; a partir de ahí solo lo edita quien lo lleva.
+ * Asesora Psicoemocional o la Asesora Jurídica, con una nota opcional de primer contacto; a partir de ahí solo lo edita quien lo lleva.
  */
 export async function crearCaso(yo, usuariaId, d, destino = yo, notaInicial = "") {
   const id = db.uid();

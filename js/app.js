@@ -4,7 +4,7 @@
 
 import { anotar } from "./core/bitacora.js";
 import * as db from "./core/db.js";
-import { ROLES } from "./core/catalogos.js";
+import { ROLES, nombreRol } from "./core/catalogos.js";
 import { crearPerfil, iniciarSesion, cerrarSesion, sesionActual, sesionVigente, tocarSesion, verificarPin, pinValido, esCoordinadora, esperaPin, pinFallido, pinCorrecto } from "./core/auth.js";
 import { $, $$, esc, aviso, errores, leerCampos } from "./core/ui.js";
 import * as nube from "./core/sync.js";
@@ -44,7 +44,7 @@ function pintar(titulo, contenido, { atras, ancho, kiosko: enModo } = {}) {
     <header class="topbar">
       <div class="wrap">
         <a class="brand" href="#/"><img class="mark" src="icons/icon-192.png" alt="" aria-hidden="true"><span><b>Centro LIBRE</b><small>Marquelia</small></span></a>
-        <div class="who"><a class="sync-pill" id="nube" href="#/ajustes" hidden></a><span class="avatar" aria-hidden="true">${esc(yo.nombre[0] || "?")}</span><span><b>${esc(yo.nombre.split(" ")[0])}</b><small>${esc(yo.rol)}</small></span>
+        <div class="who"><a class="sync-pill" id="nube" href="#/ajustes" hidden></a><span class="avatar" aria-hidden="true">${esc(yo.nombre[0] || "?")}</span><span><b>${esc(yo.nombre.split(" ")[0])}</b><small>${esc(nombreRol(yo.rol))}</small></span>
           <button class="btn small ghost" id="salir">Salir</button></div>
       </div>
     </header>
@@ -221,7 +221,7 @@ async function primerUso() {
       </section>
 
       <section class="stack" data-paso="coordinadora" ${conectada ? "" : "hidden"}>
-        <p class="hint">La cuenta del Centro aún no tiene perfiles. Cree el perfil de la Coordinadora; posteriormente, ella podrá dar de alta a la Psicóloga y a la Abogada.</p>
+        <p class="hint">La cuenta del Centro aún no tiene perfiles. Cree el perfil de la Coordinadora; posteriormente, ella podrá dar de alta a la Asesora Psicoemocional y a la Asesora Jurídica.</p>
         <div class="grid" id="f">
           <div class="field span-2"><label for="c-nombre">Nombre completo de la Coordinadora</label><input id="c-nombre" data-campo="nombre" autocomplete="name"></div>
           <div class="field"><label for="c-pin">PIN de 4 a 6 dígitos</label><input id="c-pin" data-campo="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password"></div>
@@ -282,7 +282,7 @@ function entrar(lista) {
     <div class="auth-card stack">
       <div class="auth-brand"><img class="mark" src="icons/icon-192.png" alt="" aria-hidden="true"><div><h1>Centro LIBRE Marquelia</h1></div></div>
       <h2>Seleccione su perfil</h2>
-      <div class="people">${lista.map(u => `<button class="person-btn" data-id="${esc(u.id)}"><span class="avatar">${esc(u.nombre[0])}</span><span><b>${esc(u.nombre)}</b><small>${esc(u.rol)}</small></span></button>`).join("")}</div>
+      <div class="people">${lista.map(u => `<button class="person-btn" data-id="${esc(u.id)}"><span class="avatar">${esc(u.nombre[0])}</span><span><b>${esc(u.nombre)}</b><small>${esc(nombreRol(u.rol))}</small></span></button>`).join("")}</div>
       <form id="pinForm" class="stack" hidden>
         <div class="field"><label for="pin" id="pinLabel">PIN</label><input id="pin" type="password" inputmode="numeric" pattern="[0-9]*" enterkeyhint="go" maxlength="6" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
         <div id="err"></div>

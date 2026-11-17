@@ -1,7 +1,7 @@
 // Módulo de actividades: lista, alta/edición y detalle con sus asistentes.
 
 import * as db from "../core/db.js";
-import { TIPOS_ACTIVIDAD, TIPOS_RETIRADOS, hoy, fechaLarga, mesCorto, edad, rangoDe, etiquetaGrupo, normalizar, minutosEntre, duracion } from "../core/catalogos.js";
+import { TIPOS_ACTIVIDAD, TIPOS_RETIRADOS, hoy, fechaLarga, mesCorto, edad, rangoDe, etiquetaGrupo, normalizar, minutosEntre, duracion, nombreRol } from "../core/catalogos.js";
 import { esCoordinadora } from "../core/auth.js";
 import { puedeVer, puedeEditar, puedeCapturar, puedeAdministrarCursos, puedeCompartir } from "../core/permisos.js";
 import { $, $$, esc, aviso, errores, leerCampos, dobleToque, plural, unaVez } from "../core/ui.js";
@@ -58,7 +58,7 @@ async function aceptarEnvio(yo, a, e, nombre) {
   const copia = previa || {
     id: copiaId, folio: await db.siguienteFolio(origen.fecha), creadaPor: yo.id, estado: "abierta",
     fecha: origen.fecha, lugar: origen.lugar, tipo: origen.tipo, horaInicio: origen.horaInicio || "", horaFin: origen.horaFin || "",
-    facilitadoraId: yo.id, facilitadora: yo.nombre, puesto: yo.rol,
+    facilitadoraId: yo.id, facilitadora: yo.nombre, puesto: nombreRol(yo.rol),
   };
   copia.nombre = nombre;
   copia.compartidas = [{ de: e.de, deNombre: e.deNombre, a: yo.id, aNombre: yo.nombre, en: e.en, origenId: origen.id, nombreOriginal: origen.nombre, ...(nombre !== origen.nombre ? { nombreAnterior: origen.nombre } : {}) }];
@@ -137,7 +137,7 @@ async function compartir({ yo, pintar, ir }, id) {
       <div class="card-head"><p class="hint">El perfil elegido verá un aviso en Actividades. Al aceptarlo se creará en su dispositivo una copia de «${esc(a.nombre)}» (${esc(a.folio)}) con ${plural(asis, "asistente", "asistentes")} y sus firmas, sin fotografías, con su propio folio. Podrá cambiarle el nombre si lo desea. Su actividad no cambia.</p>
         <span class="icon-row">${botonIcono("salir", "Cancelar", { href: volver, clase: "quieto" })}</span></div>
       ${perfiles.length ? `<div class="field"><label for="c-perfil">Compartir con</label>
-        <select id="c-perfil"><option value="">Seleccione un perfil</option>${perfiles.map(u => `<option value="${esc(u.id)}">${esc(u.nombre)} · ${esc(u.rol)}</option>`).join("")}</select></div>` : `<div class="empty"><b>No hay otros perfiles activos.</b><p>Cree o active otro perfil en Perfiles.</p></div>`}
+        <select id="c-perfil"><option value="">Seleccione un perfil</option>${perfiles.map(u => `<option value="${esc(u.id)}">${esc(u.nombre)} · ${esc(nombreRol(u.rol))}</option>`).join("")}</select></div>` : `<div class="empty"><b>No hay otros perfiles activos.</b><p>Cree o active otro perfil en Perfiles.</p></div>`}
       <div id="err"></div>
     </section>
     ${perfiles.length ? `<div class="barra-fija"><button class="btn primary" id="enviar">Compartir actividad</button></div>` : ""}`, { atras: volver });
@@ -263,7 +263,7 @@ async function formulario({ yo, pintar, ir }, id, origenId, nuevoCurso = false, 
         <div class="field"><label for="a-fecha">${programado ? "Fecha programada" : "Fecha"}</label><input id="a-fecha" type="date" data-campo="fecha" value="${esc(a.fecha)}"${programado ? ` min="${hoy()}"` : ""}></div>
         <div class="field"><label for="a-lugar">Lugar de desarrollo</label><input id="a-lugar" data-campo="lugar" value="${esc(a.lugar)}"></div>
         <div class="field"><label for="a-facilitadora">Facilitadora</label>
-          <select id="a-facilitadora" data-campo="facilitadoraId">${perfiles.map(u => `<option value="${esc(u.id)}" ${u.id === a.facilitadoraId ? "selected" : ""}>${esc(u.nombre)} · ${esc(u.rol)}</option>`).join("")}</select></div>
+          <select id="a-facilitadora" data-campo="facilitadoraId">${perfiles.map(u => `<option value="${esc(u.id)}" ${u.id === a.facilitadoraId ? "selected" : ""}>${esc(u.nombre)} · ${esc(nombreRol(u.rol))}</option>`).join("")}</select></div>
         ${curso ? `<div class="field span-2"><label for="a-instructora">Instructora que imparte el curso</label><input id="a-instructora" data-campo="instructora" value="${esc(a.instructora || "")}" autocomplete="off"></div>
         <div class="field"><label for="a-horas">Duración total (horas)</label><input id="a-horas" type="number" inputmode="decimal" min="0.5" max="999" step="0.5" data-campo="horas" value="${esc(a.horas ?? "")}"></div>
         <input type="hidden" data-campo="tipo" value="${TIPO_CURSO}">` : `<div class="field"><label for="a-tipo">Tipo de actividad</label>
@@ -312,7 +312,7 @@ async function formulario({ yo, pintar, ir }, id, origenId, nuevoCurso = false, 
       ...(curso ? { curso: true, horas: d.horas, instructora: d.instructora } : {}),
       ...(curso && act?.firmaInstructora && act.instructora !== d.instructora ? { firmaInstructora: undefined } : {}), // otra instructora: la firma guardada ya no corresponde
       ...(programado ? { programado: true } : {}),
-      facilitadoraId: f.id, facilitadora: f.nombre, puesto: f.rol,
+      facilitadoraId: f.id, facilitadora: f.nombre, puesto: nombreRol(f.rol),
       ...(origen ? { anteriorId: origen.id } : {}),
     };
     await db.guardar("actividades", registro);
@@ -351,7 +351,7 @@ async function detallePrevio({ yo, pintar, ir }, a) {
         <div><dt>Fecha programada</dt><dd>${fechaLarga(a.fecha)}</dd></div>
         <div><dt>Lugar</dt><dd>${esc(a.lugar)}</dd></div>
         ${a.horaInicio ? `<div class="largo"><dt>Horario</dt><dd>${esc(a.horaInicio)}${a.horaFin ? ` a ${esc(a.horaFin)}` : ""}</dd></div>` : ""}
-        <div class="largo"><dt>Facilitadora</dt><dd>${esc(a.facilitadora)} · ${esc(a.puesto)}</dd></div>
+        <div class="largo"><dt>Facilitadora</dt><dd>${esc(a.facilitadora)} · ${esc(nombreRol(a.puesto))}</dd></div>
         ${curso ? `<div class="largo"><dt>Instructora</dt><dd>${esc(a.instructora)}</dd></div>
         <div><dt>Duración</dt><dd>${esc(a.horas)} ${a.horas === 1 ? "hora" : "horas"}</dd></div>` : `<div><dt>Tipo</dt><dd>${esc(a.tipo)}</dd></div>`}
       </dl>
@@ -448,7 +448,7 @@ async function detalle({ yo, pintar, ir }, id) {
         <div><dt>Fecha</dt><dd>${fechaLarga(a.fecha)}</dd></div>
         <div><dt>Lugar</dt><dd>${esc(a.lugar)}</dd></div>
         ${a.horaInicio ? `<div class="largo"><dt>Horario</dt><dd>${esc(a.horaInicio)} a ${esc(a.horaFin)} · ${duracion(minutosEntre(a.horaInicio, a.horaFin))}</dd></div>` : ""}
-        <div class="largo"><dt>Facilitadora</dt><dd>${esc(a.facilitadora)} · ${esc(a.puesto)}</dd></div>
+        <div class="largo"><dt>Facilitadora</dt><dd>${esc(a.facilitadora)} · ${esc(nombreRol(a.puesto))}</dd></div>
         ${curso ? `<div class="largo"><dt>Instructora</dt><dd>${esc(a.instructora)}</dd></div><div><dt>Duración</dt><dd>${esc(a.horas)} ${a.horas === 1 ? "hora" : "horas"}</dd></div>` : `<div><dt>Tipo</dt><dd>${esc(a.tipo)}</dd></div>`}
       </dl>
     </section>
