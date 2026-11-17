@@ -464,7 +464,7 @@ async function detalle({ yo, pintar, ir }, id) {
       </dl>
     </section>
     <div class="actions-bar">
-      ${editable ? `<a class="btn primary" href="#/actividad/${esc(a.id)}/registrar">${icono("mas2")}Registrar asistente</a>` : ""}
+      ${capturable ? `<a class="btn primary" href="#/actividad/${esc(a.id)}/registrar">${icono("mas2")}Registrar asistente</a>` : ""}
       ${botonIcono("formato", "Formato", { href: `#/actividad/${a.id}/formato` })}
       ${curso ? botonIcono("constancia", "Constancias", { href: `#/actividad/${a.id}/constancias` }) : ""}
       ${capturable ? botonIcono("captura", "Modo captura", { id: "modoCaptura" }) : ""}
@@ -478,8 +478,8 @@ async function detalle({ yo, pintar, ir }, id) {
           <span class="body"><span class="name">${esc(p.nombre)}</span>
             <span class="meta"><span class="mono">${esc(p.curp || "Sin CURP")}</span><span>${e ?? "?"} años · ${rangoDe(e) || ""}</span><span>${esc(etiquetaGrupo(p.grupo))}</span><span>${esc(p.ocupacion)}</span></span></span>
           ${x.firma ? `<img class="sig" src="${esc(x.firma)}" alt="Firma">` : x.sinFirma ? `<span class="chip">Firma omitida: ${esc(x.sinFirma)}</span>` : `<span class="chip warn">Falta firma</span>`}`;
-        return editable ? `<a class="row person" href="#/actividad/${esc(a.id)}/registrar/${esc(x.id)}">${inner}</a>` : `<div class="row person">${inner}</div>`;
-      }).join("")}</div>` : `<div class="empty"><b>Aún no hay asistentes.</b><p>${editable ? "Seleccione “Registrar asistente” para capturar a la primera persona. Si ya asistió antes, al ingresar su CURP se completarán sus datos." : capturable ? "Los asistentes se registran con el modo captura; la Coordinadora también puede registrarlos manualmente." : "Esta actividad está cerrada."}</p></div>`}
+        return capturable ? `<a class="row person" href="#/actividad/${esc(a.id)}/registrar/${esc(x.id)}">${inner}</a>` : `<div class="row person">${inner}</div>`;
+      }).join("")}</div>` : `<div class="empty"><b>Aún no hay asistentes.</b><p>${capturable ? "Seleccione “Registrar asistente” para capturar a la primera persona. Si ya asistió antes, al ingresar su CURP se completarán sus datos." : "Esta actividad está cerrada."}</p></div>`}
     </section>
     ${await seccionActividad(yo, a)}
     ${historialCompartida(a)}
