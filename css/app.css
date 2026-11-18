@@ -618,3 +618,12 @@ body.con-teclado-pin { padding-bottom: 320px; }
 .sheet.anexo2 .a2-linea { width: 100%; border-top: 2px solid var(--paper-ink); }
 .sheet.anexo2 .a2-rotulo { font-size: 17px; padding-top: 3px; }
 .sheet.anexo2 .a2-firma b { font-size: 12px; min-height: 15px; margin-top: 2px; }
+
+/* Calendario de mes */
+.cal-mes { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-sem { text-align: center; font-weight: 700; color: var(--muted); padding: 4px 0; }
+.cal-dia { position: relative; min-height: 48px; border: 2px solid transparent; border-radius: 10px; background: var(--surface-2); color: var(--ink); font: inherit; font-weight: 700; cursor: pointer; }
+.cal-dia.hoy { border-color: var(--accent); }
+.cal-dia.elegido { background: var(--accent); color: var(--accent-ink); }
+.cal-dia.ocupado::after { content: ""; position: absolute; left: 50%; bottom: 6px; width: 7px; height: 7px; margin-left: -3.5px; border-radius: 50%; background: var(--accent); }
+.cal-dia.elegido.ocupado::after { background: var(--accent-ink); }

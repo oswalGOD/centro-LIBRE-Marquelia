@@ -8,7 +8,7 @@ import * as k from "../core/citas.js";
 import * as casos from "../core/casos.js";
 import { tarjetas } from "../core/resumen.js";
 import { botonIcono, menuMas, conectarMenus } from "../core/iconos.js";
-import { selectorUsuaria, botonFiltros, conectarFiltros, estadoVacio } from "../core/componentes.js";
+import { selectorUsuaria, botonFiltros, conectarFiltros, estadoVacio, calendarioMes } from "../core/componentes.js";
 import { esCoordinadora } from "../core/auth.js";
 import { puedeAgendarCita, puedeGestionarCita, puedeUsarCitas, puedeVerCita } from "../core/permisos.js";
 import { agregarAlCalendario } from "../core/calendario.js";
@@ -31,7 +31,7 @@ const diaCorto = f => `${diaSemana(f)} ${Number(f.slice(8, 10))}`;
 const horario = c => `${c.hora} a ${k.horaFin(c)} h`;
 
 /** Estado de la agenda al navegar (se conserva mientras la aplicación esté abierta). */
-const vista = { modo: "semana", ancla: hoy(), perfil: "", estado: "", q: "" };
+const vista = { modo: "semana", ancla: hoy(), dia: hoy(), perfil: "", estado: "", q: "" };
 
 /* ---------- Agenda ---------- */
 async function agenda(ctx, usuariaId) {
@@ -57,7 +57,7 @@ async function agenda(ctx, usuariaId) {
     ], { etiqueta: "Resumen de citas" })}
     <p class="hint">${coord ? "Vista de la Coordinadora: ve las citas de todos los perfiles y puede agendar, reprogramar y cancelar." : "Solo usted ve sus citas. El motivo y el lugar se guardan cifrados."}</p>
     <div class="toolbar">
-      ${usuariaId ? "" : `<div class="segmented" role="radiogroup" aria-label="Vista de la agenda">${[["dia", "Día"], ["semana", "Semana"], ["lista", "Lista"]].map(([v, x]) => `<button type="button" role="radio" aria-checked="${v === modo}" data-vista="${v}">${x}</button>`).join("")}</div>`}
+      ${usuariaId ? "" : `<div class="segmented" role="radiogroup" aria-label="Vista de la agenda">${[["dia", "Día"], ["semana", "Semana"], ["mes", "Mes"], ["lista", "Lista"]].map(([v, x]) => `<button type="button" role="radio" aria-checked="${v === modo}" data-vista="${v}">${x}</button>`).join("")}</div>`}
       <input type="search" id="buscar" class="search" placeholder="Buscar por usuaria, motivo o lugar" aria-label="Buscar cita" value="${esc(vista.q)}">
       ${botonFiltros()}
       ${puedeAgendarCita(yo) ? botonIcono("mas2", "Nueva cita", { href: filtrada ? `#/citas/nueva/${esc(filtrada.id)}` : "#/citas/nueva", clase: "quieto" }) : ""}
@@ -99,6 +99,20 @@ async function agenda(ctx, usuariaId) {
         ${prox.length ? `<h2 class="h3">Próximas</h2><div class="list">${prox.map(c => fila(c, true)).join("")}</div>` : ""}
         ${ant.length ? `<h2 class="h3">Anteriores</h2><div class="list">${ant.map(c => fila(c, true)).join("")}</div>` : ""}`
         : estadoVacio(todas.length ? "Ninguna cita coincide." : "Aún no hay citas.", todas.length ? "Modifique la búsqueda o los filtros." : puedeAgendarCita(yo) ? "Use «Nueva cita» para agendar la primera." : "");
+      return;
+    }
+    if (modo === "mes") {
+      const mes = vista.ancla.slice(0, 7), [ma, mm] = mes.split("-").map(Number);
+      const etiquetaMes = new Date(ma, mm - 1, 1).toLocaleDateString("es-MX", { month: "long", year: "numeric" });
+      const moverMes = n => { const d = new Date(ma, mm - 1 + n, 1); vista.ancla = formato(d); vista.dia = vista.ancla; dibujar(); };
+      nav.innerHTML = `${botonIcono("anterior", "Anterior", { id: "ant", clase: "quieto" })}<b class="nav-etiqueta" aria-live="polite">${esc(etiquetaMes.replace(/^./, c => c.toUpperCase()))}</b>${botonIcono("siguiente", "Siguiente", { id: "sig", clase: "quieto" })}${botonIcono("calendario", "Hoy", { id: "hoy", clase: "quieto" })}`;
+      $("#ant", cuerpo).onclick = () => moverMes(-1);
+      $("#sig", cuerpo).onclick = () => moverMes(1);
+      $("#hoy", cuerpo).onclick = () => { vista.ancla = hoy(); vista.dia = hoy(); dibujar(); };
+      if (!vista.dia.startsWith(mes)) vista.dia = `${mes}-01`;
+      const delDia = ordenar(lista.filter(c => c.fecha === vista.dia));
+      salida.innerHTML = `<div id="calMes"></div><h2 class="h3">${esc(diaCorto(vista.dia))}${vista.dia === hoyF ? " · hoy" : ""}</h2><div id="delDia" class="stack">${delDia.length ? `<div class="list">${delDia.map(c => fila(c, false)).join("")}</div>` : `<p class="hint">Sin citas.</p>`}</div>`;
+      calendarioMes($("#calMes", cuerpo), { mes, marcados: new Set(lista.map(c => c.fecha)), elegido: vista.dia, hoy: hoyF, onElegir: f => { vista.dia = f; dibujar(); } });
       return;
     }
     const semana = modo === "semana";
