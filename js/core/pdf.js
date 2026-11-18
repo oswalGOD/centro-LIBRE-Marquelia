@@ -79,33 +79,43 @@ export async function hojasAPDF(contenedor, { escala = 3, calidad = 0.92 } = {})
   const variables = ["--paper", "--paper-ink", "--paper-band", "--f-sheet"].map(v => `${v}:${vars.getPropertyValue(v)}`).join(";").replace(/"/g, "&quot;");
   const ancho = 1056, alto = 816;
   const paginas = [];
+  // Todas las medidas se toman de una sola vez y antes de cualquier espera: si se midiera hoja por hoja entre esperas
+  // (carga de imágenes), un cambio de la pantalla (aviso, desplazamiento) movería firmas y QR de las hojas posteriores.
+  await Promise.all([...contenedor.querySelectorAll(".sheet img")].map(i => i.decode?.().catch(() => {})));
+  const medidas = hojas.map(hoja => {
+    const k = hoja.getBoundingClientRect().width / hoja.offsetWidth || 1, r0 = hoja.getBoundingClientRect();
+    return [...hoja.querySelectorAll("img")].map(o => {
+      const r = o.getBoundingClientRect(), cs = getComputedStyle(o);
+      const bi = parseFloat(cs.borderLeftWidth) + parseFloat(cs.paddingLeft), bd = parseFloat(cs.borderRightWidth) + parseFloat(cs.paddingRight);
+      const bs = parseFloat(cs.borderTopWidth) + parseFloat(cs.paddingTop), bb = parseFloat(cs.borderBottomWidth) + parseFloat(cs.paddingBottom);
+      return {
+        src: o.getAttribute("src"), bi, bd, bs, bb, ancho: r.width / k, alto: r.height / k, cajaBorde: cs.boxSizing === "border-box",
+        caja: { x: (r.left - r0.left) / k + bi, y: (r.top - r0.top) / k + bs, w: r.width / k - bi - bd, h: r.height / k - bs - bb },
+        debajo: cs.position === "absolute", opacidad: parseFloat(cs.opacity) || 1, ajuste: cs.objectFit,
+        nitida: cs.imageRendering === "pixelated" || cs.imageRendering === "crisp-edges"
+      };
+    });
+  });
   const VACIA = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
   for (const hoja of hojas) {
     const copia = hoja.cloneNode(true);
     copia.style.transform = "none";
     // Safari (iPad/iPhone) no dibuja las imágenes de una imagen SVG con foreignObject (firmas, QR, fotos).
     // Por eso se dejan huecos del mismo tamaño y las imágenes se pintan después directamente en el lienzo.
-    const origenes = [...hoja.querySelectorAll("img")], clones = [...copia.querySelectorAll("img")];
-    const k = hoja.getBoundingClientRect().width / hoja.offsetWidth || 1, r0 = hoja.getBoundingClientRect();
+    const clones = [...copia.querySelectorAll("img")];
     const pendientes = [];
     copia.style.background = "transparent"; // el blanco de la hoja se pinta en el lienzo, para poder poner la marca de agua debajo
-    for (let i = 0; i < origenes.length; i++) {
-      const o = origenes[i];
-      // Todas las imágenes (logotipos, marca de agua, firmas, QR, fotos) se pintan en el lienzo: una imagen SVG nunca
-      // carga archivos externos y Safari tampoco dibuja las incrustadas. La marca de agua va debajo del contenido.
-      const r = o.getBoundingClientRect(), cs = getComputedStyle(o);
-      const bi = parseFloat(cs.borderLeftWidth) + parseFloat(cs.paddingLeft), bd = parseFloat(cs.borderRightWidth) + parseFloat(cs.paddingRight);
-      const bs = parseFloat(cs.borderTopWidth) + parseFloat(cs.paddingTop), bb = parseFloat(cs.borderBottomWidth) + parseFloat(cs.paddingBottom);
-      const caja = { x: (r.left - r0.left) / k + bi, y: (r.top - r0.top) / k + bs, w: r.width / k - bi - bd, h: r.height / k - bs - bb };
-      const c = clones[i];
-      c.style.width = `${r.width / k - (cs.boxSizing === "border-box" ? 0 : bi + bd)}px`;
-      c.style.height = `${r.height / k - (cs.boxSizing === "border-box" ? 0 : bs + bb)}px`;
+    // Todas las imágenes (logotipos, marca de agua, firmas, QR, fotos) se pintan en el lienzo: una imagen SVG nunca
+    // carga archivos externos y Safari tampoco dibuja las incrustadas. La marca de agua va debajo del contenido.
+    for (let i = 0; i < clones.length; i++) {
+      const m = medidas[hojas.indexOf(hoja)][i], c = clones[i], { caja } = m;
+      c.style.width = `${m.ancho - (m.cajaBorde ? 0 : m.bi + m.bd)}px`;
+      c.style.height = `${m.alto - (m.cajaBorde ? 0 : m.bs + m.bb)}px`;
       c.style.maxWidth = c.style.maxHeight = "none";
       c.style.objectFit = "fill";
-      const src = o.getAttribute("src");
       c.setAttribute("src", VACIA);
-      if (!src || caja.w <= 0 || caja.h <= 0) continue;
-      pendientes.push({ caja, debajo: cs.position === "absolute", opacidad: parseFloat(cs.opacity) || 1, ajuste: cs.objectFit, nitida: cs.imageRendering === "pixelated" || cs.imageRendering === "crisp-edges", img: cargarImagen(await incrustar(src)).catch(() => null) });
+      if (!m.src || caja.w <= 0 || caja.h <= 0) continue;
+      pendientes.push({ caja, debajo: m.debajo, opacidad: m.opacidad, ajuste: m.ajuste, nitida: m.nitida, img: cargarImagen(await incrustar(m.src)).catch(() => null) });
     }
     const xhtml = new XMLSerializer().serializeToString(copia);
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${ancho}" height="${alto}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="${variables};width:${ancho}px;height:${alto}px"><style>${css.replace(/</g, "\\3c ")}</style>${xhtml}</div></foreignObject></svg>`;
