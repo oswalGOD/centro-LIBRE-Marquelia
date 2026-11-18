@@ -627,3 +627,15 @@ body.con-teclado-pin { padding-bottom: 320px; }
 .cal-dia.elegido { background: var(--accent); color: var(--accent-ink); }
 .cal-dia.ocupado::after { content: ""; position: absolute; left: 50%; bottom: 6px; width: 7px; height: 7px; margin-left: -3.5px; border-radius: 50%; background: var(--accent); }
 .cal-dia.elegido.ocupado::after { background: var(--accent-ink); }
+
+/* Línea de tiempo */
+.linea { list-style: none; margin: 0; padding: 0; }
+.linea-item { position: relative; display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 12px; padding-bottom: 18px; }
+.linea-item::before { content: ""; position: absolute; left: 19px; top: 40px; bottom: 0; width: 2px; background: var(--line); }
+.linea-item:last-child { padding-bottom: 0; }
+.linea-item:last-child::before { display: none; }
+.linea-punto { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
+.linea-punto svg { width: 20px; height: 20px; }
+.linea-cuerpo { min-width: 0; display: grid; gap: 4px; padding-top: 2px; }
+.linea-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.linea-titulo { font-weight: 700; overflow-wrap: anywhere; }

@@ -5,9 +5,10 @@
 import * as db from "../core/db.js";
 import * as exp from "../core/expedientes.js";
 import * as c from "../core/casos.js";
+import * as citasCore from "../core/citas.js";
 import { tarjetas } from "../core/resumen.js";
 import { botonIcono } from "../core/iconos.js";
-import { selectorUsuaria, botonFiltros, conectarFiltros, estadoVacio } from "../core/componentes.js";
+import { selectorUsuaria, botonFiltros, conectarFiltros, estadoVacio, lineaTiempo } from "../core/componentes.js";
 import { esperaPin, pinFallido, pinCorrecto, verificarPin, esCoordinadora } from "../core/auth.js";
 import { puedeCrearCaso, puedeEditarCaso, puedeUsarCasos } from "../core/permisos.js";
 import { agregarAlCalendario } from "../core/calendario.js";
@@ -178,6 +179,11 @@ async function detalle(ctx, id) {
   const edita = puedeEditarCaso(yo, caso);
   const d = caso.d;
   const notas = await c.listarNotas(caso);
+  const citasDelCaso = (await citasCore.listarCitas(yo, caso.usuariaId)).filter(x => x.casoId === caso.id && x.legible);
+  const historial = [
+    ...notas.map(n => ({ fecha: n.d?.fecha || "", orden: n.creado || 0, n })),
+    ...citasDelCaso.map(x => ({ fecha: x.fecha, orden: 0, cita: x })),
+  ].sort((a, b) => b.fecha.localeCompare(a.fecha) || b.orden - a.orden);
   const seguimiento = textoSeguimiento(d);
   const vigente = d.proximo && d.proximo >= hoy() && d.estatus !== "cerrado";
 
@@ -214,7 +220,7 @@ async function detalle(ctx, id) {
     </section>` : ""}
 
     <section class="stack">
-      <h2>Notas de sesión</h2>
+      <h2>Historial</h2>
       ${edita ? `<div class="panel stack" id="nuevaNota">
         <div class="grid">
           <div class="field"><label for="nota-fecha">Fecha de la sesión</label><input id="nota-fecha" type="date" value="${hoy()}" max="${hoy()}"></div>
@@ -223,12 +229,14 @@ async function detalle(ctx, id) {
         <div id="errn"></div>
         <div class="actions"><button class="btn primary" id="guardarNota">Agregar nota</button></div>
       </div>` : ""}
-      ${notas.length ? `<div class="list">${notas.map(n => `
-        <div class="row nota" data-id="${esc(n.id)}">
-          <span class="body"><span class="name">${n.d ? `${esc(fechaLarga(n.d.fecha))}${n.d.autora ? ` · ${esc(n.d.autora)}` : ""}` : "Nota no disponible"}</span>
-            ${n.d ? `<p class="nota-texto">${esc(n.d.texto)}</p>` : `<span class="meta"><span>No se pudo abrir esta nota con la clave actual.</span></span>`}</span>
-          ${edita && n.d ? `<span class="end actions">${botonIcono("editar", "Editar", { clase: "quieto", extra: 'data-accion="editarNota"' })}${botonIcono("eliminar", "Eliminar", { clase: "danger", extra: 'data-accion="borrarNota"' })}</span>` : ""}
-        </div>`).join("")}</div>` : `${estadoVacio("Aún no hay notas.", edita ? "Agregue la primera con el cuadro de arriba." : "")}`}
+      ${historial.length ? lineaTiempo(historial.map(h => h.cita ? {
+        fecha: fechaLarga(h.cita.fecha), tipo: "Cita", icono: "agenda", clase: "prog",
+        titulo: `${h.cita.hora} h · ${citasCore.estadoVisible(h.cita) === "por_registrar" ? "Por registrar asistencia" : citasCore.etiquetaEstado(citasCore.estadoVisible(h.cita))}`, href: `#/citas/${h.cita.id}`,
+      } : h.n.d ? {
+        id: h.n.id, fecha: fechaLarga(h.n.d.fecha), tipo: "Nota de sesión", icono: "editar", titulo: h.n.d.autora || "", texto: h.n.d.texto,
+        acciones: edita ? `${botonIcono("editar", "Editar", { clase: "quieto", extra: 'data-accion="editarNota"' })}${botonIcono("eliminar", "Eliminar", { clase: "danger", extra: 'data-accion="borrarNota"' })}` : "",
+      } : { fecha: "Sin fecha", tipo: "Nota no disponible", icono: "llave", texto: "No se pudo abrir esta nota con la clave actual." }), { etiqueta: "Historial del caso" })
+        : estadoVacio("Aún no hay notas.", edita ? "Agregue la primera con el cuadro de arriba." : "")}
     </section>
   `, { atras: "#/casos" });
 
@@ -277,7 +285,7 @@ async function detalle(ctx, id) {
     ctx.recargar();
   });
 
-  $$(".row.nota", cuerpo).forEach(fila => {
+  $$(".linea-item[data-id]", cuerpo).forEach(fila => {
     const nota = notas.find(n => n.id === fila.dataset.id);
     const borrar = $('[data-accion="borrarNota"]', fila);
     if (borrar) dobleToque(borrar, "Toque nuevamente para eliminar la nota", async () => {
