@@ -113,3 +113,20 @@ export function calendarioMes(caja, { mes, marcados, elegido, hoy, onElegir }) {
   caja.innerHTML = `<div class="cal-mes" role="group" aria-label="Calendario del mes">${["L", "M", "M", "J", "V", "S", "D"].map(d => `<span class="cal-sem" aria-hidden="true">${d}</span>`).join("")}${celdas.join("")}</div>`;
   caja.querySelectorAll(".cal-dia").forEach(b => b.addEventListener("click", () => onElegir(b.dataset.fecha)));
 }
+
+/**
+ * Línea de tiempo (regla 5.1): lo más reciente arriba. Cada punto lleva fecha, tipo (con icono y etiqueta) y una línea de texto.
+ * `items`: [{ fecha (texto ya formateado), tipo, icono, clase, titulo, texto, href, id, acciones (HTML) }]. Con `href`, el título abre el detalle.
+ */
+export function lineaTiempo(items, { etiqueta = "Línea de tiempo" } = {}) {
+  return `<ol class="linea" aria-label="${esc(etiqueta)}">${items.map(i => `
+    <li class="linea-item"${i.id ? ` data-id="${esc(i.id)}"` : ""}>
+      <span class="linea-punto" aria-hidden="true">${icono(i.icono || "agenda")}</span>
+      <div class="linea-cuerpo">
+        <div class="linea-cab"><b>${esc(i.fecha)}</b><span class="chip ${esc(i.clase || "")}">${esc(i.tipo)}</span></div>
+        ${i.titulo ? `<div class="linea-titulo">${i.href ? `<a href="${esc(i.href)}">${esc(i.titulo)}</a>` : esc(i.titulo)}</div>` : ""}
+        ${i.texto ? `<p class="nota-texto">${esc(i.texto)}</p>` : ""}
+        ${i.acciones ? `<div class="icon-row">${i.acciones}</div>` : ""}
+      </div>
+    </li>`).join("")}</ol>`;
+}
