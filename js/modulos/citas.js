@@ -8,7 +8,7 @@ import * as k from "../core/citas.js";
 import * as casos from "../core/casos.js";
 import { tarjetas } from "../core/resumen.js";
 import { botonIcono, menuMas, conectarMenus } from "../core/iconos.js";
-import { selectorUsuaria, botonFiltros, conectarFiltros, estadoVacio, calendarioMes } from "../core/componentes.js";
+import { selectorUsuaria, botonFiltros, conectarFiltros, estadoVacio, calendarioMes, paginar } from "../core/componentes.js";
 import { esCoordinadora } from "../core/auth.js";
 import { puedeAgendarCita, puedeGestionarCita, puedeUsarCitas, puedeVerCita } from "../core/permisos.js";
 import { agregarAlCalendario } from "../core/calendario.js";
@@ -99,6 +99,7 @@ async function agenda(ctx, usuariaId) {
         ${prox.length ? `<h2 class="h3">Próximas</h2><div class="list">${prox.map(c => fila(c, true)).join("")}</div>` : ""}
         ${ant.length ? `<h2 class="h3">Anteriores</h2><div class="list">${ant.map(c => fila(c, true)).join("")}</div>` : ""}`
         : estadoVacio(todas.length ? "Ninguna cita coincide." : "Aún no hay citas.", todas.length ? "Modifique la búsqueda o los filtros." : puedeAgendarCita(yo) ? "Use «Nueva cita» para agendar la primera." : "");
+      if (lista.length) paginar(salida, { dentro: true, singular: "cita", plural: "citas" });
       return;
     }
     if (modo === "mes") {

@@ -8,7 +8,7 @@ import * as c from "../core/casos.js";
 import * as citasCore from "../core/citas.js";
 import { tarjetas } from "../core/resumen.js";
 import { botonIcono } from "../core/iconos.js";
-import { selectorUsuaria, botonFiltros, conectarFiltros, estadoVacio, lineaTiempo } from "../core/componentes.js";
+import { selectorUsuaria, botonFiltros, conectarFiltros, estadoVacio, lineaTiempo, paginar } from "../core/componentes.js";
 import { esperaPin, pinFallido, pinCorrecto, verificarPin, esCoordinadora } from "../core/auth.js";
 import { puedeCrearCaso, puedeEditarCaso, puedeUsarCasos } from "../core/permisos.js";
 import { agregarAlCalendario } from "../core/calendario.js";
@@ -106,7 +106,9 @@ async function lista(ctx, usuariaId) {
     const aviso = $("#sinResultados", cuerpo);
     if (aviso) aviso.hidden = n > 0;
     panel.contar(st ? 1 : 0);
+    pag.refrescar();
   };
+  const pag = paginar($("#lista", cuerpo), { singular: "caso", plural: "casos" });
   $("#buscar", cuerpo).addEventListener("input", filtrar);
   $("#estatus", cuerpo).addEventListener("change", filtrar);
 }
@@ -239,6 +241,7 @@ async function detalle(ctx, id) {
         : estadoVacio("Aún no hay notas.", edita ? "Agregue la primera con el cuadro de arriba." : "")}
     </section>
   `, { atras: "#/casos" });
+  paginar(cuerpo.querySelector(".linea"), { selector: ".linea-item", singular: "registro", plural: "registros" });
 
   if (!edita) return;
   $("#editar", cuerpo).onclick = () => { $("#editor", cuerpo).hidden = false; $("#e-asunto", cuerpo).focus(); };

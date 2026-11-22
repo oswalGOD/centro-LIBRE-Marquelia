@@ -11,7 +11,7 @@ import { colorearFirma } from "../core/firma.js";
 import * as evidencias from "../core/evidencias.js";
 import * as kiosko from "../core/kiosko.js";
 import { icono, botonIcono, menuMas, conectarMenus } from "../core/iconos.js";
-import { botonFiltros, conectarFiltros } from "../core/componentes.js";
+import { botonFiltros, conectarFiltros, paginar } from "../core/componentes.js";
 import { esProximo, sinRealizar, estadoDe, cuandoEs, ordenarCursos } from "../core/cursos.js";
 import { agregarAlCalendario } from "../core/calendario.js";
 import { tarjetas } from "../core/resumen.js";
@@ -215,7 +215,9 @@ async function lista({ yo, pintar }, curso = false) {
       : `${plural(acts.length, N.uno, N.varios)} · ${plural(abiertas, N.abierto, N.abiertos)}`;
     $("#sinResultados", c).hidden = n > 0;
     panelFiltros?.contar(Object.values(filtros).filter(Boolean).length);
+    pag?.refrescar();
   }
+  const pag = paginar($("#lista", c), { singular: curso ? "curso" : "actividad", plural: curso ? "cursos" : "actividades" });
   if (!curso) await conectarEnvios(c, yo, () => lista({ yo, pintar }, curso));
   const panelFiltros = conectarFiltros(c);
   if (muchas) $("#lista", c).insertAdjacentHTML("afterend", `<div class="empty" id="sinResultados" hidden><b>Ninguna actividad coincide.</b><p>Modifique la búsqueda o los filtros.</p></div>`);
@@ -452,7 +454,7 @@ async function detalle({ yo, pintar, ir }, id) {
     <section class="stack">
       <div class="section-head"><h2>Asistentes</h2>
         <div class="stats"><span><b>${asis.length}</b> en total</span><span><b>${n("M")}</b> mujeres</span><span><b>${n("H")}</b> hombres</span><span><b>${n("Otro")}</b> otro</span>${sinFirma ? `<span class="chip warn">${sinFirma} sin firma</span>` : ""}</div></div>
-      ${asis.length ? `<div class="list">${asis.map((x, i) => {
+      ${asis.length ? `<div class="list" id="listaAsistentes">${asis.map((x, i) => {
         const p = x.datos, e = edad(p.fnac, a.fecha);
         const inner = `<span class="num">${i + 1}</span>
           <span class="body"><span class="name">${esc(p.nombre)}</span>
@@ -471,6 +473,7 @@ async function detalle({ yo, pintar, ir }, id) {
     </section>
     ${a.estado !== "cerrada" && editable ? `<div class="barra-fija"><button class="btn" id="cerrar">${icono("cerrar", 20)}Cerrar actividad</button></div>` : ""}
   `, { atras: listaDe(a) });
+  paginar($("#listaAsistentes", c), { singular: "asistente", plural: "asistentes" });
 
   descargarMiniaturas(c, id);
   $("#tomarFotos", c)?.addEventListener("click", async () => { if (await tomarFotos(yo, a)) detalle({ yo, pintar, ir }, id); });

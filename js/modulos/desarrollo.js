@@ -5,6 +5,7 @@ import * as db from "../core/db.js";
 import * as nube from "../core/sync.js";
 import * as bitacora from "../core/bitacora.js";
 import { CLAVE_DESARROLLO } from "../core/config.js";
+import { paginar } from "../core/componentes.js";
 import { VERSION_APP } from "./ajustes.js";
 import { $, esc, aviso, errores, descargar, dobleToque } from "../core/ui.js";
 
@@ -85,7 +86,7 @@ async function vista(ctx) {
 
     <section class="panel stack">
       <h2 class="h3">Errores recientes</h2>
-      ${errs.length ? `<div class="list">${errs.map(x => `<div class="row"><span class="body"><span class="name">${esc(x.mensaje)}</span><span class="meta"><span>${fecha(x.hora)}</span>${x.lugar ? `<span class="mono">${esc(x.lugar)}</span>` : ""}${x.ruta ? `<span class="mono">${esc(x.ruta)}</span>` : ""}</span></span></div>`).join("")}</div>
+      ${errs.length ? `<div class="list" id="listaErrores">${errs.map(x => `<div class="row"><span class="body"><span class="name">${esc(x.mensaje)}</span><span class="meta"><span>${fecha(x.hora)}</span>${x.lugar ? `<span class="mono">${esc(x.lugar)}</span>` : ""}${x.ruta ? `<span class="mono">${esc(x.ruta)}</span>` : ""}</span></span></div>`).join("")}</div>
         <div class="actions"><button class="btn" id="vaciarErrores">Vaciar lista</button></div>`
       : `<p class="hint">Sin errores registrados en este dispositivo.</p>`}
     </section>
@@ -122,6 +123,7 @@ async function vista(ctx) {
     aviso(ok ? "Almacenamiento protegido" : "El navegador no lo permitió. Instalar la aplicación suele resolverlo.");
     vista(ctx);
   });
+  paginar(c.querySelector("#listaErrores"), { porPagina: 10, singular: "error", plural: "errores" });
   $("#vaciarErrores", c)?.addEventListener("click", () => { bitacora.vaciar(); vista(ctx); });
 
   const sincronizarDeNuevo = async (clave, valor, texto) => {

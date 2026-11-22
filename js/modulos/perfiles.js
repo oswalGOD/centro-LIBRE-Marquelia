@@ -3,6 +3,7 @@
 import * as db from "../core/db.js";
 import { tarjetas } from "../core/resumen.js";
 import { botonIcono } from "../core/iconos.js";
+import { paginar } from "../core/componentes.js";
 import { ROLES, nombreRol } from "../core/catalogos.js";
 import { crearPerfil, cambiarPin, pinValido, esCoordinadora } from "../core/auth.js";
 import { pedirFirma } from "../core/firma.js";
@@ -16,7 +17,7 @@ async function vista(ctx) {
   const activas = lista.filter(u => u.activa);
   const c = pintar("Perfiles", `
     ${tarjetas([[activas.length, "Activos", "ok"], [lista.length - activas.length, "Desactivados", lista.length > activas.length ? "warn" : ""], [activas.filter(u => u.rol === "Coordinadora").length, "Coordinación"]], { etiqueta: "Resumen de perfiles" })}
-    <div class="list">${lista.map(u => `
+    <div class="list" id="listaPerfiles">${lista.map(u => `
       <div class="row user ${u.activa ? "" : "inactive"}" data-id="${esc(u.id)}">
         <span class="avatar" aria-hidden="true">${esc(u.nombre[0])}</span>
         <span class="body"><span class="name">${esc(u.nombre)}${u.id === yo.id ? " (usted)" : ""}</span><span class="meta"><span>${esc(nombreRol(u.rol))}</span>${u.firma ? `<span class="chip ok">Con firma</span>` : ""}${u.activa ? "" : `<span class="chip">Desactivado</span>`}</span></span>
@@ -44,6 +45,7 @@ async function vista(ctx) {
     </section>
   `);
 
+  paginar(document.getElementById("listaPerfiles"), { singular: "perfil", plural: "perfiles" });
   $$(".row.user", c).forEach(fila => {
     const u = lista.find(x => x.id === fila.dataset.id);
     fila.addEventListener("click", async ev => {
