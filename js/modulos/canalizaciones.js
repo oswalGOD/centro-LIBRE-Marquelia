@@ -9,7 +9,7 @@ import * as k from "../core/canalizaciones.js";
 import { listarCasos } from "../core/casos.js";
 import { tarjetas } from "../core/resumen.js";
 import { botonIcono, menuMas, conectarMenus } from "../core/iconos.js";
-import { selectorUsuaria, botonFiltros, conectarFiltros, estadoVacio } from "../core/componentes.js";
+import { selectorUsuaria, botonFiltros, conectarFiltros, estadoVacio, paginar } from "../core/componentes.js";
 import { esCoordinadora } from "../core/auth.js";
 import { puedeCrearCaso, puedeEditarCaso, puedeUsarCasos } from "../core/permisos.js";
 import { agregarAlCalendario } from "../core/calendario.js";
@@ -103,7 +103,9 @@ async function lista(ctx, usuariaId) {
     const sin = $("#sinResultados", cuerpo);
     if (sin) sin.hidden = visibles > 0;
     panel.contar((st ? 1 : 0) + (inst ? 1 : 0));
+    pag.refrescar();
   };
+  const pag = paginar($("#lista", cuerpo), { singular: "canalización", plural: "canalizaciones" });
   ["#buscar", "#f-estatus", "#f-inst"].forEach(s => $(s, cuerpo).addEventListener(s === "#buscar" ? "input" : "change", filtrar));
 }
 
@@ -290,6 +292,7 @@ async function catalogo(ctx) {
           ${botonIcono("eliminar", "Quitar", { clase: "danger", extra: 'data-accion="quitar"' })}</span>
       </div>`).join("")}</div>` : estadoVacio("El catálogo está vacío.", "Agregue la primera institución con el formulario de arriba.")}
   `, { atras: "#/canalizaciones" });
+  paginar($("section ~ .list", cuerpo), { singular: "institución", plural: "instituciones" });
 
   const nombre = $("#i-nombre", cuerpo), contacto = $("#i-contacto", cuerpo), cancelar = $("#cancelarInst", cuerpo);
   const limpiar = () => {

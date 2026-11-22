@@ -3,7 +3,7 @@
 import * as db from "../core/db.js";
 import { tarjetas } from "../core/resumen.js";
 import { botonIcono, menuMas, conectarMenus } from "../core/iconos.js";
-import { estadoVacio } from "../core/componentes.js";
+import { estadoVacio, paginar } from "../core/componentes.js";
 import { aMayusculas, aCapital, GRUPOS, SEXOS, leerCurp, limpiarCurp, edad, hoy, etiquetaGrupo, etiquetaSexo, fechaLarga, normalizar } from "../core/catalogos.js";
 import { esCoordinadora } from "../core/auth.js";
 import { puedeVer, puedeCrearCaso, puedeUsarCasos } from "../core/permisos.js";
@@ -39,11 +39,13 @@ async function lista({ yo, pintar }) {
     : `<div class="empty"><b>Aún no hay usuarias registradas.</b><p>Cada persona que se registre en una actividad se agrega aquí. En su siguiente asistencia, bastará con ingresar su CURP o buscar su nombre.</p></div>`}
   `);
   $("#lista", c)?.insertAdjacentHTML("afterend", `<div class="empty" id="sinResultados" hidden><b>Ninguna usuaria coincide.</b><p>Modifique la búsqueda.</p></div>`);
+  const pag = paginar($("#lista", c), { singular: "usuaria", plural: "usuarias" });
   $("#buscar", c).addEventListener("input", e => {
     const q = normalizar(e.target.value).replace(/\s+/g, " ").trim().split(" ");
     let n = 0;
     $$("#lista .row", c).forEach(r => { r.hidden = !q.every(w => r.dataset.buscar.includes(w)); if (!r.hidden) n++; });
     $("#conteo", c).textContent = plural(n, "usuaria", "usuarias");
+    pag.refrescar();
     const aviso = $("#sinResultados", c);
     if (aviso) aviso.hidden = n > 0;
   });
@@ -147,6 +149,7 @@ async function ficha({ yo, pintar, ir }, id) {
       ${!acts.length ? estadoVacio("Aún no registra asistencia.", "Aparecerá aquí cuando se le registre en una actividad.") : ""}
     </section>
   `, { atras: "#/usuarias" });
+  paginar($("section.stack > .list", c), { singular: "actividad", plural: "actividades" });
   conectarMenus(c);
   const eliminar = $("#eliminar", c);
   if (eliminar) dobleToque(eliminar, "Toque nuevamente para eliminar", async () => {

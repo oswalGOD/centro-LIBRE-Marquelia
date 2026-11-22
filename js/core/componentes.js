@@ -130,3 +130,58 @@ export function lineaTiempo(items, { etiqueta = "Línea de tiempo" } = {}) {
       </div>
     </li>`).join("")}</ol>`;
 }
+
+/**
+ * Paginación de una lista ya dibujada. Funciona sobre el DOM: oculta las filas que no corresponden
+ * a la página actual y respeta las que otro filtro ya ocultó con el atributo `hidden`.
+ * Opciones:
+ *  - selector: filas a paginar dentro de `raiz` (por defecto «.row»).
+ *  - porPagina: filas por página (20 por defecto). Los controles solo aparecen si hay más.
+ *  - dentro: true pone los controles al final de `raiz` (para contenedores que se redibujan);
+ *    false (por defecto) los pone justo después.
+ *  - singular, plural: nombre de lo que se lista, para el resumen («87 usuarias»).
+ * Devuelve { refrescar(reiniciar = true) }: llámela después de cada filtro o búsqueda.
+ */
+export function paginar(raiz, { selector = ".row", porPagina = 20, dentro = false, singular = "registro", plural = "registros" } = {}) {
+  if (!raiz) return { refrescar() {} };
+  let pagina = 1;
+  const nav = document.createElement("nav");
+  nav.className = "paginacion no-print";
+  nav.setAttribute("aria-label", "Paginación");
+  nav.hidden = true;
+  if (dentro) raiz.append(nav); else raiz.after(nav);
+  const filas = () => [...raiz.querySelectorAll(selector)].filter(r => !r.hidden);
+  function refrescar(reiniciar = true) {
+    if (reiniciar) pagina = 1;
+    const todas = [...raiz.querySelectorAll(selector)];
+    const visibles = todas.filter(r => !r.hidden);
+    const paginas = Math.max(1, Math.ceil(visibles.length / porPagina));
+    pagina = Math.min(pagina, paginas);
+    const desde = (pagina - 1) * porPagina, hasta = desde + porPagina;
+    todas.forEach(r => r.removeAttribute("data-pag"));
+    visibles.forEach((r, i) => { if (i < desde || i >= hasta) r.setAttribute("data-pag", "fuera"); });
+    // Encabezados y grupos que quedaron sin filas en esta página.
+    raiz.querySelectorAll(".list, section.panel[data-par]").forEach(g => {
+      if (g === raiz) return;
+      const hay = [...g.querySelectorAll(selector)].some(r => !r.hidden && !r.hasAttribute("data-pag")) || (g.matches(selector) && !g.hidden && !g.hasAttribute("data-pag"));
+      g.toggleAttribute("data-pag", !hay && visibles.length > 0);
+      const t = g.previousElementSibling;
+      if (t && /^H[23]$/.test(t.tagName)) t.toggleAttribute("data-pag", !hay && visibles.length > 0);
+    });
+    nav.hidden = visibles.length <= porPagina;
+    if (nav.hidden) { nav.innerHTML = ""; return; }
+    const n = visibles.length;
+    nav.innerHTML = `${botonIcono("anterior", "Anterior", { clase: "quieto", extra: `data-pg="-1" ${pagina === 1 ? "disabled" : ""}` })}
+      <p class="paginacion-info" role="status" aria-live="polite"><b>Página ${pagina} de ${paginas}</b><span>${desde + 1} a ${Math.min(hasta, n)} de ${n} ${n === 1 ? singular : plural}</span></p>
+      ${botonIcono("siguiente", "Siguiente", { clase: "quieto", extra: `data-pg="1" ${pagina === paginas ? "disabled" : ""}` })}`;
+  }
+  nav.addEventListener("click", e => {
+    const b = e.target.closest("[data-pg]");
+    if (!b || b.disabled) return;
+    pagina += Number(b.dataset.pg);
+    refrescar(false);
+    (filas().find(r => !r.hasAttribute("data-pag")) || raiz).scrollIntoView({ block: "start", behavior: "smooth" });
+  });
+  refrescar();
+  return { refrescar };
+}

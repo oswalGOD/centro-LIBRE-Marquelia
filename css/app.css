@@ -639,3 +639,12 @@ body.con-teclado-pin { padding-bottom: 320px; }
 .linea-cuerpo { min-width: 0; display: grid; gap: 4px; padding-top: 2px; }
 .linea-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
 .linea-titulo { font-weight: 700; overflow-wrap: anywhere; }
+
+/* Paginación de listas */
+[data-pag] { display: none !important; }
+.paginacion { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 4px; }
+.paginacion[hidden] { display: none; }
+.paginacion-info { display: grid; gap: 2px; text-align: center; margin: 0; min-width: 0; font-size: .88rem; color: var(--muted); }
+.paginacion-info b { color: var(--ink); }
+.paginacion .ib[disabled] { opacity: .4; pointer-events: none; }
+.list > .row, .list > section { scroll-margin-top: 84px; }
