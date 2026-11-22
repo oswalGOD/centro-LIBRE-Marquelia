@@ -5,7 +5,7 @@
 import { anotar } from "./core/bitacora.js";
 import * as db from "./core/db.js";
 import { ROLES, nombreRol } from "./core/catalogos.js";
-import { crearPerfil, iniciarSesion, cerrarSesion, sesionActual, sesionVigente, tocarSesion, verificarPin, pinValido, esCoordinadora, esperaPin, pinFallido, pinCorrecto } from "./core/auth.js";
+import { crearPerfil, iniciarSesion, cerrarSesion, sesionActual, sesionVigente, tocarSesion, restoInactividad, AVISO_PREVIO, verificarPin, pinValido, esCoordinadora, esperaPin, pinFallido, pinCorrecto } from "./core/auth.js";
 import { $, $$, esc, aviso, errores, leerCampos } from "./core/ui.js";
 import * as nube from "./core/sync.js";
 import * as kiosko from "./core/kiosko.js";
@@ -324,10 +324,45 @@ function entrar(lista) {
 
 window.addEventListener("hashchange", router);
 
-// Tras 30 minutos sin usarla, la app vuelve a pedir el PIN
-["pointerdown", "keydown"].forEach(t => addEventListener(t, tocarSesion, { passive: true }));
-setInterval(() => { if (yo && !kiosko.estado() && !sesionVigente()) { yo = null; router(); } }, 30000);
-document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && yo && !kiosko.estado() && !sesionVigente()) { yo = null; router(); } });
+// Tras un tiempo sin usarla (15 minutos de forma predeterminada; se cambia en Ajustes) la app vuelve a pedir el PIN.
+// Un minuto antes se muestra un aviso con la opción de continuar. Los datos ya guardados no se pierden;
+// solo se descarta lo que estuviera escrito en un formulario sin guardar.
+["pointerdown", "keydown", "touchstart"].forEach(t => addEventListener(t, () => tocarSesion(), { passive: true }));
+
+function cerrarPorInactividad() {
+  $("#avisoInactividad")?.remove();
+  yo = null;
+  router();
+}
+
+function mostrarAvisoInactividad(resto) {
+  let m = $("#avisoInactividad");
+  if (!m) {
+    m = document.createElement("div");
+    m.id = "avisoInactividad";
+    m.className = "pin-modal";
+    m.innerHTML = `
+      <div class="pin-card stack" role="alertdialog" aria-modal="true" aria-labelledby="inacT" aria-describedby="inacD">
+        <h2 class="h3" id="inacT">¿Sigue utilizando la aplicación?</h2>
+        <p class="hint" id="inacD">Por seguridad, la sesión se cerrará en <b id="inacSeg"></b> segundos por falta de actividad. Lo que ya se guardó no se pierde, pero se descartará lo que esté escrito en un formulario sin guardar.</p>
+        <div class="actions"><button class="btn primary" type="button" id="inacSigo">Continuar en la sesión</button></div>
+      </div>`;
+    document.body.append(m);
+    $("#inacSigo").onclick = () => { tocarSesion(true); m.remove(); };
+    $("#inacSigo").focus();
+  }
+  $("#inacSeg").textContent = Math.ceil(resto / 1000);
+}
+
+function vigilarInactividad() {
+  if (!yo || kiosko.estado()) return $("#avisoInactividad")?.remove();
+  const resto = restoInactividad();
+  if (resto <= 0) return cerrarPorInactividad();
+  if (resto <= AVISO_PREVIO) mostrarAvisoInactividad(resto);
+  else $("#avisoInactividad")?.remove(); // se usó la app desde otra pestaña o ventana
+}
+setInterval(vigilarInactividad, 1000);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") vigilarInactividad(); });
 navigator.storage?.persist?.();
 router();
 
