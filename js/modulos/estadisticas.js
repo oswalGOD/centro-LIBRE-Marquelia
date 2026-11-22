@@ -4,23 +4,29 @@ import * as db from "../core/db.js";
 import { botonIcono } from "../core/iconos.js";
 import { botonFiltros, conectarFiltros } from "../core/componentes.js";
 import { GRUPOS, RANGOS, SEXOS, edad, rangoDe, hoy, fechaCorta, fechaLarga, etiquetaGrupo, etiquetaRango, minutosEntre, duracion, nombreRol } from "../core/catalogos.js";
-import { esCoordinadora } from "../core/auth.js";
 import { puedeVer } from "../core/permisos.js";
 import { $, $$, esc, descargar, plural } from "../core/ui.js";
 
 const SEXO_COLUMNAS = [["M", "Mujeres"], ["H", "Hombres"], ["Otro", "Otro"]];
 
 // Filtros vigentes mientras la app está abierta
-const filtros = { desde: hoy().slice(0, 4) + "-01-01", hasta: hoy(), tipo: "", facilitadoraId: "", contar: "asistencias" };
+const filtros = { desde: hoy().slice(0, 4) + "-01-01", hasta: hoy(), tipo: "", facilitadoraId: "", contar: "asistencias", ambito: "individual" };
 
 async function cargar(yo) {
   const [acts, asis] = await Promise.all([db.todos("actividades"), db.todos("asistencias")]);
-  const visibles = acts.filter(a => puedeVer(yo, a) && !a.programado && !a.cancelado); // los cursos por realizar no cuentan
-  return { visibles, asis };
+  const realizadas = acts.filter(a => !a.programado && !a.cancelado); // los cursos por realizar no cuentan
+  return { realizadas, asis, yo };
 }
 
+/**
+ * Individual: lo que el perfil ve (sus actividades y los cursos, que son colectivos).
+ * Global: todo el Centro; cada copia de actividad suma sus asistencias y cada curso cuenta una sola vez.
+ */
+const visiblesDe = ({ realizadas, yo }, ambito = filtros.ambito) => (ambito === "global" ? realizadas : realizadas.filter(a => puedeVer(yo, a)));
+
 /** Aplica los filtros y devuelve las filas a contar: una por asistencia o una por usuaria. */
-function calcular({ visibles, asis }) {
+function calcular(datos) {
+  const { asis } = datos, visibles = visiblesDe(datos);
   const acts = visibles
     .filter(a => a.fecha >= filtros.desde && a.fecha <= filtros.hasta)
     .filter(a => !filtros.tipo || a.tipo === filtros.tipo)
@@ -88,12 +94,14 @@ const csv = filas => "﻿" + filas.map(f => f.map(celdaCsv).join(",")).join("\r\
 async function vista(ctx) {
   const { yo, pintar } = ctx;
   const datos = await cargar(yo);
-  const coord = esCoordinadora(yo);
-  const perfiles = coord ? (await db.todos("perfiles")).sort((a, b) => a.nombre.localeCompare(b.nombre)) : [];
-  const tipos = [...new Set(datos.visibles.map(a => a.tipo))].sort();
+  const perfiles = (await db.todos("perfiles")).sort((a, b) => a.nombre.localeCompare(b.nombre));
+  const tipos = [...new Set(datos.realizadas.map(a => a.tipo))].sort();
 
   const c = pintar("Estadísticas", `
     <div class="toolbar">
+      <div class="segmented" role="radiogroup" aria-label="Ámbito de las estadísticas">
+        <button type="button" role="radio" data-ambito="individual">Mis estadísticas</button>
+        <button type="button" role="radio" data-ambito="global">Globales</button></div>
       ${botonFiltros()}
       <div class="segmented" role="radiogroup" aria-label="Qué contar">
         <button type="button" role="radio" data-contar="asistencias">Asistencias</button>
@@ -103,13 +111,15 @@ async function vista(ctx) {
       <div class="field"><label for="e-desde">Desde</label><input id="e-desde" type="date" data-filtro="desde" value="${filtros.desde}"></div>
       <div class="field"><label for="e-hasta">Hasta</label><input id="e-hasta" type="date" data-filtro="hasta" value="${filtros.hasta}"></div>
       <div class="field"><label for="e-tipo">Tipo de actividad</label><select id="e-tipo" data-filtro="tipo"><option value="">Todos</option>${tipos.map(t => `<option ${t === filtros.tipo ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></div>
-      ${coord ? `<div class="field"><label for="e-fac">Facilitadora</label><select id="e-fac" data-filtro="facilitadoraId"><option value="">Todas</option>${perfiles.map(u => `<option value="${esc(u.id)}" ${u.id === filtros.facilitadoraId ? "selected" : ""}>${esc(u.nombre)}</option>`).join("")}</select></div>` : ""}
+      <div class="field" id="campoFac"><label for="e-fac">Facilitadora</label><select id="e-fac" data-filtro="facilitadoraId"><option value="">Todas</option>${perfiles.map(u => `<option value="${esc(u.id)}" ${u.id === filtros.facilitadoraId ? "selected" : ""}>${esc(u.nombre)}</option>`).join("")}</select></div>
     </div>
     <div id="resultado" class="stack"></div>
   `, { ancho: true });
 
   function pintarResultado() {
     $$("[data-contar]", c).forEach(b => b.setAttribute("aria-checked", b.dataset.contar === filtros.contar));
+    $$("[data-ambito]", c).forEach(b => b.setAttribute("aria-checked", b.dataset.ambito === filtros.ambito));
+    $("#campoFac", c).hidden = filtros.ambito !== "global";
     const r = calcular(datos);
     const filas = filtros.contar === "usuarias" ? r.usuarias : r.registros;
     const nota = filtros.contar === "usuarias"
@@ -126,7 +136,7 @@ async function vista(ctx) {
     const totalMin = conHorario.reduce((t, m) => t + m, 0);
 
     $("#resultado", c).innerHTML = `
-      <p class="hint">Del ${fechaLarga(filtros.desde)} al ${fechaLarga(filtros.hasta)}${coord ? "" : " · solo sus actividades"}.</p>
+      <p class="hint">Del ${fechaLarga(filtros.desde)} al ${fechaLarga(filtros.hasta)}${filtros.ambito === "global" ? " · globales: todas las actividades del Centro, con las copias de cada perfil y cada curso una sola vez" : " · solo sus actividades y los cursos"}.</p>
       <div class="tiles">
         <div class="tile"><span class="label">Asistencias registradas</span><span class="value">${r.registros.length}</span></div>
         <div class="tile"><span class="label">Usuarias distintas</span><span class="value">${r.usuarias.length}</span></div>
@@ -185,6 +195,12 @@ async function vista(ctx) {
     pintarResultado();
   }));
   $$("[data-contar]", c).forEach(b => b.addEventListener("click", () => { filtros.contar = b.dataset.contar; pintarResultado(); }));
+  $$("[data-ambito]", c).forEach(b => b.addEventListener("click", () => {
+    filtros.ambito = b.dataset.ambito;
+    if (filtros.ambito !== "global") { filtros.facilitadoraId = ""; $("#e-fac", c).value = ""; }
+    contarFiltros();
+    pintarResultado();
+  }));
   // Filtros activos: tipo, facilitadora y un periodo distinto del año en curso hasta hoy
   const panel = conectarFiltros(c);
   const contarFiltros = () => panel.contar([filtros.tipo, filtros.facilitadoraId, filtros.desde !== hoy().slice(0, 4) + "-01-01" || filtros.hasta !== hoy()].filter(Boolean).length);

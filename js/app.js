@@ -13,6 +13,7 @@ import { iniciarTecladoPin } from "./core/teclado-pin.js";
 import * as expedientes from "./core/expedientes.js";
 import { captura } from "./modulos/captura.js";
 import actividades from "./modulos/actividades.js";
+import agenda from "./modulos/agenda.js";
 import duplicadas from "./modulos/duplicadas.js";
 import usuarias from "./modulos/usuarias.js";
 import estadisticas from "./modulos/estadisticas.js";
@@ -28,7 +29,7 @@ import citas from "./modulos/citas.js";
 import canalizaciones from "./modulos/canalizaciones.js";
 import informes from "./modulos/informes.js";
 
-const MODULOS = [inicio, actividades, constancias, anexo2, evidencias, casos, citas, canalizaciones, duplicadas, usuarias, estadisticas, informes, perfiles, ajustes, desarrollo];
+const MODULOS = [inicio, actividades, agenda, constancias, anexo2, evidencias, casos, citas, canalizaciones, duplicadas, usuarias, estadisticas, informes, perfiles, ajustes, desarrollo];
 
 iniciarTecladoPin();
 const raiz = document.getElementById("app");
