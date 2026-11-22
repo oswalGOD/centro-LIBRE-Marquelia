@@ -7,7 +7,7 @@ import { fechaLarga, mesCorto, normalizar } from "../core/catalogos.js";
 import { puedeVer, puedeObtenerCopia, esDeAgenda } from "../core/permisos.js";
 import { crearCopia, idCopiaAgenda, tiposDisponibles } from "../core/copias.js";
 import { esProximo, estadoDe, cuandoEs, ordenarCursos } from "../core/cursos.js";
-import { botonFiltros, conectarFiltros } from "../core/componentes.js";
+import { botonFiltros, conectarFiltros, paginar } from "../core/componentes.js";
 import { tarjetas } from "../core/resumen.js";
 import { $, $$, esc, aviso, plural, unaVez } from "../core/ui.js";
 
@@ -83,7 +83,9 @@ async function agenda({ yo, pintar, ir }) {
     });
     if ($("#sinResultados", c)) $("#sinResultados", c).hidden = n > 0 || !acts.length;
     panel?.contar(Object.values(filtros).filter(Boolean).length);
+    pag?.refrescar();
   }
+  const pag = paginar($("#lista", c), { selector: ":scope > section", singular: "actividad", plural: "actividades" });
   buscar?.addEventListener("input", filtrar);
   for (const k in filtros) filtros[k] = $(`[data-filtro=${k}]`, c)?.value || "";
   $$("[data-filtro]", c).forEach(el => el.addEventListener("change", () => { filtros[el.dataset.filtro] = el.value; filtrar(); }));
