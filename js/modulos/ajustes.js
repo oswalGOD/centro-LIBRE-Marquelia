@@ -1,7 +1,7 @@
 // Ajustes del dispositivo, respaldo y restauración de datos, e instalación de la app.
 
 import * as db from "../core/db.js";
-import { esCoordinadora, cambiarPin, pinValido, verificarPin } from "../core/auth.js";
+import { esCoordinadora, cambiarPin, pinValido, verificarPin, minutosInactividad, fijarMinutosInactividad, OPCIONES_INACTIVIDAD } from "../core/auth.js";
 import { hoy, prefijoFolio } from "../core/catalogos.js";
 import { $, esc, aviso, errores, descargar, dobleToque, plural, unaVez } from "../core/ui.js";
 import * as nube from "../core/sync.js";
@@ -103,6 +103,17 @@ async function vista(ctx) {
       <p class="hint">El folio toma el mes y el año de la actividad y lleva un consecutivo por mes, p. ej. <b class="mono">${prefijoFolio(hoy())}-${esc(idDisp)}001</b>. Utilice un ID (una letra) distinto en cada tableta o computadora.</p>
       <div id="errFolio"></div>
       <div class="actions"><button class="btn" id="guardarFolio">Guardar</button></div>
+    </div></details>` : ""}
+
+    ${coord ? `<details class="panel plegable" >
+      <summary><h2 class="h3">Cierre de sesión por inactividad</h2></summary>
+      <div class="stack">
+      <div class="grid">
+        <div class="field"><label for="inactividad">Cerrar la sesión tras</label>
+          <select id="inactividad">${OPCIONES_INACTIVIDAD.map(m => `<option value="${m}" ${m === minutosInactividad() ? "selected" : ""}>${m === 60 ? "1 hora" : `${m} minutos`} sin usar la aplicación</option>`).join("")}</select></div>
+      </div>
+      <p class="hint">Al cumplirse el tiempo, la aplicación vuelve a pedir el PIN. Un minuto antes se muestra un aviso para continuar. Este ajuste aplica solo a este dispositivo; los datos guardados nunca se pierden.</p>
+      <div class="actions"><button class="btn" id="guardarInactividad">Guardar</button></div>
     </div></details>` : ""}
 
     <details class="panel plegable" >
@@ -226,6 +237,10 @@ async function vista(ctx) {
     vista(ctx);
   });
 
+  $("#guardarInactividad", c)?.addEventListener("click", () => {
+    fijarMinutosInactividad(Number($("#inactividad", c).value));
+    aviso("Tiempo de inactividad guardado");
+  });
   $("#cambiarPin", c).onclick = async () => {
     const actual = $("#pinActual", c).value, nuevo = $("#pinNuevo", c).value;
     const e = [];

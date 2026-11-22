@@ -6,7 +6,23 @@ import * as expedientes from "./expedientes.js";
 
 const CLAVE_SESION = "clm-sesion";
 const DURACION_SESION = 12 * 60 * 60 * 1000; // máximo 12 horas seguidas
-export const INACTIVIDAD = 30 * 60 * 1000; // se pide el PIN otra vez tras 30 minutos sin usarla
+const CLAVE_INACTIVIDAD = "clm-inactividad";
+export const OPCIONES_INACTIVIDAD = [5, 10, 15, 30, 60]; // minutos
+export const INACTIVIDAD_PREDETERMINADA = 15;
+export const AVISO_PREVIO = 60 * 1000; // se avisa un minuto antes de cerrar
+
+/** Minutos sin usar la app tras los cuales se pide el PIN otra vez (ajuste propio de cada dispositivo). */
+export function minutosInactividad() {
+  try {
+    const m = Number(localStorage.getItem(CLAVE_INACTIVIDAD));
+    return OPCIONES_INACTIVIDAD.includes(m) ? m : INACTIVIDAD_PREDETERMINADA;
+  } catch (e) { return INACTIVIDAD_PREDETERMINADA; }
+}
+export function fijarMinutosInactividad(m) {
+  if (!OPCIONES_INACTIVIDAD.includes(m)) return;
+  try { localStorage.setItem(CLAVE_INACTIVIDAD, String(m)); } catch (e) {}
+}
+const inactividadMs = () => minutosInactividad() * 60 * 1000;
 const CLAVE_INTENTOS = "clm-intentos";
 
 const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
@@ -48,17 +64,26 @@ export function iniciarSesion(perfil) {
 }
 
 /** Marca actividad para que la sesión no se cierre mientras se usa la app. */
-export function tocarSesion() {
+export function tocarSesion(forzar = false) {
   try {
     const s = JSON.parse(localStorage.getItem(CLAVE_SESION));
-    if (s && Date.now() - s.ultimo > 15000) localStorage.setItem(CLAVE_SESION, JSON.stringify({ ...s, ultimo: Date.now() }));
+    if (s && (forzar || Date.now() - s.ultimo > 15000)) localStorage.setItem(CLAVE_SESION, JSON.stringify({ ...s, ultimo: Date.now() }));
   } catch (e) {}
+}
+
+/** Milisegundos que faltan para cerrar la sesión por inactividad (0 si ya no hay sesión). */
+export function restoInactividad() {
+  try {
+    const s = JSON.parse(localStorage.getItem(CLAVE_SESION));
+    if (!s) return 0;
+    return Math.max(0, Math.min(s.expira - Date.now(), (s.ultimo || 0) + inactividadMs() - Date.now()));
+  } catch (e) { return 0; }
 }
 
 export function sesionVigente() {
   try {
     const s = JSON.parse(localStorage.getItem(CLAVE_SESION));
-    return !!s && s.expira > Date.now() && Date.now() - (s.ultimo || 0) < INACTIVIDAD;
+    return !!s && s.expira > Date.now() && Date.now() - (s.ultimo || 0) < inactividadMs();
   } catch (e) { return false; }
 }
 
