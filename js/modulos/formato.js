@@ -152,8 +152,10 @@ export const esMovil = () => esIOS() || esAndroid();
 export const esIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
 export async function formato({ yo, pintar, ir }, id) {
-  const act = await db.uno("actividades", id);
-  if (!act || !puedeVer(yo, act)) return ir("#/asistencia");
+  const original = await db.uno("actividades", id);
+  if (!original || !puedeVer(yo, original)) return ir("#/asistencia");
+  // En los cursos todos los perfiles son facilitadores: el formato sale con el nombre de quien lo imprime.
+  const act = original.curso ? { ...original, facilitadora: yo.nombre, puesto: nombreRol(yo.rol) } : original;
   const asis = (await db.todos("asistencias", "actividadId", id)).sort((a, b) => a.orden - b.orden);
   await Promise.all(asis.map(async x => { if (x.firma) x.firma = await colorearFirma(x.firma); })); // solo para mostrar e imprimir
   const hojas = Math.max(1, Math.ceil(asis.length / POR_HOJA)) + (act.notas ? 1 : 0);

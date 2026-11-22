@@ -38,12 +38,14 @@ const minutosDe = a => {
 const conteoSexo = filas => SEXOS_INFORME.map(([s]) => filas.filter(r => r.sexo === s).length);
 
 /**
- * Datos agregados del periodo para el perfil `yo` (la Coordinadora ve todo; los demás, lo que ya ven en Estadísticas).
+ * Datos agregados del periodo para el perfil `yo`.
+ * ambito: "individual" (sus actividades y los cursos) o "global" (todo el Centro: cada copia de actividad suma
+ * sus asistencias y cada curso cuenta una sola vez). El informe global no incluye citas ni canalizaciones.
  * alcance: "todo", "actividades" o "cursos".
  */
-export async function calcularInforme(yo, { desde, hasta, alcance = "todo" }) {
+export async function calcularInforme(yo, { desde, hasta, alcance = "todo", ambito = "individual" }) {
   const [acts, asis] = await Promise.all([db.todos("actividades"), db.todos("asistencias")]);
-  const visibles = acts.filter(a => puedeVer(yo, a) && !a.programado && !a.cancelado);
+  const visibles = acts.filter(a => (ambito === "global" || puedeVer(yo, a)) && !a.programado && !a.cancelado);
   const delPeriodo = visibles
     .filter(a => a.fecha >= desde && a.fecha <= hasta)
     .filter(a => alcance === "todo" || (alcance === "cursos") === Boolean(a.curso))
@@ -102,10 +104,10 @@ export async function calcularInforme(yo, { desde, hasta, alcance = "todo" }) {
   }
 
   // Citas individuales: solo conteos (nunca quién, con quién ni el motivo). Se incluyen cuando el informe abarca todo.
-  const citas = alcance === "todo" ? contarCitas(await citasDelPeriodo(yo, desde, hasta)) : null;
+  const citas = alcance === "todo" && ambito !== "global" ? contarCitas(await citasDelPeriodo(yo, desde, hasta)) : null;
 
   return {
-    desde, hasta, alcance, generado: hoy(), citas,
+    desde, hasta, alcance, ambito, generado: hoy(), citas,
     totales: {
       actividades: actividades.filter(a => !a.curso).length,
       cursos: actividades.filter(a => a.curso).length,
@@ -117,7 +119,7 @@ export async function calcularInforme(yo, { desde, hasta, alcance = "todo" }) {
     sexoUnicas: conteoSexo(unicas),
     registros, unicas, actividades, porTipo, meses,
     // Solo conteos por institución y estatus; null si los expedientes del perfil no están abiertos en esta sesión
-    canalizaciones: await resumenCanalizaciones(yo, desde, hasta).catch(() => null),
+    canalizaciones: ambito === "global" ? null : await resumenCanalizaciones(yo, desde, hasta).catch(() => null),
   };
 }
 

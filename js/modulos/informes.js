@@ -6,7 +6,6 @@ import * as db from "../core/db.js";
 import * as ev from "../core/evidencias.js";
 import { descargarFoto } from "../core/sync.js";
 import { GRUPOS, RANGOS, hoy, fechaCorta, duracion } from "../core/catalogos.js";
-import { esCoordinadora } from "../core/auth.js";
 import { calcularInforme, cruzar, evidenciasDelPeriodo, periodo, MESES, SEXOS_INFORME } from "../core/informe.js";
 import { ESTATUS as ESTATUS_CANAL } from "../core/canalizaciones.js";
 import { libroXlsx } from "../core/xlsx.js";
@@ -21,7 +20,7 @@ const POR_HOJA_FOTOS = 6, FILAS_ACTIVIDADES = 17;
 const ahora = hoy();
 const filtros = {
   modo: "mes", anio: Number(ahora.slice(0, 4)), mes: Number(ahora.slice(5, 7)), trimestre: Math.ceil(Number(ahora.slice(5, 7)) / 3),
-  desde: ahora.slice(0, 4) + "-01-01", hasta: ahora, alcance: "todo",
+  desde: ahora.slice(0, 4) + "-01-01", hasta: ahora, alcance: "todo", ambito: "individual",
 };
 let seleccion = []; // ids de las fotografías elegidas, en el orden en que se presentan
 
@@ -29,6 +28,7 @@ const sinSimbolos = s => String(s).replace(/[\\/:*?"<>|]+/g, "-");
 const opciones = (lista, actual) => lista.map(([v, t]) => `<option value="${esc(v)}" ${String(v) === String(actual) ? "selected" : ""}>${esc(t)}</option>`).join("");
 const capital = s => s[0].toUpperCase() + s.slice(1);
 const horasTexto = min => (min ? duracion(min) : "—");
+const AMBITOS = { individual: "Individual (sus actividades y los cursos)", global: "Global (todo el Centro)" };
 const ALCANCES = { todo: "Todas las actividades y cursos", actividades: "Solo actividades", cursos: "Solo cursos y capacitaciones" };
 
 function anios() {
@@ -38,7 +38,7 @@ function anios() {
 
 function nombreArchivo(per) {
   const base = filtros.modo === "mes" ? `${filtros.anio}-${String(filtros.mes).padStart(2, "0")}` : filtros.modo === "trimestre" ? `${filtros.anio}-T${filtros.trimestre}` : `${per.desde}-a-${per.hasta}`;
-  return sinSimbolos(`Informe ${base} Centro LIBRE Marquelia`);
+  return sinSimbolos(`Informe ${filtros.ambito === "global" ? "global " : ""}${base} Centro LIBRE Marquelia`);
 }
 
 /* ---------- Excel ---------- */
@@ -57,7 +57,7 @@ export function libroDeInforme(inf, per) {
     filas: [
       [{ v: "Centro LIBRE Marquelia", e: "titulo" }],
       [{ v: `${per.tipo}: ${per.titulo}`, e: "sub" }],
-      [{ v: `${ALCANCES[inf.alcance]} · Generado el ${fechaCorta(inf.generado)}`, e: "nota" }],
+      [{ v: `${AMBITOS[inf.ambito]} · ${ALCANCES[inf.alcance]} · Generado el ${fechaCorta(inf.generado)}`, e: "nota" }],
       [{ v: "Datos agregados: no incluye nombres, CURP, teléfonos ni firmas de las usuarias.", e: "nota" }],
       [],
       [{ v: "Indicador", e: "enc" }, { v: "Valor", e: "enc" }],
@@ -161,7 +161,7 @@ function encabezadoInforme(per, inf) {
       <table class="hdr"><colgroup><col style="width:48%"><col style="width:52%"></colgroup>
         <tr class="h-title"><td>CENTRO LIBRE MARQUELIA</td><td>INFORME DE ACTIVIDADES</td></tr>
         <tr class="h-row"><td>Periodo: <b>${esc(per.titulo)}</b></td><td>${esc(per.tipo)} · del <b>${fechaCorta(per.desde)}</b> al <b>${fechaCorta(per.hasta)}</b></td></tr>
-        <tr class="h-row"><td>Alcance: <b>${esc(ALCANCES[inf.alcance])}</b></td><td>Fecha de elaboración: <b>${fechaCorta(inf.generado)}</b></td></tr>
+        <tr class="h-row"><td>Informe: <b>${esc(inf.ambito === "global" ? "Global" : "Individual")}</b> · Alcance: <b>${esc(ALCANCES[inf.alcance])}</b></td><td>Fecha de elaboración: <b>${fechaCorta(inf.generado)}</b></td></tr>
       </table>`;
 }
 
@@ -275,9 +275,8 @@ function tablaPantalla(titulo, primera, filas) {
 
 async function pantalla({ yo, pintar }) {
   ev.liberarUrls();
-  const coord = esCoordinadora(yo);
   const per = periodo(filtros);
-  const inf = await calcularInforme(yo, { ...per, alcance: filtros.alcance });
+  const inf = await calcularInforme(yo, { ...per, alcance: filtros.alcance, ambito: filtros.ambito });
   const grupos = await evidenciasDelPeriodo(inf.actividades.map(a => ({ id: a.id, nombre: a.nombre, fecha: a.fecha, folio: a.folio })));
   const validas = new Set(grupos.flatMap(g => g.fotos.map(f => f.id)));
   seleccion = seleccion.filter(id => validas.has(id));
@@ -293,12 +292,13 @@ async function pantalla({ yo, pintar }) {
          <div class="field"><label for="i-hasta">Hasta</label><input id="i-hasta" type="date" data-filtro="hasta" value="${filtros.hasta}"></div>`;
 
   const c = pintar("Informes", `
-    <p class="hint">Informe con datos agregados del periodo, listo para entregar. No incluye nombres, CURP, teléfonos ni firmas de las usuarias.${coord ? "" : " Solo contiene sus actividades."}</p>
+    <p class="hint">Informe con datos agregados del periodo, listo para entregar. No incluye nombres, CURP, teléfonos ni firmas de las usuarias.${filtros.ambito === "global" ? " El informe global suma todas las actividades del Centro (con las copias de cada perfil) y cada curso una sola vez; no incluye citas ni canalizaciones." : " Solo contiene sus actividades y los cursos."}</p>
     <p class="hint">${inf.canalizaciones ? (inf.canalizaciones.total ? `Incluye ${plural(inf.canalizaciones.total, "canalización", "canalizaciones")} del periodo, solo como conteos por institución y estatus.` : "No hay canalizaciones registradas en el periodo.") : "Para incluir las canalizaciones del periodo, abra primero «Canalizaciones» con su PIN."}</p>
     <div class="filters" id="filtros">
       <div class="field"><span class="legend">Periodo</span><div class="segmented" role="radiogroup" aria-label="Tipo de periodo">
         ${[["mes", "Mensual"], ["trimestre", "Trimestral"], ["rango", "Por fechas"]].map(([v, x]) => `<button type="button" role="radio" aria-checked="${v === filtros.modo}" data-modo="${v}">${x}</button>`).join("")}</div></div>
       ${campos}
+      <div class="field"><label for="i-ambito">Informe</label><select id="i-ambito" data-filtro="ambito">${opciones(Object.entries(AMBITOS), filtros.ambito)}</select></div>
       <div class="field"><label for="i-alcance">Incluir</label><select id="i-alcance" data-filtro="alcance">${opciones(Object.entries(ALCANCES), filtros.alcance)}</select></div>
     </div>
     <p class="hint"><b>${esc(capital(per.tipo.toLowerCase()))}:</b> ${esc(per.titulo)}.</p>
@@ -378,7 +378,7 @@ async function pantalla({ yo, pintar }) {
 async function vistaPDF({ yo, pintar, ir }) {
   ev.liberarUrls();
   const per = periodo(filtros);
-  const inf = await calcularInforme(yo, { ...per, alcance: filtros.alcance });
+  const inf = await calcularInforme(yo, { ...per, alcance: filtros.alcance, ambito: filtros.ambito });
   if (!inf.actividades.length && !inf.citas?.total) return ir("#/informes");
   const grupos = await evidenciasDelPeriodo(inf.actividades.map(a => ({ id: a.id, nombre: a.nombre, fecha: a.fecha, folio: a.folio })));
   const porId = new Map(grupos.flatMap(g => g.fotos.map(f => [f.id, { f, a: g.actividad }])));

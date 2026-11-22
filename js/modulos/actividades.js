@@ -2,8 +2,8 @@
 
 import * as db from "../core/db.js";
 import { TIPOS_ACTIVIDAD, TIPOS_RETIRADOS, hoy, fechaLarga, mesCorto, edad, rangoDe, etiquetaGrupo, normalizar, minutosEntre, duracion, nombreRol } from "../core/catalogos.js";
-import { esCoordinadora } from "../core/auth.js";
-import { puedeVer, puedeEditar, puedeCapturar, puedeAdministrarCursos, puedeCompartir } from "../core/permisos.js";
+import { puedeVer, puedeEditar, puedeCapturar, puedeCompartir, puedeEliminar } from "../core/permisos.js";
+import { crearCopia, tiposDisponibles } from "../core/copias.js";
 import { $, $$, esc, aviso, errores, leerCampos, dobleToque, plural, unaVez } from "../core/ui.js";
 import { captura } from "./captura.js";
 import { formato } from "./formato.js";
@@ -54,21 +54,7 @@ const etiquetaEnvio = e => e.estado === "aceptada" ? `aceptada por ${e.aNombre}`
 async function aceptarEnvio(yo, a, e, nombre, tipo) {
   const origen = await db.uno("actividades", a.id);
   const copiaId = `copia-${e.id}`;
-  const previa = await db.uno("actividades", copiaId);
-  const copia = previa || {
-    id: copiaId, folio: await db.siguienteFolio(origen.fecha), creadaPor: yo.id, estado: "abierta",
-    fecha: origen.fecha, lugar: origen.lugar, tipo: origen.tipo, horaInicio: origen.horaInicio || "", horaFin: origen.horaFin || "",
-    facilitadoraId: yo.id, facilitadora: yo.nombre, puesto: nombreRol(yo.rol),
-  };
-  copia.nombre = nombre;
-  copia.tipo = tipo;
-  copia.compartidas = [{ de: e.de, deNombre: e.deNombre, a: yo.id, aNombre: yo.nombre, en: e.en, origenId: origen.id, nombreOriginal: origen.nombre, ...(nombre !== origen.nombre ? { nombreAnterior: origen.nombre } : {}), ...(tipo !== origen.tipo ? { tipoAnterior: origen.tipo } : {}) }];
-  await db.guardar("actividades", copia);
-  const existentes = new Set((await db.todos("asistencias", "actividadId", copiaId)).map(x => x.id));
-  for (const x of await db.todos("asistencias", "actividadId", origen.id)) {
-    const id = `${copiaId}-${x.id}`;
-    if (!existentes.has(id)) await db.guardar("asistencias", { ...x, id, actividadId: copiaId, creado: undefined });
-  }
+  const copia = await crearCopia(yo, origen, copiaId, nombre, tipo, { de: e.de, deNombre: e.deNombre, en: e.en });
   const actual = await db.uno("actividades", origen.id);
   await db.guardar("actividades", { ...actual, compartidaCon: actual.compartidaCon.map(x => x.id === e.id ? { ...x, estado: "aceptada", resueltaEn: Date.now(), copiaId } : x) });
   return copia;
@@ -84,8 +70,7 @@ async function seccionEnvios(yo) {
   const lista = await envios(yo);
   if (!lista.length) return "";
   const asis = await db.todos("asistencias");
-  const usados = (await db.todos("actividades")).map(x => x.tipo).filter(t => t && t !== TIPO_CURSO && !TIPOS_RETIRADOS.includes(t));
-  const tiposBase = [...new Set([...TIPOS_ACTIVIDAD, ...usados.sort((x, y) => x.localeCompare(y, "es"))])];
+  const tiposBase = await tiposDisponibles();
   return `<section class="panel stack" id="envios"><div><h2 class="h3">${lista.length === 1 ? "Actividad compartida con usted" : "Actividades compartidas con usted"}</h2>
     <p class="hint">Al aceptar se crea su propia copia, con las mismas asistentes y sus firmas, y usted figura como facilitadora. Cambiar el nombre es opcional; confirme o cambie el tipo de actividad.</p></div>
     ${lista.map(({ a, e }, i) => `<div class="stack">
@@ -128,7 +113,7 @@ function historialCompartida(a) {
   const enviados = a.compartidaCon || [];
   if (!origen && !enviados.length) return "";
   const items = [
-    ...(origen ? [`${fechaHora(origen.en)}: copia recibida de ${origen.deNombre} (actividad «${origen.nombreOriginal}»)${origen.nombreAnterior ? `; ${origen.aNombre} cambió el nombre a «${a.nombre}»` : ""}${origen.tipoAnterior ? `; cambió el tipo de «${origen.tipoAnterior}» a «${a.tipo}»` : ""}.`] : []),
+    ...(origen ? [`${fechaHora(origen.en)}: ${origen.via === "agenda" ? "copia obtenida desde la Agenda de la actividad" : "copia recibida de"} ${origen.deNombre} (actividad «${origen.nombreOriginal}»)${origen.nombreAnterior ? `; ${origen.aNombre} cambió el nombre a «${a.nombre}»` : ""}${origen.tipoAnterior ? `; cambió el tipo de «${origen.tipoAnterior}» a «${a.tipo}»` : ""}.`] : []),
     ...enviados.map(h => `${fechaHora(h.en)}: compartida con ${h.aNombre}; ${etiquetaEnvio(h)}.`),
   ];
   return `<section class="panel stack"><div><h2 class="h3">Historial de la actividad compartida</h2>
@@ -166,7 +151,6 @@ async function lista({ yo, pintar }, curso = false) {
   const N = curso
     ? { titulo: "Cursos y capacitaciones", uno: "curso", varios: "cursos", abierto: "abierto", abiertos: "abiertos", nuevo: "#/curso/nuevo", programar: "#/curso/programar", buscar: "Buscar por nombre, folio, lugar o instructora" }
     : { titulo: "Actividades", uno: "actividad", varios: "actividades", abierto: "abierta", abiertos: "abiertas", nuevo: "#/actividad/nueva", programar: "#/actividad/programar", buscar: "Buscar por nombre, folio o lugar" };
-  const administra = !curso || puedeAdministrarCursos(yo); // los cursos solo los administra la Coordinadora
   const acts = (await db.todos("actividades"))
     .filter(a => Boolean(a.curso) === curso && puedeVer(yo, a));
   acts.splice(0, acts.length, ...ordenarCursos(acts));
@@ -185,7 +169,6 @@ async function lista({ yo, pintar }, curso = false) {
   const opciones = (lista, actual) => lista.map(([v, t]) => `<option value="${esc(v)}" ${v === actual ? "selected" : ""}>${esc(t)}</option>`).join("");
   const meses = [...new Set(acts.map(a => a.fecha.slice(0, 7)))].map(m => [m, `${mesCorto(m + "-01")} ${m.slice(0, 4)}`]);
   const tipos = [...new Set(acts.map(a => a.tipo))].sort((x, y) => x.localeCompare(y, "es")).map(t => [t, t]);
-  const facilitadoras = [...new Map(acts.map(a => [a.facilitadoraId, a.facilitadora]))].sort((x, y) => x[1].localeCompare(y[1], "es"));
 
   const avisoEnvios = curso ? "" : await seccionEnvios(yo);
   const c = pintar(N.titulo, `
@@ -193,17 +176,17 @@ async function lista({ yo, pintar }, curso = false) {
     <div class="toolbar">
       ${muchas ? `<input type="search" id="buscar" class="search" placeholder="${N.buscar}" aria-label="Buscar ${N.uno}">
       ${botonFiltros()}` : ""}
-      ${administra ? botonIcono("mas2", curso ? "Nuevo" : "Nueva", { href: N.nuevo, clase: "primary", extra: `aria-label="${curso ? "Nuevo curso" : "Nueva actividad"}" title="${curso ? "Nuevo curso" : "Nueva actividad"}"` }) : ""}
-      ${administra ? botonIcono("calendario", "Programar", { href: N.programar, extra: `aria-label="${curso ? "Programar curso" : "Programar actividad"}" title="${curso ? "Programar curso" : "Programar actividad"}"` }) : ""}
+      ${botonIcono("mas2", curso ? "Nuevo" : "Nueva", { href: N.nuevo, clase: "primary", extra: `aria-label="${curso ? "Nuevo curso" : "Nueva actividad"}" title="${curso ? "Nuevo curso" : "Nueva actividad"}"` })}
+      ${botonIcono("calendario", "Programar", { href: N.programar, extra: `aria-label="${curso ? "Programar curso" : "Programar actividad"}" title="${curso ? "Programar curso" : "Programar actividad"}"` })}
+      ${curso ? "" : botonIcono("agenda", "Agenda", { href: "#/agenda", extra: `aria-label="Agenda de actividades" title="Agenda de actividades de todos los perfiles"` })}
       <p class="hint" id="cuenta">${plural(acts.length, N.uno, N.varios)} · ${plural(abiertas, N.abierto, N.abiertos)}${proximos.length ? ` · ${curso ? plural(proximos.length, "programado", "programados") : plural(proximos.length, "programada", "programadas")}` : ""}</p>
-      ${!administra ? `<p class="hint">Consulta de cursos y capacitaciones. La Coordinadora los administra; usted puede capturar datos y evidencias en un curso abierto.</p>` : ""}
+      ${curso ? `<p class="hint">Los cursos y capacitaciones son colectivos: todos los perfiles los ven y pueden crearlos, programarlos y editarlos.</p>` : `<p class="hint">Aquí aparecen solo sus actividades. En la Agenda puede consultar las de los demás perfiles y obtener su propia copia.</p>`}
     </div>
     ${avisoEnvios}
     ${proximos.length ? `<div class="aviso-proximo" role="status"><b>${curso ? "Próximo curso" : "Próxima actividad"} ${esc(cuandoEs(proximos[0].fecha))}:</b> ${esc(proximos[0].nombre)}, ${esc(fechaLarga(proximos[0].fecha))}${proximos[0].horaInicio ? ` a las ${esc(proximos[0].horaInicio)}` : ""}.</div>` : ""}
     ${muchas ? `<div class="filters" id="filtros" hidden>
       <div class="field"><label for="f-mes">Mes</label><select id="f-mes" data-filtro="mes"><option value="">Todos</option>${opciones(meses, filtros.mes)}</select></div>
       <div class="field"><label for="f-tipo">Tipo</label><select id="f-tipo" data-filtro="tipo"><option value="">Todos</option>${opciones(tipos, filtros.tipo)}</select></div>
-      ${esCoordinadora(yo) ? `<div class="field"><label for="f-fac">Facilitadora</label><select id="f-fac" data-filtro="facilitadoraId"><option value="">Todas</option>${opciones(facilitadoras, filtros.facilitadoraId)}</select></div>` : ""}
       <div class="field"><label for="f-estado">Estado</label><select id="f-estado" data-filtro="estado"><option value="">Todas</option>${opciones(curso ? [["programada", "Programados"], ["abierta", "Abiertos"], ["cerrada", "Cerrados"], ["cancelada", "Cancelados"]] : [["programada", "Programadas"], ["abierta", "Abiertas"], ["cerrada", "Cerradas"], ["cancelada", "Canceladas"]], filtros.estado)}</select></div>
     </div>` : ""}
     ${acts.length ? `<div class="list" id="lista">${acts.map(a => `
@@ -211,11 +194,11 @@ async function lista({ yo, pintar }, curso = false) {
         data-mes="${a.fecha.slice(0, 7)}" data-tipo="${esc(a.tipo)}" data-facilitadora-id="${esc(a.facilitadoraId)}" data-estado="${estadoDe(a)}">
         <span class="date"><b>${Number(a.fecha.slice(8, 10))}</b><small>${mesCorto(a.fecha)}</small></span>
         <span class="body"><span class="name">${esc(a.nombre)}</span>
-          <span class="meta"><span>${esc(a.folio)}</span><span>${esc(curso ? `${a.horas} h` : a.tipo)}</span>${a.programado && a.horaInicio ? `<span>${esc(a.horaInicio)}</span>` : ""}<span>${esc(a.lugar)}</span>${esCoordinadora(yo) ? `<span>${esc(a.facilitadora)}</span>` : ""}${a.compartidas?.length ? `<span class="chip">Recibida</span>` : ""}</span></span>
+          <span class="meta"><span>${esc(a.folio)}</span><span>${esc(curso ? `${a.horas} h` : a.tipo)}</span>${a.programado && a.horaInicio ? `<span>${esc(a.horaInicio)}</span>` : ""}<span>${esc(a.lugar)}</span>${a.compartidas?.length ? `<span class="chip">Recibida</span>` : ""}</span></span>
         <span class="end"><span class="big">${cuenta(a.id)}</span><small>asistentes</small>
           ${chipEstado(a)}</span>
       </a>`).join("")}</div>`
-    : `<div class="empty">${curso && !administra ? `<b>Aún no hay cursos registrados.</b><p>Cuando la Coordinadora registre o programe cursos, aparecerán aquí.</p>` : curso ? `<b>Aún no hay cursos registrados.</b><p>Cree el primero con “Nuevo”. Después podrá registrar a cada asistente con su firma, imprimir la lista y emitir las constancias.</p>` : `<b>Aún no hay actividades registradas.</b><p>Cree la primera con “Nueva actividad”. Posteriormente podrá registrar a cada asistente con su firma e imprimir la lista.</p>`}</div>`}
+    : `<div class="empty">${curso ? `<b>Aún no hay cursos registrados.</b><p>Cree el primero con “Nuevo”. Después podrá registrar a cada asistente con su firma, imprimir la lista y emitir las constancias.</p>` : `<b>Aún no hay actividades registradas.</b><p>Cree la primera con “Nueva actividad”. Posteriormente podrá registrar a cada asistente con su firma e imprimir la lista.</p>`}</div>`}
   `, { atras: "#/" });
   const buscar = $("#buscar", c);
   function filtrar() {
@@ -249,13 +232,11 @@ async function lista({ yo, pintar }, curso = false) {
 
 /** Alta (id null), edición (id) o repetición de una actividad anterior (origenId). */
 async function formulario({ yo, pintar, ir }, id, origenId, nuevoCurso = false, programar = false) {
-  if (nuevoCurso && !puedeAdministrarCursos(yo)) return ir("#/cursos"); // solo la Coordinadora crea cursos
   const act = id ? await db.uno("actividades", id) : null;
   if (id && (!act || !puedeEditar(yo, act))) return ir(id ? `#/actividad/${id}` : "#/asistencia");
   const origen = origenId ? await db.uno("actividades", origenId) : null;
   if (origenId && (!origen || !puedeVer(yo, origen))) return ir("#/asistencia");
   const curso = nuevoCurso || Boolean((act || origen)?.curso);
-  if (curso && !puedeAdministrarCursos(yo)) return ir("#/cursos");
   const programado = programar || Boolean(act?.programado);
   const perfiles = (await db.todos("perfiles")).filter(u => u.activa);
   const ultimoLugar = await db.leerMeta("ultimoLugar", "Marquelia, Gro.");
@@ -275,8 +256,8 @@ async function formulario({ yo, pintar, ir }, id, origenId, nuevoCurso = false, 
         <div class="field span-2"><label for="a-nombre">${curso ? "Nombre del curso o capacitación" : "Nombre de la actividad"}</label><input id="a-nombre" data-campo="nombre" value="${esc(a.nombre)}"></div>
         <div class="field"><label for="a-fecha">${programado ? "Fecha programada" : "Fecha"}</label><input id="a-fecha" type="date" data-campo="fecha" value="${esc(a.fecha)}"${programado ? ` min="${hoy()}"` : ""}></div>
         <div class="field"><label for="a-lugar">Lugar de desarrollo</label><input id="a-lugar" data-campo="lugar" value="${esc(a.lugar)}"></div>
-        <div class="field"><label for="a-facilitadora">Facilitadora</label>
-          <select id="a-facilitadora" data-campo="facilitadoraId">${perfiles.map(u => `<option value="${esc(u.id)}" ${u.id === a.facilitadoraId ? "selected" : ""}>${esc(u.nombre)} · ${esc(nombreRol(u.rol))}</option>`).join("")}</select></div>
+        ${curso ? "" : `<div class="field"><label for="a-facilitadora">Facilitadora</label>
+          <select id="a-facilitadora" data-campo="facilitadoraId">${perfiles.map(u => `<option value="${esc(u.id)}" ${u.id === a.facilitadoraId ? "selected" : ""}>${esc(u.nombre)} · ${esc(nombreRol(u.rol))}</option>`).join("")}</select></div>`}
         ${curso ? `<div class="field span-2"><label for="a-instructora">Instructora que imparte el curso</label><input id="a-instructora" data-campo="instructora" value="${esc(a.instructora || "")}" autocomplete="off"></div>
         <div class="field"><label for="a-horas">Duración total (horas)</label><input id="a-horas" type="number" inputmode="decimal" min="0.5" max="999" step="0.5" data-campo="horas" value="${esc(a.horas ?? "")}"></div>
         <input type="hidden" data-campo="tipo" value="${TIPO_CURSO}">` : `<div class="field"><label for="a-tipo">Tipo de actividad</label>
@@ -317,7 +298,7 @@ async function formulario({ yo, pintar, ir }, id, origenId, nuevoCurso = false, 
     else if (d.horaInicio && !minutosEntre(d.horaInicio, d.horaFin)) e.push("La hora de término debe ser posterior a la de inicio.");
     errores($("#err", c), e);
     if (e.length) return;
-    const f = perfiles.find(u => u.id === d.facilitadoraId);
+    const f = perfiles.find(u => u.id === (d.facilitadoraId || act?.facilitadoraId || yo.id)) || yo; // en los cursos todos son facilitadores
     const registro = {
       ...(act || { id: db.uid(), folio: await db.siguienteFolio(d.fecha), creadaPor: yo.id, estado: "abierta" }),
       nombre: d.nombre, fecha: d.fecha, lugar: d.lugar, tipo: d.tipo,
@@ -337,7 +318,6 @@ async function formulario({ yo, pintar, ir }, id, origenId, nuevoCurso = false, 
 
 /** Curso o actividad programados o cancelados: aún no admiten asistentes. Se pueden iniciar, reprogramar, cancelar o eliminar. */
 async function detallePrevio({ yo, pintar, ir }, a) {
-  const coord = esCoordinadora(yo);
   const cancelado = Boolean(a.cancelado);
   const curso = Boolean(a.curso);
   const sust = curso ? { el: "el curso", prog: "programado", Eliminar: "Eliminar curso", Cancelar: "Cancelar curso" } : { el: "la actividad", prog: "programada", Eliminar: "Eliminar actividad", Cancelar: "Cancelar actividad" };
@@ -346,7 +326,7 @@ async function detallePrevio({ yo, pintar, ir }, a) {
   const opcionesMas = [
     ...(puedeCompartir(yo, a) ? [{ id: "compartir", icono: "compartir", texto: "Compartir copia con otro perfil" }] : []),
     ...(!cancelado && editable ? [{ id: "cancelar", icono: "salir", texto: sust.Cancelar, clase: "danger" }] : []),
-    ...(coord ? [{ id: "eliminar", icono: "eliminar", texto: sust.Eliminar, clase: "danger" }] : []),
+    ...(puedeEliminar(yo, a) ? [{ id: "eliminar", icono: "eliminar", texto: sust.Eliminar, clase: "danger" }] : []),
   ];
   const c = pintar(a.nombre, `
     <section class="panel stack">
@@ -438,13 +418,12 @@ async function detalle({ yo, pintar, ir }, id) {
   const n = s => asis.filter(x => x.datos.sexo === s).length;
   const sinFirma = asis.filter(x => !x.firma && !x.sinFirma).length;
 
-  const coord = esCoordinadora(yo);
   const capturable = puedeCapturar(yo, a);
-  const administra = !curso || puedeAdministrarCursos(yo); // en los cursos solo la Coordinadora administra
+  const administra = true; // los cursos son colectivos: todos los perfiles los administran
   const opcionesMas = [
     ...(puedeCompartir(yo, a) ? [{ id: "compartir", icono: "compartir", texto: "Compartir copia con otro perfil" }] : []),
-    ...(a.estado === "cerrada" && coord ? [{ id: "reabrir", icono: "reabrir", texto: "Reabrir actividad" }] : []),
-    ...(coord ? [{ id: "eliminar", icono: "eliminar", texto: "Eliminar actividad", clase: "danger" }] : []),
+    ...(a.estado === "cerrada" && puedeEliminar(yo, a) ? [{ id: "reabrir", icono: "reabrir", texto: "Reabrir actividad" }] : []),
+    ...(puedeEliminar(yo, a) ? [{ id: "eliminar", icono: "eliminar", texto: "Eliminar actividad", clase: "danger" }] : []),
   ];
   const c = pintar(a.nombre, `
     <section class="panel stack">
@@ -542,7 +521,7 @@ async function detalle({ yo, pintar, ir }, id) {
 }
 
 export default {
-  menu: [{ href: "#/asistencia", texto: "Actividades", activa: /^#\/(asistencia|actividad.*|cursos|curso.*)$/ }],
+  menu: [{ href: "#/asistencia", texto: "Actividades", activa: /^#\/(asistencia|agenda|actividad.*|cursos|curso.*)$/ }],
   rutas: [
     [/^#\/asistencia$/, ctx => lista(ctx, false)],
     [/^#\/cursos$/, ctx => lista(ctx, true)],
