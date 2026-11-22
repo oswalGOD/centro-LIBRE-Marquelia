@@ -136,13 +136,13 @@ export function lineaTiempo(items, { etiqueta = "Línea de tiempo" } = {}) {
  * a la página actual y respeta las que otro filtro ya ocultó con el atributo `hidden`.
  * Opciones:
  *  - selector: filas a paginar dentro de `raiz` (por defecto «.row»).
- *  - porPagina: filas por página (20 por defecto). Los controles solo aparecen si hay más.
+ *  - porPagina: filas por página (10 por defecto). Los controles solo aparecen si hay más.
  *  - dentro: true pone los controles al final de `raiz` (para contenedores que se redibujan);
  *    false (por defecto) los pone justo después.
  *  - singular, plural: nombre de lo que se lista, para el resumen («87 usuarias»).
  * Devuelve { refrescar(reiniciar = true) }: llámela después de cada filtro o búsqueda.
  */
-export function paginar(raiz, { selector = ".row", porPagina = 20, dentro = false, singular = "registro", plural = "registros" } = {}) {
+export function paginar(raiz, { selector = ".row", porPagina = 10, dentro = false, singular = "registro", plural = "registros" } = {}) {
   if (!raiz) return { refrescar() {} };
   let pagina = 1;
   const nav = document.createElement("nav");

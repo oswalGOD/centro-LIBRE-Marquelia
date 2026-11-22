@@ -494,7 +494,7 @@ async function detalle({ yo, pintar, ir }, id) {
     </section>
     ${a.estado !== "cerrada" && editable ? `<div class="barra-fija"><button class="btn" id="cerrar">${icono("cerrar", 20)}Cerrar actividad</button></div>` : ""}
   `, { atras: listaDe(a) });
-  paginar($("#listaAsistentes", c), { porPagina: 25, singular: "asistente", plural: "asistentes" });
+  paginar($("#listaAsistentes", c), { singular: "asistente", plural: "asistentes" });
 
   descargarMiniaturas(c, id);
   $("#tomarFotos", c)?.addEventListener("click", async () => { if (await tomarFotos(yo, a)) detalle({ yo, pintar, ir }, id); });

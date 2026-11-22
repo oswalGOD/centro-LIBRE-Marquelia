@@ -140,7 +140,7 @@ export async function constancias({ yo, pintar, ir }, id) {
   const alCambiar = () => (document.contains(c) ? $("#hojas", c) && ajustarHojas($("#hojas", c)) : removeEventListener("resize", alCambiar));
   addEventListener("resize", alCambiar);
 
-  paginar($("#elegir", c), { porPagina: 25, singular: "asistente", plural: "asistentes" });
+  paginar($("#elegir", c), { singular: "asistente", plural: "asistentes" });
   $("#elegir", c).addEventListener("change", e => {
     const k = e.target.closest("[data-id]");
     if (!k) return;

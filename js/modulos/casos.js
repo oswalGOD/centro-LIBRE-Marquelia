@@ -241,7 +241,7 @@ async function detalle(ctx, id) {
         : estadoVacio("Aún no hay notas.", edita ? "Agregue la primera con el cuadro de arriba." : "")}
     </section>
   `, { atras: "#/casos" });
-  paginar(cuerpo.querySelector(".linea"), { selector: ".linea-item", porPagina: 15, singular: "registro", plural: "registros" });
+  paginar(cuerpo.querySelector(".linea"), { selector: ".linea-item", singular: "registro", plural: "registros" });
 
   if (!edita) return;
   $("#editar", cuerpo).onclick = () => { $("#editor", cuerpo).hidden = false; $("#e-asunto", cuerpo).focus(); };
