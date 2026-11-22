@@ -2,7 +2,7 @@
 
 import * as db from "../core/db.js";
 import { buscarDuplicadas, planificarFusion, unirUsuarias, marcarDistintas, CAMPOS_FICHA } from "../core/duplicados.js";
-import { estadoVacio } from "../core/componentes.js";
+import { estadoVacio, paginar } from "../core/componentes.js";
 import { fechaLarga, etiquetaSexo, etiquetaGrupo } from "../core/catalogos.js";
 import { $, $$, esc, aviso, dobleToque, plural } from "../core/ui.js";
 
@@ -38,6 +38,7 @@ async function vista({ pintar, recargar }) {
       : estadoVacio("No hay posibles duplicadas.", "Si dos dispositivos registran a la misma persona sin CURP, aparecerá aquí tras sincronizar.")}
   `, { atras: "#/usuarias" });
 
+  paginar(c, { selector: "[data-par]", porPagina: 10, dentro: true, singular: "pareja", plural: "parejas" });
   $$("[data-par]", c).forEach(caja => {
     const [a, b] = caja.dataset.par.split("|");
     dobleToque($("[data-unir]", caja), "Toque nuevamente para unir", async () => {

@@ -11,6 +11,7 @@ import { puedeVer, puedeCapturar } from "../core/permisos.js";
 import { $, $$, esc, aviso, dobleToque, plural } from "../core/ui.js";
 import { tarjetas } from "../core/resumen.js";
 import { botonIcono } from "../core/iconos.js";
+import { paginar } from "../core/componentes.js";
 
 const ID = "([\\w-]+)";
 const hora = t => new Date(t).toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" });
@@ -103,7 +104,9 @@ async function lista({ yo, pintar }) {
     $$("#lista .row", c).forEach(r => { r.hidden = !r.dataset.buscar.includes(q); if (!r.hidden) n++; });
     const aviso = $("#sinResultados", c);
     if (aviso) aviso.hidden = n > 0;
+    pag.refrescar();
   });
+  const pag = paginar($("#lista", c), { singular: "actividad", plural: "actividades" });
 }
 
 async function carpeta({ yo, pintar, ir }, id, ordenando = false) {
