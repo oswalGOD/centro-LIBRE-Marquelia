@@ -2,6 +2,7 @@
 // (3 columnas × 2 filas), cada una con su número y su leyenda. Se puede imprimir o exportar a PDF.
 
 import * as db from "../core/db.js";
+import { nombreRol } from "../core/catalogos.js";
 import { botonIcono } from "../core/iconos.js";
 import * as ev from "../core/evidencias.js";
 import { descargarFoto } from "../core/sync.js";
@@ -40,8 +41,10 @@ export function hojasEvidenciasHTML(act, items) {
 
 export async function formatoEvidencias({ yo, pintar, ir }, id) {
   ev.liberarUrls();
-  const act = await db.uno("actividades", id);
-  if (!act || !puedeVer(yo, act)) return ir("#/evidencias");
+  const original = await db.uno("actividades", id);
+  if (!original || !puedeVer(yo, original)) return ir("#/evidencias");
+  // En los cursos todos los perfiles son facilitadores: el formato sale con el nombre de quien lo imprime.
+  const act = original.curso ? { ...original, facilitadora: yo.nombre, puesto: nombreRol(yo.rol) } : original;
   const fotos = await ev.de(id);
   if (!fotos.length) return ir(`#/actividad/${id}/evidencias`);
   aviso("Preparando fotografías…");
