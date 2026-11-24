@@ -1,7 +1,7 @@
 // Service worker: guarda la app en el dispositivo para que abra y funcione sin internet.
 // Al publicar cambios, sube el número de VERSION para que los dispositivos se actualicen.
 
-const VERSION = "clm-v0.49.0";
+const VERSION = "clm-v0.49.1";
 const ARCHIVOS = [
   "./",
   "index.html",
@@ -96,6 +96,7 @@ self.addEventListener("activate", e => {
     caches.keys()
       .then(claves => Promise.all(claves.filter(k => k !== VERSION).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
+      .then(() => completarCopia().catch(() => {}))
   );
 });
 
@@ -105,17 +106,42 @@ self.addEventListener("message", e => {
 
 // Primero la copia guardada; si no existe, la red. Lo que se descarga del lector de texto
 // (la versión para dispositivos sin SIMD) también se guarda para usarlo después sin internet.
+// Si falta la copia guardada (por ejemplo, el sistema liberó espacio en el iPad), se vuelve a descargar
+// en segundo plano la próxima vez que haya internet.
+async function completarCopia() {
+  const c = await caches.open(VERSION);
+  const faltan = [];
+  for (const u of ARCHIVOS) if (!(await c.match(u))) faltan.push(u);
+  if (faltan.length) await Promise.all(faltan.map(u => c.add(new Request(u, { cache: "reload" })).catch(() => {})));
+}
+
+const PAGINA_SIN_COPIA = () => new Response(
+  '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Centro LIBRE</title>' +
+  '<body style="font-family:sans-serif;max-width:32rem;margin:3rem auto;padding:0 1rem"><h1>Centro LIBRE Marquelia</h1>' +
+  "<p>La copia de la aplicación guardada en este dispositivo no está disponible. Conéctese a internet y abra la aplicación una vez para volver a guardarla.</p>" +
+  '<p><a href="./">Reintentar</a></p></body>',
+  { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } }
+);
+
+// Primero la copia guardada; si no existe, la red. Siempre se responde algo (nunca vacío):
+// al abrir sin internet con la copia incompleta, Safari mostraba «Returned response is null».
 self.addEventListener("fetch", e => {
   if (e.request.method !== "GET" || new URL(e.request.url).origin !== location.origin) return;
-  e.respondWith(
-    caches.match(e.request, { ignoreSearch: true }).then(guardado =>
-      guardado || fetch(e.request).then(r => {
-        if (r.ok && e.request.url.includes("/js/vendor/tesseract/")) {
-          const copia = r.clone();
-          caches.open(VERSION).then(c => c.put(e.request, copia));
-        }
-        return r;
-      }).catch(() => (e.request.mode === "navigate" ? caches.match("index.html") : Response.error()))
-    )
-  );
+  const navegacion = e.request.mode === "navigate";
+  e.respondWith((async () => {
+    const guardado = await caches.match(e.request, { ignoreSearch: true });
+    if (guardado) return guardado;
+    try {
+      const r = await fetch(e.request);
+      if (r.ok && e.request.url.includes("/js/vendor/tesseract/")) {
+        const copia = r.clone();
+        caches.open(VERSION).then(c => c.put(e.request, copia));
+      }
+      if (navegacion) e.waitUntil(completarCopia().catch(() => {}));
+      return r;
+    } catch {
+      if (navegacion) return (await caches.match("./")) || (await caches.match("index.html")) || PAGINA_SIN_COPIA();
+      return Response.error();
+    }
+  })());
 });
